@@ -1,3 +1,14 @@
+---
+name: svelte-core-bestpractices
+description: Svelte 5 core best practices — runes ($state/$derived/$effect/$props), declaration tags, snippets, events, each blocks, context, styling, and which legacy features to avoid. Use when writing or reviewing any Svelte 5 component.
+---
+
+# Svelte 5 core best practices
+
+Mirrors the official `svelte/best-practices` doc (fetch the current version with
+`npx @sveltejs/mcp get-documentation "svelte/best-practices"`), with the
+declaration-tags section added — see the note in that section.
+
 ## `$state`
 
 Only use the `$state` rune for variables that should be _reactive_ — in other words, variables that cause an `$effect`, `$derived` or template expression to update. Everything else can be a normal variable.
@@ -30,10 +41,10 @@ If the derived expression is an object or array, it will be returned as-is — i
 
 Effects are an escape hatch and should mostly be avoided. In particular, avoid updating state inside effects.
 
-- If you need to sync state to an external library such as D3, it is often neater to use [`{@attach ...}`](references/@attach.md)
-- If you need to run some code in response to user interaction, put the code directly in an event handler or use a [function binding](references/bind.md) as appropriate
-- If you need to log values for debugging purposes, use [`$inspect`](references/$inspect.md)
-- If you need to observe something external to Svelte, use [`createSubscriber`](references/svelte-reactivity.md)
+- If you need to sync state to an external library such as D3, it is often neater to use [`{@attach ...}`](https://svelte.dev/docs/svelte/@attach)
+- If you need to run some code in response to user interaction, put the code directly in an event handler or use a [function binding](https://svelte.dev/docs/svelte/bind#Function-bindings) as appropriate
+- If you need to log values for debugging purposes, use [`$inspect`](https://svelte.dev/docs/svelte/$inspect)
+- If you need to observe something external to Svelte, use [`createSubscriber`](https://svelte.dev/docs/svelte/svelte-reactivity#createSubscriber)
 
 Never wrap the contents of an effect in `if (browser) {...}` or similar — effects do not run on the server.
 
@@ -42,7 +53,6 @@ Never wrap the contents of an effect in `if (browser) {...}` or similar — effe
 Treat props as though they will change. For example, values that depend on props should usually use `$derived`:
 
 ```js
-// @errors: 2451
 let { type } = $props();
 
 // do this
@@ -55,6 +65,49 @@ let color = type === 'danger' ? 'red' : 'green';
 ## `$inspect.trace`
 
 `$inspect.trace` is a debugging tool for reactivity. If something is not updating properly or running more than it should you can add `$inspect.trace(label)` as the first line of an `$effect` or `$derived.by` (or any function they call) to trace their dependencies and discover which one triggered an update.
+
+## Declaration tags
+
+> [!NOTE] This section is not in the upstream best-practices doc yet — it is
+> distilled from `svelte/declaration-tags`. Drop it once upstream covers it.
+
+Declaration tags define local variables inside markup with `const` or `let`, and are the modern replacement for [`{@const ...}`](https://svelte.dev/docs/svelte/@const):
+
+```svelte
+{#each boxes as box (box.id)}
+	{const area = box.width * box.height}
+	{const label = `${box.width} ⨉ ${box.height} = ${area}`}
+
+	<p>{label}</p>
+{/each}
+```
+
+> [!NOTE] Declaration tags require **Svelte 5.56+**. On older versions `{@const ...}` is still the only option — check the installed version before converting.
+
+Unlike `{@const ...}` — which must be a direct child of a block, a component, or `<svelte:boundary>` — declaration tags can be used anywhere in the component, and are visible to siblings and their children in the same lexical scope.
+
+They are not reactive on their own. For reactive values, use the runes inside the tag:
+
+```svelte
+{#if editing}
+	{let name = $state(user.name)}
+	{const greeting = $derived(`Hello ${name}`)}
+
+	<input bind:value={name} />
+	<p>{greeting}</p>
+{/if}
+```
+
+A plain `{const x = ...}` recomputes when the values it reads change (it behaves like the old `{@const}`); reach for `$derived` when you specifically need a reactive value that other reactive code depends on, and `$state` when the local needs to be written to (e.g. via `bind:`).
+
+The common one-liner is aliasing a dynamic component so it can be rendered with a capitalised name:
+
+```svelte
+{#each links as link (link.label)}
+	{const Icon = link.icon}
+	<Icon class="size-4" />
+{/each}
+```
 
 ## Events
 
@@ -81,7 +134,7 @@ Avoid using `onMount` or `$effect` for this.
 
 ## Snippets
 
-[Snippets](references/snippet.md) are a way to define reusable chunks of markup that can be instantiated with the [`{@render ...}`](references/@render.md) tag, or passed to components as props. They must be declared within the template.
+[Snippets](https://svelte.dev/docs/svelte/snippet) are a way to define reusable chunks of markup that can be instantiated with the [`{@render ...}`](https://svelte.dev/docs/svelte/@render) tag, or passed to components as props. They must be declared within the template.
 
 ```svelte
 {#snippet greeting(name)}
@@ -95,7 +148,7 @@ Avoid using `onMount` or `$effect` for this.
 
 ## Each blocks
 
-Prefer to use [keyed each blocks](references/each.md) — this improves performance by allowing Svelte to surgically insert or remove items rather than updating the DOM belonging to existing items.
+Prefer to use [keyed each blocks](https://svelte.dev/docs/svelte/each#Keyed-each-blocks) — this improves performance by allowing Svelte to surgically insert or remove items rather than updating the DOM belonging to existing items.
 
 > [!NOTE] The key _must_ uniquely identify the object. Do not use the index as a key.
 
@@ -129,7 +182,7 @@ The CSS in a component's `<style>` is scoped to that component. If a parent comp
 </style>
 ```
 
-If this impossible (for example, the child component comes from a library) you can use `:global` to override styles:
+If this is impossible (for example, the child component comes from a library) you can use `:global` to override styles:
 
 ```svelte
 <div>
@@ -153,7 +206,7 @@ Use `createContext` rather than `setContext` and `getContext`, as it provides ty
 
 ## Async Svelte
 
-If using version 5.36 or higher, you can use [await expressions](references/await-expressions.md) and [hydratable](references/hydratable.md) to use promises directly inside components. Note that these require the `experimental.async` option to be enabled in `svelte.config.js` as they are not yet considered fully stable.
+If using version 5.36 or higher, you can use [await expressions](https://svelte.dev/docs/svelte/await-expressions) and [hydratable](https://svelte.dev/docs/svelte/hydratable) to use promises directly inside components. Note that these require the `experimental.async` option to be enabled in `svelte.config.js` as they are not yet considered fully stable.
 
 ## Avoid legacy features
 
@@ -164,6 +217,7 @@ Always use runes mode for new code, and avoid features that have more modern rep
 - use `$props` instead of `export let`, `$$props` and `$$restProps`
 - use `onclick={...}` instead of `on:click={...}`
 - use `{#snippet ...}` and `{@render ...}` instead of `<slot>` and `$$slots` and `<svelte:fragment>`
+- use `{const x = ...}` / `{let x = $state(...)}` declaration tags instead of `{@const ...}` (Svelte 5.56+)
 - use `<DynamicComponent>` instead of `<svelte:component this={DynamicComponent}>`
 - use `import Self from './ThisComponent.svelte'` and `<Self>` instead of `<svelte:self>`
 - use classes with `$state` fields to share reactivity between components, instead of using stores

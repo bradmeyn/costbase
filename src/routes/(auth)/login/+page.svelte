@@ -10,10 +10,9 @@
 </svelte:head>
 
 <div class="w-full max-w-sm">
-	<div class="rounded-xl border border-border bg-card p-8 shadow-sm">
-		<div class="mb-6">
+	<div>
+		<div class="mb-6 text-center">
 			<h1 class="heading-primary">Welcome back</h1>
-			<p class="mt-1 text-sm text-muted-foreground">Log in to your account</p>
 		</div>
 
 		{#if loginUser.result?.success === false}
@@ -54,6 +53,6 @@
 
 	<p class="mt-4 text-center text-sm text-muted-foreground">
 		No account?
-		<a href="/register" class="font-medium text-primary hover:underline">Sign up free</a>
+		<a href="/register" class="font-medium text-primary hover:underline">Sign up</a>
 	</p>
 </div>
