@@ -1,6 +1,6 @@
 <script lang="ts">
-	import * as Accordion from '$lib/components/ui/accordion';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import * as Accordion from '#lib/components/ui/accordion/index.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import { type BudgetItem } from '../budget.svelte';
 
 	let {

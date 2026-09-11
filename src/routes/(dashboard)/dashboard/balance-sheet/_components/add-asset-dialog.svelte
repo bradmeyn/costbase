@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { getAssets, addAsset } from '$lib/remotes/balance-sheet.remote';
+	import { getAssets, addAsset } from '#lib/remotes/balance-sheet.remote.js';
 	import * as Dialog from '$ui/dialog';
 	import * as Field from '$ui/field';
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import { Button } from '$ui/button';
-	import { OWNERS, ASSET_CATEGORIES } from '$lib/constants/categories';
+	import { OWNERS, ASSET_CATEGORIES } from '#lib/constants/categories.js';
 
 	let { open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void } = $props();
 </script>

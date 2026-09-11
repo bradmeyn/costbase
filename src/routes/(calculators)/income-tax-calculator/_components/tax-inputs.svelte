@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getCalculatorState } from '../calculator.svelte';
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
-	import FrequencySelect from '$lib/components/inputs/frequency-select.svelte';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
+	import FrequencySelect from '#lib/components/inputs/frequency-select.svelte';
 	import Label from '$ui/label/label.svelte';
 	import { Checkbox } from '$ui/checkbox';
 

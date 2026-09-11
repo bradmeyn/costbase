@@ -1,9 +1,9 @@
 <script lang="ts">
-	import AddPortfolioDialog from '$lib/components/portfolio/add-portfolio-dialog.svelte';
-	import EditPortfolioDialog from '$lib/components/portfolio/edit-portfolio-dialog.svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
-	import { getPortfolios, deletePortfolio } from '$lib/remotes/portfolio.remote';
+	import AddPortfolioDialog from '#lib/components/portfolio/add-portfolio-dialog.svelte';
+	import EditPortfolioDialog from '#lib/components/portfolio/edit-portfolio-dialog.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
+	import { getPortfolios, deletePortfolio } from '#lib/remotes/portfolio.remote.js';
 	import { ChevronRight } from '@lucide/svelte';
 
 	const portfolios = $derived(await getPortfolios());
@@ -11,9 +11,7 @@
 	type Portfolio = (typeof portfolios)[number];
 
 	type Dialog =
-		| { kind: 'edit'; portfolio: Portfolio }
-		| { kind: 'delete'; portfolio: Portfolio }
-		| null;
+		{ kind: 'edit'; portfolio: Portfolio } | { kind: 'delete'; portfolio: Portfolio } | null;
 
 	let dialog = $state<Dialog>(null);
 </script>

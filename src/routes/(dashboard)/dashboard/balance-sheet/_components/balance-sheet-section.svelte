@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$ui/button';
 	import { Plus } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency } from '#lib/utils.js';
 	import type { Snippet } from 'svelte';
 
 	let {

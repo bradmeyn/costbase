@@ -1,13 +1,13 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { portfolioTable } from '$db/schemas/portfolio';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { transactionTable } from '$db/schemas/portfolio';
-import { getStockPrices } from '$lib/server/prices';
+import { getStockPrices } from '#lib/server/prices.js';
 
 type Transaction = InferSelectModel<typeof transactionTable>;
 

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { getCalculatorState } from '../calculator.svelte';
-	import PercentageSlider from '$lib/components/inputs/percentage-slider.svelte';
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
+	import PercentageSlider from '#lib/components/inputs/percentage-slider.svelte';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
 	import Label from '$ui/label/label.svelte';
-	import * as Select from '$lib/components/ui/select';
-	import { Button } from '$lib/components/ui/button';
-	import TabSelect from '$lib/components/inputs/tab-select.svelte';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import TabSelect from '#lib/components/inputs/tab-select.svelte';
 	import Slider from '$ui/slider/slider.svelte';
 	import Explainer from '$ui/explainer.svelte';
-	import { FREQUENCIES } from '$lib/constants/frequencies';
+	import { FREQUENCIES } from '#lib/constants/frequencies.js';
 
 	let calc = getCalculatorState();
 

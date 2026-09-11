@@ -1,6 +1,6 @@
 <script lang="ts">
-	import * as Select from '$lib/components/ui/select';
-	import { FREQUENCIES, FREQUENCY_ENUM, type FrequencyType } from '$lib/constants/frequencies';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import { FREQUENCIES, FREQUENCY_ENUM, type FrequencyType } from '#lib/constants/frequencies.js';
 
 	type Props = {
 		value: FrequencyType;

@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { getHolding } from '$lib/remotes/holding.remote';
+	import { getHolding } from '#lib/remotes/holding.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import Button from '$ui/button/button.svelte';
-	import AddTransactionsDialog from '$lib/components/transaction/add-transactions-dialog.svelte';
-	import TransactionRow from '$lib/components/transaction/transaction-row.svelte';
-	import AddDistributionDialog from '$lib/components/distribution/add-distribution-dialog.svelte';
-	import DistributionRow from '$lib/components/distribution/distribution-row.svelte';
-	import SummaryCard from '$lib/components/summary-card.svelte';
+	import AddTransactionsDialog from '#lib/components/transaction/add-transactions-dialog.svelte';
+	import TransactionRow from '#lib/components/transaction/transaction-row.svelte';
+	import AddDistributionDialog from '#lib/components/distribution/add-distribution-dialog.svelte';
+	import DistributionRow from '#lib/components/distribution/distribution-row.svelte';
+	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { ArrowLeft } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency } from '#lib/utils.js';
 
 	const holdingId = page.params.holdingId!;
 	const portfolioId = page.params.portfolioId!;

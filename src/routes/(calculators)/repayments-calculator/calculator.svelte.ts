@@ -40,33 +40,62 @@ class MortgageCalculatorState {
 
 	projection = $derived.by(() => {
 		if (this.principal <= 0) {
-			return { repayment: 0, ioRepayment: 0, totalInterest: 0, totalRepayment: 0, remainingPrincipal: 0, breakdown: [] };
+			return {
+				repayment: 0,
+				ioRepayment: 0,
+				totalInterest: 0,
+				totalRepayment: 0,
+				remainingPrincipal: 0,
+				breakdown: []
+			};
 		}
 		if (this.loanType === 'Interest Only') {
 			return calculateInterestOnly(
-				this.principal, this.ioRate, this.ioPeriods, this.totalPeriods,
-				this.periodsPerYear, this.periodRate, this.extraRepayments,
-				this.propertyValue, this.propertyGrowthRate
+				this.principal,
+				this.ioRate,
+				this.ioPeriods,
+				this.totalPeriods,
+				this.periodsPerYear,
+				this.periodRate,
+				this.extraRepayments,
+				this.propertyValue,
+				this.propertyGrowthRate
 			);
 		}
 		if (this.loanType === 'Variable') {
 			return calculateVariable(
-				this.principal, this.interestRate, this.variableRate, this.totalPeriods,
-				this.periodsPerYear, this.fixedPeriods, this.extraRepayments,
-				this.propertyValue, this.propertyGrowthRate
+				this.principal,
+				this.interestRate,
+				this.variableRate,
+				this.totalPeriods,
+				this.periodsPerYear,
+				this.fixedPeriods,
+				this.extraRepayments,
+				this.propertyValue,
+				this.propertyGrowthRate
 			);
 		}
 		return calculatePrincipalAndInterest(
-			this.principal, this.periodRate, this.totalPeriods, this.periodsPerYear,
-			this.extraRepayments, this.propertyValue, this.propertyGrowthRate
+			this.principal,
+			this.periodRate,
+			this.totalPeriods,
+			this.periodsPerYear,
+			this.extraRepayments,
+			this.propertyValue,
+			this.propertyGrowthRate
 		);
 	});
 
 	interestSaved = $derived.by(() => {
 		if (this.extraRepayments <= 0) return 0;
 		const withoutExtra = calculatePrincipalAndInterest(
-			this.principal, this.periodRate, this.totalPeriods, this.periodsPerYear,
-			0, this.propertyValue, this.propertyGrowthRate
+			this.principal,
+			this.periodRate,
+			this.totalPeriods,
+			this.periodsPerYear,
+			0,
+			this.propertyValue,
+			this.propertyGrowthRate
 		);
 		return withoutExtra.totalInterest - this.projection.totalInterest;
 	});

@@ -3,14 +3,14 @@
 		getSubscriptions,
 		addSubscription,
 		updateSubscription
-	} from '$lib/remotes/subscription.remote';
+	} from '#lib/remotes/subscription.remote.js';
 	import * as Dialog from '$ui/dialog';
 	import * as Field from '$ui/field';
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import { Button } from '$ui/button';
-	import { FREQUENCIES, FREQUENCY_ENUM } from '$lib/constants/frequencies';
-	import { OWNERS } from '$lib/constants/categories';
+	import { FREQUENCIES, FREQUENCY_ENUM } from '#lib/constants/frequencies.js';
+	import { OWNERS } from '#lib/constants/categories.js';
 	import type { Subscription } from '$db/schemas/budget';
 
 	let {

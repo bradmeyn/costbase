@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { calculators } from '$lib/constants/calculators';
+	import { calculators } from '#lib/constants/calculators.js';
 </script>
 
 <svelte:head>

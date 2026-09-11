@@ -1,5 +1,5 @@
 import { query } from '$app/server';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { error } from '@sveltejs/kit';
 

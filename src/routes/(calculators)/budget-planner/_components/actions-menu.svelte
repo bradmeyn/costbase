@@ -1,9 +1,9 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { Trash, Save, RefreshCcw } from '@lucide/svelte';
 	import ClearAllDialog from './clear-all-dialog.svelte';
 	import { getBudgetState } from '../budget.svelte';
-	import CalculatorActions from '$lib/components/calculator-actions.svelte';
+	import CalculatorActions from '#lib/components/calculator-actions.svelte';
 	const budget = getBudgetState();
 
 	let deleteItemsOpen = $state(false);

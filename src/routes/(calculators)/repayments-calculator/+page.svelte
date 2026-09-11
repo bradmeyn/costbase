@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { setCalculatorState, getCalculatorState } from './calculator.svelte';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import * as Tabs from '#lib/components/ui/tabs/index.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import Inputs from './_components/mortgage-inputs.svelte';
 	import MortgageChart from './_components/mortgage-chart.svelte';
 	import ScrollableTable from '$ui/scrollable-table.svelte';
-	import CalculatorActions from '$lib/components/calculator-actions.svelte';
+	import CalculatorActions from '#lib/components/calculator-actions.svelte';
 	import { FREQUENCIES } from '$constants/frequencies';
 
 	setCalculatorState();

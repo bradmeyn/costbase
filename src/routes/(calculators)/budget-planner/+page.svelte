@@ -1,12 +1,12 @@
 <script lang="ts">
-	import DoughnutChart from '$lib/components/charts/doughnut-chart.svelte';
-	import LegendList from '$lib/components/charts/legend-list.svelte';
-	import { formatPercentage } from '$lib/utils/formatters';
+	import DoughnutChart from '#lib/components/charts/doughnut-chart.svelte';
+	import LegendList from '#lib/components/charts/legend-list.svelte';
+	import { formatPercentage } from '#lib/utils/formatters.js';
 	import { setBudgetState } from './budget.svelte';
 	import BudgetCard from './_components/budget-card.svelte';
 	import ActionsMenu from './_components/actions-menu.svelte';
 	import LoadBudgetAlert from './_components/load-budget-alert.svelte';
-	import TabSelect from '$lib/components/inputs/tab-select.svelte';
+	import TabSelect from '#lib/components/inputs/tab-select.svelte';
 
 	const budget = setBudgetState();
 

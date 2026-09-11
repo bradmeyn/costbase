@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { LineChart, Tooltip } from 'layerchart';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import type { AnnualData } from '../calculator.svelte';
-	import { COLOURS } from '$lib/constants/colours';
+	import { COLOURS } from '#lib/constants/colours.js';
 	import { LC_TOOLTIP_PROPS, LC_AXIS_PROPS, LC_GRID } from '$constants/chart-config';
 
 	let {

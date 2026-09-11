@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Header from '$lib/components/header.svelte';
-	import DashboardSubnav from '$lib/components/dashboard-subnav.svelte';
+	import Header from '#lib/components/header.svelte';
+	import DashboardSubnav from '#lib/components/dashboard-subnav.svelte';
 
 	let { children } = $props();
 </script>

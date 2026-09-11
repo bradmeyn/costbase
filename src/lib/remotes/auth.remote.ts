@@ -1,7 +1,7 @@
 import { form, getRequestEvent, query } from '$app/server';
-import { registerSchema, loginSchema } from '$lib/schemas/auth';
+import { registerSchema, loginSchema } from '#lib/schemas/auth.js';
 import { redirect } from '@sveltejs/kit';
-import { auth } from '$lib/server/auth';
+import { auth } from '#lib/server/auth.js';
 
 export const registerUser = form(
 	registerSchema,

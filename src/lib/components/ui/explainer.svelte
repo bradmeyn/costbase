@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Tooltip from '$lib/components/ui/tooltip';
+	import * as Tooltip from '#lib/components/ui/tooltip/index.js';
 	import { CircleHelp } from '@lucide/svelte';
 	let { text }: { text: string } = $props();
 </script>

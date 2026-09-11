@@ -62,7 +62,9 @@ describe('calculateCompoundInterest', () => {
 	it('endingValue increases each year with positive return and no contributions', () => {
 		const result = calculateCompoundInterest(10000, 0.07, 10, 0, 1, 0);
 		for (let i = 1; i < result.annualData.length; i++) {
-			expect(result.annualData[i].endingValue).toBeGreaterThan(result.annualData[i - 1].endingValue);
+			expect(result.annualData[i].endingValue).toBeGreaterThan(
+				result.annualData[i - 1].endingValue
+			);
 		}
 	});
 

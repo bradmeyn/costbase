@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { getPortfolioUnrealisedGains } from '$lib/remotes/portfolio.remote';
+	import { getPortfolioUnrealisedGains } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import Button from '$ui/button/button.svelte';
-	import { formatCurrency, downloadCSV } from '$lib/utils';
-	import SummaryCard from '$lib/components/summary-card.svelte';
+	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { Check, Download, Minus } from '@lucide/svelte';
 
 	const portfolioId = page.params.portfolioId!;

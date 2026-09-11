@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { EllipsisVertical, Download } from '@lucide/svelte';
 	import Button from '$ui/button/button.svelte';
 

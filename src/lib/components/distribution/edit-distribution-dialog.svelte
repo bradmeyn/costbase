@@ -3,12 +3,12 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { updateDistribution } from '$lib/remotes/distribution.remote';
+	import { updateDistribution } from '#lib/remotes/distribution.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Checkbox } from '$ui/checkbox';
 	import Label from '$ui/label/label.svelte';
-	import { formatCurrency } from '$lib/utils';
-	import type { distributionTable } from '$lib/server/db/schemas/portfolio';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { distributionTable } from '#lib/server/db/schemas/portfolio.js';
 	import type { InferSelectModel } from 'drizzle-orm';
 
 	type Distribution = InferSelectModel<typeof distributionTable>;

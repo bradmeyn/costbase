@@ -1,6 +1,6 @@
-import { auth } from '$lib/server/auth'; // path to your auth file
+import { auth } from '#lib/server/auth.js'; // path to your auth file
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { building } from '$app/environment';
+import { building } from '$app/env';
 import { redirect } from '@sveltejs/kit';
 
 export async function handle({ event, resolve }) {

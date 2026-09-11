@@ -1,12 +1,12 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { transactionTable, holdingTable } from '$db/schemas/portfolio';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { getHolding } from './holding.remote';
-import { transactionSchema, updateTransactionSchema } from '$lib/schemas/portfolio';
+import { transactionSchema, updateTransactionSchema } from '#lib/schemas/portfolio.js';
 
 export const getTransactions = query(z.string(), async (holdingId: string) => {
 	const user = await getCurrentUser();

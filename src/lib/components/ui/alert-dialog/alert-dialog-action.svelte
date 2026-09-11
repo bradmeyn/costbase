@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { AlertDialog as AlertDialogPrimitive } from "bits-ui";
-	import { buttonVariants } from "$ui/button/index.js";
-	import { cn } from "$lib/utils/tailwind.js";
+	import { AlertDialog as AlertDialogPrimitive } from 'bits-ui';
+	import { buttonVariants } from '$ui/button/index.js';
+	import { cn } from '#lib/utils/tailwind.js';
 
 	let {
 		ref = $bindable(null),

@@ -2,10 +2,10 @@
 	import Button from '$ui/button/button.svelte';
 	import * as Table from '$ui/table';
 	import { Pencil, Trash2 } from '@lucide/svelte';
-	import EditTransactionDialog from '$lib/components/transaction/edit-transaction-dialog.svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import { deleteTransaction } from '$lib/remotes/transaction.remote';
-	import { formatCurrency } from '$lib/utils';
+	import EditTransactionDialog from '#lib/components/transaction/edit-transaction-dialog.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import { deleteTransaction } from '#lib/remotes/transaction.remote.js';
+	import { formatCurrency } from '#lib/utils.js';
 
 	let {
 		transaction,

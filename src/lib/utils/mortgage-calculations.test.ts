@@ -37,56 +37,99 @@ describe('calculatePrincipalAndInterest', () => {
 
 	it('balance reaches zero by end of term', () => {
 		const result = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.remainingPrincipal).toBeCloseTo(0, 0);
 	});
 
 	it('repayment matches calculatePayment', () => {
 		const result = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
-		expect(result.repayment).toBeCloseTo(calculatePayment(BASE.principal, periodRate, totalPeriods), 2);
+		expect(result.repayment).toBeCloseTo(
+			calculatePayment(BASE.principal, periodRate, totalPeriods),
+			2
+		);
 	});
 
 	it('produces correct number of breakdown periods', () => {
 		const result = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.breakdown).toHaveLength(totalPeriods);
 	});
 
 	it('extra repayments reduce total interest paid', () => {
 		const without = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		const withExtra = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			500, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			500,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(withExtra.totalInterest).toBeLessThan(without.totalInterest);
 	});
 
 	it('extra repayments shorten the loan term', () => {
 		const without = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		const withExtra = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			500, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			500,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(withExtra.breakdown.length).toBeLessThan(without.breakdown.length);
 	});
 
 	it('balance never goes negative', () => {
 		const result = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			500, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			500,
+			0,
+			BASE.propertyGrowthRate
 		);
 		result.breakdown.forEach(({ balance }) => {
 			expect(balance).toBeGreaterThanOrEqual(0);
@@ -95,16 +138,26 @@ describe('calculatePrincipalAndInterest', () => {
 
 	it('tracks property value when provided', () => {
 		const result = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 700_000, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			700_000,
+			BASE.propertyGrowthRate
 		);
 		expect(result.breakdown[0].propertyValue).toBeGreaterThan(700_000);
 	});
 
 	it('ioRepayment is 0', () => {
 		const result = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.ioRepayment).toBe(0);
 	});
@@ -117,8 +170,15 @@ describe('calculateInterestOnly', () => {
 
 	it('principal is 0 for all IO period breakdown entries', () => {
 		const result = calculateInterestOnly(
-			BASE.principal, 0.055, ioPeriods, totalPeriods, BASE.periodsPerYear,
-			periodRate, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.055,
+			ioPeriods,
+			totalPeriods,
+			BASE.periodsPerYear,
+			periodRate,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		result.breakdown.slice(0, ioPeriods).forEach(({ principal }) => {
 			expect(principal).toBe(0);
@@ -127,8 +187,15 @@ describe('calculateInterestOnly', () => {
 
 	it('balance stays at principal throughout IO period (no extra repayments)', () => {
 		const result = calculateInterestOnly(
-			BASE.principal, 0.055, ioPeriods, totalPeriods, BASE.periodsPerYear,
-			periodRate, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.055,
+			ioPeriods,
+			totalPeriods,
+			BASE.periodsPerYear,
+			periodRate,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		result.breakdown.slice(0, ioPeriods).forEach(({ balance }) => {
 			expect(balance).toBeCloseTo(BASE.principal, 0);
@@ -137,28 +204,54 @@ describe('calculateInterestOnly', () => {
 
 	it('transitions to P&I phase and balance reaches zero', () => {
 		const result = calculateInterestOnly(
-			BASE.principal, 0.055, ioPeriods, totalPeriods, BASE.periodsPerYear,
-			periodRate, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.055,
+			ioPeriods,
+			totalPeriods,
+			BASE.periodsPerYear,
+			periodRate,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.remainingPrincipal).toBeCloseTo(0, 0);
 	});
 
 	it('ioRepayment is greater than 0', () => {
 		const result = calculateInterestOnly(
-			BASE.principal, 0.055, ioPeriods, totalPeriods, BASE.periodsPerYear,
-			periodRate, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.055,
+			ioPeriods,
+			totalPeriods,
+			BASE.periodsPerYear,
+			periodRate,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.ioRepayment).toBeGreaterThan(0);
 	});
 
 	it('IO loan has higher total interest than equivalent P&I loan', () => {
 		const piResult = calculatePrincipalAndInterest(
-			BASE.principal, periodRate, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			periodRate,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		const ioResult = calculateInterestOnly(
-			BASE.principal, 0.06, ioPeriods, totalPeriods, BASE.periodsPerYear,
-			periodRate, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.06,
+			ioPeriods,
+			totalPeriods,
+			BASE.periodsPerYear,
+			periodRate,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(ioResult.totalInterest).toBeGreaterThan(piResult.totalInterest);
 	});
@@ -170,8 +263,15 @@ describe('calculateVariable', () => {
 
 	it('produces breakdown covering full loan term', () => {
 		const result = calculateVariable(
-			BASE.principal, 0.06, 0.08, totalPeriods, BASE.periodsPerYear,
-			fixedPeriods, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.06,
+			0.08,
+			totalPeriods,
+			BASE.periodsPerYear,
+			fixedPeriods,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.remainingPrincipal).toBeCloseTo(0, 0);
 	});
@@ -180,28 +280,54 @@ describe('calculateVariable', () => {
 		const fixedPeriodRate = 0.06 / 12;
 		const expected = calculatePayment(BASE.principal, fixedPeriodRate, totalPeriods);
 		const result = calculateVariable(
-			BASE.principal, 0.06, 0.08, totalPeriods, BASE.periodsPerYear,
-			fixedPeriods, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.06,
+			0.08,
+			totalPeriods,
+			BASE.periodsPerYear,
+			fixedPeriods,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(result.repayment).toBeCloseTo(expected, 2);
 	});
 
 	it('higher variable rate increases total interest vs same fixed rate', () => {
 		const allFixed = calculatePrincipalAndInterest(
-			BASE.principal, 0.06 / 12, totalPeriods, BASE.periodsPerYear,
-			0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.06 / 12,
+			totalPeriods,
+			BASE.periodsPerYear,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		const variable = calculateVariable(
-			BASE.principal, 0.06, 0.09, totalPeriods, BASE.periodsPerYear,
-			fixedPeriods, 0, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.06,
+			0.09,
+			totalPeriods,
+			BASE.periodsPerYear,
+			fixedPeriods,
+			0,
+			0,
+			BASE.propertyGrowthRate
 		);
 		expect(variable.totalInterest).toBeGreaterThan(allFixed.totalInterest);
 	});
 
 	it('balance never goes negative', () => {
 		const result = calculateVariable(
-			BASE.principal, 0.06, 0.08, totalPeriods, BASE.periodsPerYear,
-			fixedPeriods, 500, 0, BASE.propertyGrowthRate
+			BASE.principal,
+			0.06,
+			0.08,
+			totalPeriods,
+			BASE.periodsPerYear,
+			fixedPeriods,
+			500,
+			0,
+			BASE.propertyGrowthRate
 		);
 		result.breakdown.forEach(({ balance }) => {
 			expect(balance).toBeGreaterThanOrEqual(0);
@@ -210,9 +336,7 @@ describe('calculateVariable', () => {
 });
 
 describe('buildScheduleData', () => {
-	const result = calculatePrincipalAndInterest(
-		500_000, 0.06 / 12, 30 * 12, 12, 0, 0, 0.03
-	);
+	const result = calculatePrincipalAndInterest(500_000, 0.06 / 12, 30 * 12, 12, 0, 0, 0.03);
 
 	it('returns correct column count without property', () => {
 		const { columns } = buildScheduleData(result.breakdown, false);

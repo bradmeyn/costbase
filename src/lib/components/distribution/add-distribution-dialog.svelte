@@ -3,12 +3,12 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { addDistribution } from '$lib/remotes/distribution.remote';
+	import { addDistribution } from '#lib/remotes/distribution.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Plus } from '@lucide/svelte';
 	import { Checkbox } from '$ui/checkbox';
 	import Label from '$ui/label/label.svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency } from '#lib/utils.js';
 
 	let {
 		holdingId,

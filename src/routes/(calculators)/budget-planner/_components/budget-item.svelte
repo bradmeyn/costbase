@@ -1,13 +1,13 @@
 <script lang="ts">
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import { convertToFrequency, type BudgetItem } from '../budget.svelte';
-	import FrequencyInput from '$lib/components/inputs/frequency-select.svelte';
+	import FrequencyInput from '#lib/components/inputs/frequency-select.svelte';
 	import { Pencil, Trash } from '@lucide/svelte';
 	import { getBudgetState } from '../budget.svelte';
 	import Button from '$ui/button/button.svelte';
 	import { FREQUENCIES } from '$constants/frequencies';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import EditItemDialog from './edit-item-dialog.svelte';
 
 	let {

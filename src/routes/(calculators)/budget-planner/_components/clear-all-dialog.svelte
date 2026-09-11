@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 
 	let {
 		text = 'all budget items',

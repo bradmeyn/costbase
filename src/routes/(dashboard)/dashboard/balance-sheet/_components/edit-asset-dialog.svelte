@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { getAssets, updateAsset } from '$lib/remotes/balance-sheet.remote';
+	import { getAssets, updateAsset } from '#lib/remotes/balance-sheet.remote.js';
 	import * as Dialog from '$ui/dialog';
 	import * as Field from '$ui/field';
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import { Button } from '$ui/button';
 	import type { Asset } from '$db/schemas/budget';
-	import { OWNERS } from '$lib/constants/categories';
+	import { OWNERS } from '#lib/constants/categories.js';
 
 	const ASSET_CATEGORIES = ['cash', 'property', 'vehicle', 'other'] as const;
 

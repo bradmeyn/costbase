@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { getCalculatorState } from '../calculator.svelte';
-	import PercentageSlider from '$lib/components/inputs/percentage-slider.svelte';
-	import FrequencySelect from '$lib/components/inputs/frequency-select.svelte';
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
+	import PercentageSlider from '#lib/components/inputs/percentage-slider.svelte';
+	import FrequencySelect from '#lib/components/inputs/frequency-select.svelte';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
 	import Label from '$ui/label/label.svelte';
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import Explainer from '$ui/explainer.svelte';
 	import Slider from '$ui/slider/slider.svelte';
 

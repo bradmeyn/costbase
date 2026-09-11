@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { getInsurances, addInsurance } from '$lib/remotes/insurance.remote';
+	import { getInsurances, addInsurance } from '#lib/remotes/insurance.remote.js';
 	import * as Dialog from '$ui/dialog';
 	import * as Field from '$ui/field';
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import { Button } from '$ui/button';
-	import { OWNERS, INSURANCE_CATEGORIES } from '$lib/constants/categories';
-	import { FREQUENCIES, FREQUENCY_ENUM } from '$lib/constants/frequencies';
+	import { OWNERS, INSURANCE_CATEGORIES } from '#lib/constants/categories.js';
+	import { FREQUENCIES, FREQUENCY_ENUM } from '#lib/constants/frequencies.js';
 
 	let { open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void } = $props();
 </script>

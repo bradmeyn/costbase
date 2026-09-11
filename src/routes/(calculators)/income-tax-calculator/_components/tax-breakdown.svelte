@@ -1,8 +1,8 @@
 <script lang="ts">
-	import DoughnutChart from '$lib/components/charts/doughnut-chart.svelte';
+	import DoughnutChart from '#lib/components/charts/doughnut-chart.svelte';
 	import { getCalculatorState } from '../calculator.svelte';
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { COLOURS } from '$lib/constants/colours';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { COLOURS } from '#lib/constants/colours.js';
 
 	let calc = getCalculatorState();
 </script>

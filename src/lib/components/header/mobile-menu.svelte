@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { X } from '@lucide/svelte';
-	import { calculators } from '$lib/constants/calculators';
+	import { calculators } from '#lib/constants/calculators.js';
 
 	let activeUrl = $derived(page.url.pathname);
 	let user = $derived(page.data.user);
@@ -12,10 +12,16 @@
 			if (!node.contains(event.target as Node)) callback();
 		}
 		document.addEventListener('click', handleClick, true);
-		return { destroy() { document.removeEventListener('click', handleClick, true); } };
+		return {
+			destroy() {
+				document.removeEventListener('click', handleClick, true);
+			}
+		};
 	}
 
-	function closeMenu() { isOpen = false; }
+	function closeMenu() {
+		isOpen = false;
+	}
 </script>
 
 <div class="relative md:hidden block" use:clickOutside={closeMenu}>
@@ -36,23 +42,34 @@
 	</button>
 
 	{#if isOpen}
-		<div class="fixed top-0 left-0 right-0 bg-card shadow-lg z-50 max-h-screen overflow-y-auto border-b border-border">
+		<div
+			class="fixed top-0 left-0 right-0 bg-card shadow-lg z-50 max-h-screen overflow-y-auto border-b border-border"
+		>
 			<div class="flex items-center justify-between p-4 border-b border-border">
 				<span class="text-foreground text-xl font-medium tracking-tight">
-					Money<span class="text-transparent bg-clip-text bg-linear-to-b from-primary to-brand">Kit</span>
+					Money<span class="text-transparent bg-clip-text bg-linear-to-b from-primary to-brand"
+						>Kit</span
+					>
 				</span>
-				<button onclick={closeMenu} class="p-2 hover:bg-muted rounded-lg transition-colors" aria-label="Close menu">
+				<button
+					onclick={closeMenu}
+					class="p-2 hover:bg-muted rounded-lg transition-colors"
+					aria-label="Close menu"
+				>
 					<X class="size-5 text-muted-foreground" />
 				</button>
 			</div>
 
 			<nav class="p-4 space-y-1">
-				<p class="px-4 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Calculators</p>
+				<p class="px-4 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+					Calculators
+				</p>
 				{#each calculators as calculator}
 					<a
 						href={calculator.href}
 						onclick={closeMenu}
-						class="flex items-center rounded-lg px-4 py-2.5 text-sm transition-colors {activeUrl === calculator.href
+						class="flex items-center rounded-lg px-4 py-2.5 text-sm transition-colors {activeUrl ===
+						calculator.href
 							? 'text-foreground bg-muted font-medium'
 							: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 					>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { brandStyle } from '$lib/constants/subscription-brands';
+	import { brandStyle } from '#lib/constants/subscription-brands.js';
 
 	let { name, size = 36 }: { name: string; size?: number } = $props();
 	const style = $derived(brandStyle(name));

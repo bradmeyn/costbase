@@ -2,11 +2,11 @@
 	import * as Table from '$ui/table';
 	import Button from '$ui/button/button.svelte';
 	import { CircleCheck, Pencil, Trash2 } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency } from '#lib/utils.js';
 	import type { Distribution } from '$db/schemas/portfolio';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import { deleteDistribution } from '$lib/remotes/distribution.remote';
-	import { getHolding } from '$lib/remotes/holding.remote';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import { deleteDistribution } from '#lib/remotes/distribution.remote.js';
+	import { getHolding } from '#lib/remotes/holding.remote.js';
 	import EditDistributionDialog from './edit-distribution-dialog.svelte';
 
 	interface Props {

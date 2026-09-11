@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { EllipsisVertical, Pencil, Trash } from '@lucide/svelte';
 	import { type BudgetItem, getBudgetState } from '../budget.svelte';
 	import ClearAllDialog from './clear-all-dialog.svelte';

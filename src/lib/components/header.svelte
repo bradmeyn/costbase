@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { logoutUser } from '$lib/remotes/auth.remote';
-	import { calculators } from '$lib/constants/calculators';
+	import { logoutUser } from '#lib/remotes/auth.remote.js';
+	import { calculators } from '#lib/constants/calculators.js';
 	import * as DropdownMenu from '$ui/dropdown-menu';
 	import { ChevronDown } from '@lucide/svelte';
 

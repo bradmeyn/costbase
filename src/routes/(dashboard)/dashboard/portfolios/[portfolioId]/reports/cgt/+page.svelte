@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { getPortfolioTaxSummary } from '$lib/remotes/portfolio.remote';
+	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import Button from '$ui/button/button.svelte';
-	import { formatCurrency, downloadCSV } from '$lib/utils';
+	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import { Check, Download, Minus } from '@lucide/svelte';
 
 	const portfolioId = page.params.portfolioId!;
@@ -190,8 +190,8 @@
 	<span class="text-muted-foreground">/</span>
 	<a
 		href="/dashboard/portfolios/{portfolioId}"
-		class="text-sm text-muted-foreground hover:text-foreground"
-	>Holdings</a>
+		class="text-sm text-muted-foreground hover:text-foreground">Holdings</a
+	>
 </div>
 
 <div class="mb-6 flex items-center justify-between">
@@ -208,8 +208,7 @@
 		>
 		<a
 			href="/dashboard/portfolios/{portfolioId}/reports/cgt"
-			class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary"
-			>CGT Report</a
+			class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary">CGT Report</a
 		>
 	</div>
 	<Button onclick={generateCGTReport}>

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { FREQUENCIES } from '$lib/constants/frequencies';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import { FREQUENCIES } from '#lib/constants/frequencies.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import BudgetCardMenu from './budget-card-menu.svelte';
 	import { getBudgetState, calculateCategoryTotal, type BudgetItem } from '../budget.svelte';
 	import BudgetTable from './budget-table.svelte';

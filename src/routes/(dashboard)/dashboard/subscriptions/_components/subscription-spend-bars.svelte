@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { brandStyle } from '$lib/constants/subscription-brands';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { brandStyle } from '#lib/constants/subscription-brands.js';
 
 	let {
 		spend

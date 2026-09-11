@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatCurrency, parseCurrency } from '$lib/utils/formatters';
-	import Input from '$lib/components/ui/input/input.svelte';
+	import { formatCurrency, parseCurrency } from '#lib/utils/formatters.js';
+	import Input from '#lib/components/ui/input/input.svelte';
 
 	type Props = {
 		class?: string;

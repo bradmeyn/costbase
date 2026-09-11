@@ -1,11 +1,11 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { budgetItemTable } from '$db/schemas/budget';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { FREQUENCY_ENUM, type FrequencyType } from '$lib/constants/frequencies';
+import { FREQUENCY_ENUM, type FrequencyType } from '#lib/constants/frequencies.js';
 
 const itemSchema = z.object({
 	type: z.enum(['income', 'expense']),

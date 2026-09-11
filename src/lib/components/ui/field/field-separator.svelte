@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Separator } from "$lib/components/ui/separator/index.js";
-	import { cn } from "$lib/utils.js";
-	import type { HTMLAttributes } from "svelte/elements";
-	import type { Snippet } from "svelte";
+	import { Separator } from '#lib/components/ui/separator/index.js';
+	import { cn } from '#lib/utils.js';
+	import type { HTMLAttributes } from 'svelte/elements';
+	import type { Snippet } from 'svelte';
 
 	let {
 		class: className,
@@ -18,10 +18,7 @@
 <div
 	data-slot="field-separator"
 	data-content={hasContent}
-	class={cn(
-		"relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2",
-		className
-	)}
+	class={cn('relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2', className)}
 	{...restProps}
 >
 	<Separator class="absolute inset-0 top-1/2" />

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatCurrency, formatPercentage } from '$utils/formatters';
-	import SummaryCard from '$lib/components/summary-card.svelte';
+	import SummaryCard from '#lib/components/summary-card.svelte';
 
 	let {
 		totalAssets,

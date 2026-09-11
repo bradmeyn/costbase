@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { getSubscriptions, deleteSubscription } from '$lib/remotes/subscription.remote';
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { toMonthly } from '$lib/utils/cashflow';
+	import { getSubscriptions, deleteSubscription } from '#lib/remotes/subscription.remote.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { toMonthly } from '#lib/utils/cashflow.js';
 	import { Button } from '$ui/button';
 	import { Plus, CalendarClock } from '@lucide/svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import SummaryCard from '$lib/components/summary-card.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import SummaryCard from '#lib/components/summary-card.svelte';
 	import SubscriptionDialog from './_components/subscription-dialog.svelte';
 	import SubscriptionList from './_components/subscription-list.svelte';
 	import SubscriptionSpendBars from './_components/subscription-spend-bars.svelte';

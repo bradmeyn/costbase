@@ -1,11 +1,11 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { subscriptionTable } from '$db/schemas/budget';
 import { and, eq, lte, gte } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { FREQUENCY_ENUM, type FrequencyType } from '$lib/constants/frequencies';
+import { FREQUENCY_ENUM, type FrequencyType } from '#lib/constants/frequencies.js';
 
 export const getSubscriptions = query(async () => {
 	const user = await getCurrentUser();

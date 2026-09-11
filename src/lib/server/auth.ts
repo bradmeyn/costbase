@@ -3,7 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '$db';
 import { getRequestEvent } from '$app/server';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
-import { BETTER_AUTH_SECRET } from '$env/static/private';
+import { BETTER_AUTH_SECRET } from '$app/env/private';
 
 export const auth = betterAuth({
 	plugins: [sveltekitCookies(getRequestEvent)],

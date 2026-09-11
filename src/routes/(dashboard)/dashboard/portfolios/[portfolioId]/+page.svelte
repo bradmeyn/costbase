@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { getPortfolio, deletePortfolio } from '$lib/remotes/portfolio.remote';
-	import { deleteHolding } from '$lib/remotes/holding.remote';
+	import { getPortfolio, deletePortfolio } from '#lib/remotes/portfolio.remote.js';
+	import { deleteHolding } from '#lib/remotes/holding.remote.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import * as Table from '$ui/table';
 	import Button from '$ui/button/button.svelte';
-	import AddHoldingDialog from '$lib/components/holding/add-holding-dialog.svelte';
-	import EditHoldingDialog from '$lib/components/holding/edit-holding-dialog.svelte';
-	import EditPortfolioDialog from '$lib/components/portfolio/edit-portfolio-dialog.svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
-	import SummaryCard from '$lib/components/summary-card.svelte';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import AddHoldingDialog from '#lib/components/holding/add-holding-dialog.svelte';
+	import EditHoldingDialog from '#lib/components/holding/edit-holding-dialog.svelte';
+	import EditPortfolioDialog from '#lib/components/portfolio/edit-portfolio-dialog.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
+	import SummaryCard from '#lib/components/summary-card.svelte';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { EllipsisVertical, Pencil, Plus, Trash2 } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency } from '#lib/utils.js';
 
 	const portfolio = $derived(await getPortfolio(page.params.portfolioId!));
 	const portfolioId = page.params.portfolioId!;

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { getBudgetState, convertToFrequency, type BudgetItem } from '../budget.svelte';
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
-	import FrequencySelect from '$lib/components/inputs/frequency-select.svelte';
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { FREQUENCIES } from '$lib/constants/frequencies';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
+	import FrequencySelect from '#lib/components/inputs/frequency-select.svelte';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { FREQUENCIES } from '#lib/constants/frequencies.js';
 	import { Trash } from '@lucide/svelte';
 	import Button from '$ui/button/button.svelte';
 	import AddItemDialog from './add-item-dialog.svelte';
-	import * as Select from '$lib/components/ui/select';
+	import * as Select from '#lib/components/ui/select/index.js';
 
 	let {
 		items,

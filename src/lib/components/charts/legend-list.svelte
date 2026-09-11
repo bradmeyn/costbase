@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { COLOURS } from '$lib/constants/colours';
+	import { COLOURS } from '#lib/constants/colours.js';
 
 	let {
 		data,

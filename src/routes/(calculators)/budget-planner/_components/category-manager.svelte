@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
 
 	import Button from '$ui/button/button.svelte';
 	import Input from '$ui/input/input.svelte';

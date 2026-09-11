@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getCalculatorState } from '../calculator.svelte';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 
 	let calc = getCalculatorState();
 

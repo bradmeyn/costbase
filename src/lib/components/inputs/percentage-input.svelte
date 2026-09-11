@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatPercentage, parsePercentage } from '$lib/utils/formatters';
-	import Input from '$lib/components/ui/input/input.svelte';
+	import { formatPercentage, parsePercentage } from '#lib/utils/formatters.js';
+	import Input from '#lib/components/ui/input/input.svelte';
 
 	let {
 		value = $bindable(),

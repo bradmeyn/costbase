@@ -4,7 +4,7 @@
 	import * as NativeSelect from '$ui/native-select/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { addTransactions } from '$lib/remotes/transaction.remote';
+	import { addTransactions } from '#lib/remotes/transaction.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Plus, Trash, Upload } from '@lucide/svelte';
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatCurrency } from '$lib/utils';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
+	import { formatCurrency } from '#lib/utils.js';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import { ArrowUpRight } from '@lucide/svelte';
 
 	let {

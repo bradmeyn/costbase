@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { formatFrequency } from '$lib/utils/cashflow';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { formatFrequency } from '#lib/utils/cashflow.js';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import SubscriptionAvatar from './subscription-avatar.svelte';
 	import type { Subscription } from '$db/schemas/budget';
 

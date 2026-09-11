@@ -4,9 +4,13 @@
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import { Button } from '$ui/button';
-	import { addBudgetItem, updateBudgetItem, getBudgetItems } from '$lib/remotes/budget-item.remote';
-	import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, OWNERS } from '$lib/constants/categories';
-	import { FREQUENCIES, FREQUENCY_ENUM } from '$lib/constants/frequencies';
+	import {
+		addBudgetItem,
+		updateBudgetItem,
+		getBudgetItems
+	} from '#lib/remotes/budget-item.remote.js';
+	import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, OWNERS } from '#lib/constants/categories.js';
+	import { FREQUENCIES, FREQUENCY_ENUM } from '#lib/constants/frequencies.js';
 	import type { BudgetItem } from '$db/schemas/budget';
 
 	let {

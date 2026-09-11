@@ -1,4 +1,4 @@
-import { FREQUENCIES, type FrequencyType } from '$lib/constants/frequencies';
+import { FREQUENCIES, type FrequencyType } from '#lib/constants/frequencies.js';
 
 /** Convert an amount from one frequency to another (e.g. weekly -> monthly). */
 export function convertFrequency(amount: number, from: string, to: FrequencyType): number {

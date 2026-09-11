@@ -1,17 +1,17 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { holdingTable, portfolioTable } from '$db/schemas/portfolio';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import type { Holding, Investment, Transaction, Distribution } from '$db/schemas/portfolio';
-import { getStockPrice } from '$lib/server/prices';
+import { getStockPrice } from '#lib/server/prices.js';
 import {
 	calculateHoldingMetrics,
 	calculateUnrealisedMetrics
-} from '$lib/utils/holding-calculations';
-import { holdingSchema, updateHoldingSchema } from '$lib/schemas/portfolio';
+} from '#lib/utils/holding-calculations.js';
+import { holdingSchema, updateHoldingSchema } from '#lib/schemas/portfolio.js';
 
 interface HoldingWithBasicMetrics extends Holding {
 	units: number;

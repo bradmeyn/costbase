@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { getBudgetItems, deleteBudgetItem } from '$lib/remotes/budget-item.remote';
-	import { getSubscriptions } from '$lib/remotes/subscription.remote';
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { convertFrequency } from '$lib/utils/cashflow';
+	import { getBudgetItems, deleteBudgetItem } from '#lib/remotes/budget-item.remote.js';
+	import { getSubscriptions } from '#lib/remotes/subscription.remote.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { convertFrequency } from '#lib/utils/cashflow.js';
 	import * as Table from '$ui/table';
 	import * as Tabs from '$ui/tabs';
-	import TabSelect from '$lib/components/inputs/tab-select.svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
+	import TabSelect from '#lib/components/inputs/tab-select.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import BudgetItemDialog from './_components/budget-item-dialog.svelte';
 	import CashflowSection from './_components/cashflow-section.svelte';
-	import { OWNERS } from '$lib/constants/categories';
-	import { FREQUENCIES, type FrequencyType } from '$lib/constants/frequencies';
+	import { OWNERS } from '#lib/constants/categories.js';
+	import { FREQUENCIES, type FrequencyType } from '#lib/constants/frequencies.js';
 	import type { BudgetItem } from '$db/schemas/budget';
 
 	const [budgetItems, subscriptions] = $derived(
@@ -118,7 +118,9 @@
 							<Table.Cell class="text-muted-foreground">
 								{filteredSubscriptions.length} active
 							</Table.Cell>
-							<Table.Cell class="text-muted-foreground">{FREQUENCIES[displayPeriod].label}</Table.Cell>
+							<Table.Cell class="text-muted-foreground"
+								>{FREQUENCIES[displayPeriod].label}</Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums text-red-500">
 								{formatCurrency(periodSubscriptions)}
 							</Table.Cell>

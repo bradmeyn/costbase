@@ -2,10 +2,10 @@
 	import Button from '$ui/button/button.svelte';
 	import * as Dialog from '$ui/dialog/index.js';
 	import * as Field from '$ui/field';
-	import { updateHolding } from '$lib/remotes/holding.remote';
-	import { getHolding, getHoldings } from '$lib/remotes/holding.remote';
-	import { getPortfolio } from '$lib/remotes/portfolio.remote';
-	import { getInvestments } from '$lib/remotes/investment.remote';
+	import { updateHolding } from '#lib/remotes/holding.remote.js';
+	import { getHolding, getHoldings } from '#lib/remotes/holding.remote.js';
+	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
+	import { getInvestments } from '#lib/remotes/investment.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 
 	let {

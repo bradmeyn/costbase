@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { getLiabilities, updateLiability } from '$lib/remotes/balance-sheet.remote';
+	import { getLiabilities, updateLiability } from '#lib/remotes/balance-sheet.remote.js';
 	import * as Dialog from '$ui/dialog';
 	import * as Field from '$ui/field';
 	import * as NativeSelect from '$ui/native-select';
 	import Input from '$ui/input/input.svelte';
 	import { Button } from '$ui/button';
 	import type { Liability } from '$db/schemas/budget';
-	import { OWNERS } from '$lib/constants/categories';
+	import { OWNERS } from '#lib/constants/categories.js';
 
 	const LIABILITY_CATEGORIES = ['mortgage', 'personal_loan', 'credit_card', 'other'] as const;
 

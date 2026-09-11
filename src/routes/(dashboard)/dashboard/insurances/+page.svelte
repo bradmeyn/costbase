@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { getInsurances, deleteInsurance } from '$lib/remotes/insurance.remote';
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { toMonthly, formatFrequency } from '$lib/utils/cashflow';
+	import { getInsurances, deleteInsurance } from '#lib/remotes/insurance.remote.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { toMonthly, formatFrequency } from '#lib/utils/cashflow.js';
 	import * as Table from '$ui/table';
 	import { Button } from '$ui/button';
 	import { Plus, ShieldCheck } from '@lucide/svelte';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import AddInsuranceDialog from './_components/add-insurance-dialog.svelte';
 	import EditInsuranceDialog from './_components/edit-insurance-dialog.svelte';
 	import type { Insurance } from '$db/schemas/budget';

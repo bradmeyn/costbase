@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FREQUENCY_ENUM, type FrequencyType } from '$lib/constants/frequencies';
+import { FREQUENCY_ENUM, type FrequencyType } from '#lib/constants/frequencies.js';
 
 export const insuranceSchema = z.object({
 	name: z.string().min(1, 'Name is required'),

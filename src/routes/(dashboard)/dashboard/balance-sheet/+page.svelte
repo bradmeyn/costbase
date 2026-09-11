@@ -4,9 +4,9 @@
 		getLiabilities,
 		deleteAsset,
 		deleteLiability
-	} from '$lib/remotes/balance-sheet.remote';
-	import { getNetWorth } from '$lib/remotes/portfolio.remote';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
+	} from '#lib/remotes/balance-sheet.remote.js';
+	import { getNetWorth } from '#lib/remotes/portfolio.remote.js';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import AddAssetDialog from './_components/add-asset-dialog.svelte';
 	import EditAssetDialog from './_components/edit-asset-dialog.svelte';
 	import AddLiabilityDialog from './_components/add-liability-dialog.svelte';

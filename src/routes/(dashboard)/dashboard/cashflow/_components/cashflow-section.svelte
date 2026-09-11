@@ -2,10 +2,10 @@
 	import * as Table from '$ui/table';
 	import { Button } from '$ui/button';
 	import { Plus } from '@lucide/svelte';
-	import RowActionsMenu from '$lib/components/row-actions-menu.svelte';
-	import { formatCurrency } from '$lib/utils/formatters';
-	import { convertFrequency, formatFrequency } from '$lib/utils/cashflow';
-	import { FREQUENCIES, type FrequencyType } from '$lib/constants/frequencies';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
+	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { convertFrequency, formatFrequency } from '#lib/utils/cashflow.js';
+	import { FREQUENCIES, type FrequencyType } from '#lib/constants/frequencies.js';
 	import type { BudgetItem } from '$db/schemas/budget';
 	import type { Snippet } from 'svelte';
 
@@ -69,7 +69,9 @@
 						<Table.Cell class="text-muted-foreground">{item.category}</Table.Cell>
 						<Table.Cell>{formatFrequency(item.frequency)}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums {amountClass}">
-							{formatCurrency(convertFrequency(dollars(item.amount), item.frequency, displayPeriod))}
+							{formatCurrency(
+								convertFrequency(dollars(item.amount), item.frequency, displayPeriod)
+							)}
 						</Table.Cell>
 						<Table.Cell class="text-right">
 							<RowActionsMenu

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PieChart } from 'layerchart';
-	import { COLOURS } from '$lib/constants/colours';
+	import { COLOURS } from '#lib/constants/colours.js';
 	import { LC_TOOLTIP_PROPS } from '$constants/chart-config';
 
 	let {

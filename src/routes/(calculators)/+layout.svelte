@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Header from '$lib/components/header/header.svelte';
+	import Header from '#lib/components/header/header.svelte';
 	import { type Snippet } from 'svelte';
 
 	let { children }: { children: Snippet } = $props();

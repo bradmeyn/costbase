@@ -3,8 +3,8 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { updatePortfolio } from '$lib/remotes/portfolio.remote';
-	import { getPortfolio, getPortfolios } from '$lib/remotes/portfolio.remote';
+	import { updatePortfolio } from '#lib/remotes/portfolio.remote.js';
+	import { getPortfolio, getPortfolios } from '#lib/remotes/portfolio.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 
 	let {

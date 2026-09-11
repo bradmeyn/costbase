@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { getNetWorth } from '$lib/remotes/portfolio.remote';
-	import { getUpcomingSubscriptions } from '$lib/remotes/subscription.remote';
+	import { getNetWorth } from '#lib/remotes/portfolio.remote.js';
+	import { getUpcomingSubscriptions } from '#lib/remotes/subscription.remote.js';
 
-	import { formatCurrency } from '$lib/utils/formatters';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import { TrendingUp, TrendingDown, CalendarClock, ChevronRight } from '@lucide/svelte';
 
 	const user = $derived(page.data.user);
