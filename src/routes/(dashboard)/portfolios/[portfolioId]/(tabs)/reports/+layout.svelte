@@ -15,7 +15,6 @@
 				portfolioId
 			}),
 			label: 'Capital gains',
-			/** Reports keyed to a financial year show the year selector. */
 			byYear: true
 		},
 		{
@@ -23,6 +22,15 @@
 				portfolioId
 			}),
 			label: 'Unrealised gains',
+			byYear: false
+		},
+		{
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/cgt-estimator', {
+				portfolioId
+			}),
+			label: 'CGT estimator',
+			// Always the current year: it asks what selling more would add to what you
+			// have already realised, so a past year has nothing to estimate.
 			byYear: false
 		}
 	]);
@@ -71,10 +79,12 @@
 				{/each}
 			</div>
 		{/if}
-		<Button variant="ghost" onclick={() => window.print()}>
-			<Printer class="size-4" />
-			Export PDF
-		</Button>
+		{#if active}
+			<Button variant="ghost" onclick={() => window.print()}>
+				<Printer class="size-4" />
+				Export PDF
+			</Button>
+		{/if}
 	</div>
 </div>
 

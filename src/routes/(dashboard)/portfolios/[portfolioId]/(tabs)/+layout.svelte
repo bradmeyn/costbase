@@ -2,60 +2,58 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
-	import { ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft, FileText } from '@lucide/svelte';
 
 	let { children } = $props();
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const portfolio = $derived(await getPortfolio(portfolioId));
 
-	const tabs = $derived([
+	/* Holdings is not listed: /portfolios/[id] is the holdings view, so a tab
+	   pointing at the page you are already on would be noise. */
+	const sections = $derived([
 		{
-			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId }),
-			label: 'Holdings',
-			match: (p: string) =>
-				p === resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })
-		},
-		{
-			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/capital-gains', {
-				portfolioId
-			}),
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports', { portfolioId }),
 			label: 'Reports',
-			match: (p: string) => p.includes('/reports/')
-		},
-		{
-			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/cgt-estimator', { portfolioId }),
-			label: 'CGT Estimator',
-			match: (p: string) => p.endsWith('/cgt-estimator')
+			icon: FileText,
+			match: (p: string) => p.includes('/reports')
 		}
 	]);
 
 	const current = $derived(page.url.pathname.replace(/\/$/, ''));
+	const onHoldings = $derived(!sections.some((s) => s.match(current)));
 </script>
 
-<!-- Chrome lives here so every tab gets the same header, back link and tabs. -->
 <div class="print:hidden">
 	<a
-		href={resolve('/(dashboard)/portfolios')}
+		href={onHoldings
+			? resolve('/(dashboard)/portfolios')
+			: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })}
 		class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
 	>
 		<ArrowLeft class="size-4" />
-		Back to Portfolios
+		{onHoldings ? 'Back to Portfolios' : `Back to ${portfolio.name}`}
 	</a>
 
-	<h1 class="heading-primary mt-4">{portfolio.name}</h1>
+	<div class="mt-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+		<h1 class="heading-primary mb-0">{portfolio.name}</h1>
 
-	<div class="mb-5 flex gap-1 border-b">
-		{#each tabs as tab (tab.href)}
-			<a
-				href={tab.href}
-				class="border-b-2 px-3 py-2 text-sm font-medium transition-colors {tab.match(current)
-					? 'border-primary text-primary'
-					: 'border-transparent text-muted-foreground hover:text-foreground'}"
-			>
-				{tab.label}
-			</a>
-		{/each}
+		<div class="flex gap-1">
+			{#each sections as section (section.href)}
+				{@const Icon = section.icon}
+				<a
+					href={section.href}
+					class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors {section.match(
+						current
+					)
+						? 'bg-primary/15 text-foreground'
+						: 'text-muted-foreground hover:text-foreground'}"
+				>
+					<Icon class="size-4" />
+					{section.label}
+				</a>
+			{/each}
+		</div>
 	</div>
 </div>
 
