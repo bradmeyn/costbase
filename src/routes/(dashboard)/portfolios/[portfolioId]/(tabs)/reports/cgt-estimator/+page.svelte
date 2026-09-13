@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { registerCsv } from '#lib/report-export.svelte.js';
+	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
@@ -182,18 +182,15 @@
 		downloadCSV(csv, `CGT-Report-${taxSummary.currentFY.label}`);
 	}
 
-	registerCsv(generateCGTReport, 'cgt-estimator');
+	registerReport(() => ({
+		title: 'CGT estimator',
+		subtitle: `${taxSummary.currentFY.label} · what you have realised so far, and what selling more would add`,
+		csv: generateCGTReport
+	}));
 </script>
 
 <!-- Short-Term Gains Table -->
 <div class="mb-8">
-	<div class="mb-5">
-		<h1 class="text-2xl font-semibold tracking-tight">CGT estimator</h1>
-		<p class="mt-1 text-[13px] text-muted-foreground">
-			{taxSummary.currentFY.label} · what you have realised so far, and what selling more would add
-		</p>
-	</div>
-
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-base font-semibold">Short-Term Gains</h2>
 		<div class="text-right">

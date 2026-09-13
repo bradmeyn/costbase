@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import * as Table from '$ui/table';
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
@@ -71,6 +72,11 @@
 	/** Sum one Part A label across every statement for the year. */
 	const labelTotal = (field: string) =>
 		fyStatements.reduce((sum, s) => sum + Number(s[field as keyof typeof s] ?? 0), 0);
+
+	registerReport(() => ({
+		title: 'Capital gains report',
+		subtitle: `${formatDate(fyStart)} to ${formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments`
+	}));
 </script>
 
 <svelte:head>
@@ -83,15 +89,6 @@
 	<p class="text-[13px]">
 		{formatDate(fyStart)} to {formatDate(fyEnd)} · prepared {formatDate(new Date())}
 	</p>
-</div>
-
-<div class="mb-5 flex flex-wrap items-end justify-between gap-3 print:hidden">
-	<div>
-		<h1 class="text-2xl font-semibold tracking-tight">Capital gains report</h1>
-		<p class="mt-1 text-[13px] text-muted-foreground">
-			{formatDate(fyStart)} to {formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments
-		</p>
-	</div>
 </div>
 
 <!-- Headline labels -->
