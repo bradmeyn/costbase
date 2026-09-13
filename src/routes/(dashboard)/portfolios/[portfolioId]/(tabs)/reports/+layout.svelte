@@ -52,21 +52,7 @@
 	const selectedFy = $derived(Number(page.url.searchParams.get('fy')) || years[0] || null);
 </script>
 
-<div class="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-	<div class="flex gap-1">
-		{#each reports as report (report.href)}
-			<a
-				href={report.href}
-				class="rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors {current ===
-				report.href
-					? 'bg-primary/15 text-foreground'
-					: 'text-muted-foreground hover:text-foreground'}"
-			>
-				{report.label}
-			</a>
-		{/each}
-	</div>
-
+<div class="mb-4 flex flex-wrap items-center justify-end gap-3 print:hidden">
 	<div class="flex items-center gap-2">
 		{#if active?.byYear && years.length > 0}
 			<NativeSelect.Root
