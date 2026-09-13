@@ -1,17 +1,14 @@
 import { command, form } from '$app/server';
 import { z } from 'zod';
 import { db } from '$db';
-import {
-	documentTable,
-	holdingTable,
-	portfolioTable,
-	transactionTable
-} from '$db/schemas/portfolio';
+import { documentTable, portfolioTable, transactionTable } from '$db/schemas/portfolio';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { parseContractNote } from '#lib/server/parse-contract-note.js';
 import { storeDocument } from '#lib/server/documents.js';
+import { getHolding } from '#lib/remotes/holding.remote.js';
+import { getAmitStatements } from '#lib/remotes/amit.remote.js';
 
 /** The portfolio's holdings, keyed by ticker, for matching a parsed note. */
 async function ownedPortfolio(portfolioId: string) {
@@ -122,7 +119,7 @@ export const importContractNote = form(
 );
 
 /** Attach a PDF to an existing transaction, distribution or AMMA statement. */
-export const attachDocument = form(
+export const attachDocument = command(
 	z.object({
 		owner: z.enum(['transaction', 'distribution', 'amitStatement']),
 		ownerId: z.string().min(1),
@@ -133,34 +130,24 @@ export const attachDocument = form(
 		if (!user) error(401, 'Unauthorized');
 
 		// Confirm the row belongs to this user before writing anything to disk.
-		const holdingFor =
+		const record =
 			owner === 'transaction'
-				? (
-						await db.query.transactionTable.findFirst({
-							where: eq(transactionTable.id, ownerId),
+				? await db.query.transactionTable.findFirst({
+						where: eq(transactionTable.id, ownerId),
+						with: { holding: { with: { portfolio: true } } }
+					})
+				: owner === 'distribution'
+					? await db.query.distributionTable.findFirst({
+							where: (d, { eq: e }) => e(d.id, ownerId),
 							with: { holding: { with: { portfolio: true } } }
 						})
-					)?.holding
-				: owner === 'distribution'
-					? (
-							await db.query.distributionTable.findFirst({
-								where: (d, { eq: e }) => e(d.id, ownerId),
-								with: { holding: { with: { portfolio: true } } }
-							})
-						)?.holding
-					: (
-							await db.query.amitStatementTable.findFirst({
-								where: (a, { eq: e }) => e(a.id, ownerId),
-								with: { holding: { with: { portfolio: true } } }
-							})
-						)?.holding;
+					: await db.query.amitStatementTable.findFirst({
+							where: (a, { eq: e }) => e(a.id, ownerId),
+							with: { holding: { with: { portfolio: true } } }
+						});
 
-		if (!holdingFor) error(404, 'Record not found');
-		const owning = await db.query.holdingTable.findFirst({
-			where: eq(holdingTable.id, holdingFor.id),
-			with: { portfolio: true }
-		});
-		if (owning?.portfolio.userId !== user.id) error(403, 'Forbidden');
+		if (!record) error(404, 'Record not found');
+		if (record.holding.portfolio.userId !== user.id) error(403, 'Forbidden');
 
 		const stored = await storeDocument(file);
 		await db.insert(documentTable).values({
@@ -170,6 +157,42 @@ export const attachDocument = form(
 			...stored
 		});
 
+		await Promise.all([
+			getHolding(record.holdingId).refresh(),
+			owner === 'amitStatement' ? getAmitStatements(record.holdingId).refresh() : Promise.resolve()
+		]);
+
 		return { success: true };
 	}
 );
+
+/** Remove an attachment. The file stays on disk; only the link is dropped. */
+export const detachDocument = command(z.string().min(1), async (documentId) => {
+	const user = await getCurrentUser();
+	if (!user) error(401, 'Unauthorized');
+
+	const document = await db.query.documentTable.findFirst({
+		where: eq(documentTable.id, documentId),
+		with: {
+			transaction: { with: { holding: { with: { portfolio: true } } } },
+			distribution: { with: { holding: { with: { portfolio: true } } } },
+			amitStatement: { with: { holding: { with: { portfolio: true } } } }
+		}
+	});
+	if (!document) error(404, 'Document not found');
+
+	const holding =
+		document.transaction?.holding ??
+		document.distribution?.holding ??
+		document.amitStatement?.holding;
+	if (!holding || holding.portfolio.userId !== user.id) error(403, 'Forbidden');
+
+	await db.delete(documentTable).where(eq(documentTable.id, documentId));
+
+	await Promise.all([
+		getHolding(holding.id).refresh(),
+		document.amitStatementId ? getAmitStatements(holding.id).refresh() : Promise.resolve()
+	]);
+
+	return { success: true };
+});

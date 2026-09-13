@@ -42,6 +42,7 @@ export const getAmitStatements = query(z.string(), async (holdingId: string) => 
 
 	return db.query.amitStatementTable.findMany({
 		where: eq(amitStatementTable.holdingId, holdingId),
+		with: { documents: true },
 		orderBy: (s, { desc }) => [desc(s.financialYear)]
 	});
 });

@@ -3,14 +3,15 @@
 	import Button from '$ui/button/button.svelte';
 	import { CircleCheck, Pencil, Trash2 } from '@lucide/svelte';
 	import { formatCurrency } from '#lib/utils.js';
-	import type { Distribution } from '$db/schemas/portfolio';
+	import type { Distribution, Document } from '$db/schemas/portfolio';
+	import DocumentAttachment from '#lib/components/document-attachment.svelte';
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import { deleteDistribution } from '#lib/remotes/distribution.remote.js';
 	import { getHolding } from '#lib/remotes/holding.remote.js';
 	import EditDistributionDialog from './edit-distribution-dialog.svelte';
 
 	interface Props {
-		distribution: Distribution;
+		distribution: Distribution & { documents?: Document[] };
 		holdingId: string;
 	}
 
@@ -52,7 +53,12 @@
 		{/if}
 	</Table.Cell>
 	<Table.Cell class="text-right">
-		<div class="flex justify-end gap-1">
+		<div class="flex items-center justify-end gap-1">
+			<DocumentAttachment
+				owner="distribution"
+				ownerId={distribution.id}
+				documents={distribution.documents}
+			/>
 			<Button variant="ghost" size="icon" onclick={() => (dialog = 'edit')}>
 				<Pencil class="size-4" />
 			</Button>

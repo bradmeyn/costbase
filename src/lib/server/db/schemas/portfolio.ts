@@ -225,24 +225,47 @@ export const holdingRelations = relations(holdingTable, ({ many, one }) => ({
 	amitStatements: many(amitStatementTable)
 }));
 
-export const amitStatementRelations = relations(amitStatementTable, ({ one }) => ({
+export const amitStatementRelations = relations(amitStatementTable, ({ one, many }) => ({
 	holding: one(holdingTable, {
 		fields: [amitStatementTable.holdingId],
 		references: [holdingTable.id]
-	})
+	}),
+	documents: many(documentTable)
 }));
 
-export const transactionRelations = relations(transactionTable, ({ one }) => ({
+export const transactionRelations = relations(transactionTable, ({ one, many }) => ({
 	holding: one(holdingTable, {
 		fields: [transactionTable.holdingId],
 		references: [holdingTable.id]
-	})
+	}),
+	documents: many(documentTable)
 }));
 
-export const distributionRelations = relations(distributionTable, ({ one }) => ({
+export const distributionRelations = relations(distributionTable, ({ one, many }) => ({
 	holding: one(holdingTable, {
 		fields: [distributionTable.holdingId],
 		references: [holdingTable.id]
+	}),
+	documents: many(documentTable)
+}));
+
+/*
+  A document hangs off exactly one of the three record types; the other two columns
+  are null. Drizzle needs all three declared so `with: { documents: true }` works
+  from whichever side is being read.
+*/
+export const documentRelations = relations(documentTable, ({ one }) => ({
+	transaction: one(transactionTable, {
+		fields: [documentTable.transactionId],
+		references: [transactionTable.id]
+	}),
+	distribution: one(distributionTable, {
+		fields: [documentTable.distributionId],
+		references: [distributionTable.id]
+	}),
+	amitStatement: one(amitStatementTable, {
+		fields: [documentTable.amitStatementId],
+		references: [amitStatementTable.id]
 	})
 }));
 

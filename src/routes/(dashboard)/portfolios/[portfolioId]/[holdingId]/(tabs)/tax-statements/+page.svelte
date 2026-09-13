@@ -6,6 +6,7 @@
 	import { getAmitStatements } from '#lib/remotes/amit.remote.js';
 	import { netCostBaseAmount } from '#lib/utils/amit-calculations.js';
 	import { formatCurrency } from '#lib/utils.js';
+	import DocumentAttachment from '#lib/components/document-attachment.svelte';
 
 	const holdingId = $derived(page.params.holdingId!);
 	const portfolioId = $derived(page.params.portfolioId!);
@@ -55,14 +56,21 @@
 							{adj > 0 ? '+' : ''}{formatCurrency(adj)}
 						</Table.Cell>
 						<Table.Cell class="text-right">
-							<Button
-								variant="ghost"
-								size="sm"
-								href={resolve(
-									'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
-									{ portfolioId, holdingId, financialYear: String(fy) }
-								)}>Edit</Button
-							>
+							<div class="flex items-center justify-end gap-1">
+								<DocumentAttachment
+									owner="amitStatement"
+									ownerId={stmt.id}
+									documents={stmt.documents}
+								/>
+								<Button
+									variant="ghost"
+									size="sm"
+									href={resolve(
+										'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
+										{ portfolioId, holdingId, financialYear: String(fy) }
+									)}>Edit</Button
+								>
+							</div>
 						</Table.Cell>
 					{:else}
 						<Table.Cell colspan={3} class="text-muted-foreground">Not entered</Table.Cell>

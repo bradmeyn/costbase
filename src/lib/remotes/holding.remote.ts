@@ -5,7 +5,13 @@ import { db } from '$db';
 import { holdingTable, portfolioTable } from '$db/schemas/portfolio';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import type { Holding, Investment, Transaction, Distribution } from '$db/schemas/portfolio';
+import type {
+	Holding,
+	Investment,
+	Transaction,
+	Distribution,
+	Document
+} from '$db/schemas/portfolio';
 import { getStockPrice } from '#lib/server/prices.js';
 import {
 	calculateHoldingMetrics,
@@ -33,8 +39,8 @@ interface HoldingWithMetrics extends Holding {
 	name: string;
 	code: string;
 	investment: Investment;
-	transactions: Transaction[];
-	distributions: Distribution[];
+	transactions: (Transaction & { documents: Document[] })[];
+	distributions: (Distribution & { documents: Document[] })[];
 }
 
 export const getHoldings = query(z.string(), async (portfolioId: string) => {
@@ -79,8 +85,8 @@ export const getHolding = query(z.string(), async (id: string) => {
 		with: {
 			portfolio: true,
 			investment: true,
-			transactions: true,
-			distributions: true
+			transactions: { with: { documents: true } },
+			distributions: { with: { documents: true } }
 		}
 	});
 
