@@ -23,7 +23,7 @@
 			variant="ghost"
 			href={resolve('/(dashboard)/portfolios/[portfolioId]/import', { portfolioId })}
 		>
-			Import contract note
+			Import a document
 		</Button>
 		<Button onclick={() => (addTransactionsOpen = true)}>Add Transactions</Button>
 	</div>

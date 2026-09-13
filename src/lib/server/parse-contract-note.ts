@@ -1,12 +1,11 @@
 import { getDocumentProxy } from 'unpdf';
+import { extractRows } from './pdf-rows.js';
 
 /*
   Parses a Stake ASX trade confirmation.
 
-  The PDF is absolutely positioned, so reading the extracted text in stream order
-  interleaves labels and values ("SELLBROKERAGE & GST"). Instead the text items are
-  regrouped into visual rows by their y coordinate and ordered by x, which restores
-  the "LABEL  value" pairs the document actually shows.
+  Rows come back as the document lays them out (see extractRows), which restores the
+  "LABEL  value" pairs from a stream that would otherwise interleave them.
 
   Nothing here is trusted: every field is returned alongside warnings, and the caller
   presents it for confirmation before anything is written.
@@ -30,33 +29,6 @@ export interface ParsedContractNote {
 	confirmationNumber: string | null;
 	/** Anything that did not parse, or arithmetic that did not reconcile. */
 	warnings: string[];
-}
-
-/** Rebuild visual rows from absolutely positioned text items. */
-async function extractRows(bytes: Uint8Array): Promise<string[][]> {
-	const pdf = await getDocumentProxy(bytes);
-	const rows = new Map<number, { x: number; s: string }[]>();
-
-	for (let n = 1; n <= pdf.numPages; n++) {
-		const content = await (await pdf.getPage(n)).getTextContent();
-		for (const item of content.items as { str: string; transform: number[] }[]) {
-			if (!item.str.trim()) continue;
-			const y = Math.round(item.transform[5]);
-			// Items on the same visual line can differ by a point or two.
-			const key = [...rows.keys()].find((k) => Math.abs(k - y) <= 3) ?? y;
-			if (!rows.has(key)) rows.set(key, []);
-			rows.get(key)!.push({ x: item.transform[4], s: item.str.trim() });
-		}
-	}
-
-	return [...rows.entries()]
-		.sort((a, b) => b[0] - a[0])
-		.map(([, items]) =>
-			items
-				.sort((a, b) => a.x - b.x)
-				.map((i) => i.s)
-				.filter(Boolean)
-		);
 }
 
 /** The cell following a label within the same row. */
@@ -84,7 +56,7 @@ function toIsoDate(raw: string | null): string | null {
 }
 
 export async function parseContractNote(bytes: Uint8Array): Promise<ParsedContractNote> {
-	return fieldsFromRows(await extractRows(bytes));
+	return fieldsFromRows(await extractRows(await getDocumentProxy(bytes)));
 }
 
 /** Exported separately so the field mapping can be tested without a PDF fixture. */
