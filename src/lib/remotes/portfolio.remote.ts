@@ -31,43 +31,6 @@ function calculateHoldingMetrics(transactions: Transaction[]) {
 	return { units: totalUnits, averagePrice, costBase };
 }
 
-export const getNetWorth = query(async () => {
-	const user = await getCurrentUser();
-	if (!user) error(401, 'Unauthorized');
-
-	const portfolios = await db.query.portfolioTable.findMany({
-		where: eq(portfolioTable.userId, user.id),
-		with: {
-			holdings: {
-				with: { investment: true, transactions: true }
-			}
-		}
-	});
-
-	const allCodes = [
-		...new Set(portfolios.flatMap((p) => p.holdings.map((h) => h.investment.code)))
-	];
-	const prices: Map<string, number | null> =
-		allCodes.length > 0 ? await getStockPrices(allCodes) : new Map();
-
-	let totalValue = 0;
-	let totalCostBase = 0;
-
-	for (const portfolio of portfolios) {
-		for (const holding of portfolio.holdings) {
-			const { units, averagePrice, costBase } = calculateHoldingMetrics(holding.transactions);
-			const currentPrice = prices.get(holding.investment.code) ?? averagePrice;
-			totalValue += units * currentPrice;
-			totalCostBase += costBase;
-		}
-	}
-
-	const totalGain = totalValue - totalCostBase;
-	const totalGainPercent = totalCostBase > 0 ? (totalGain / totalCostBase) * 100 : 0;
-
-	return { totalValue, totalCostBase, totalGain, totalGainPercent };
-});
-
 export const getPortfolios = query(async () => {
 	const user = await getCurrentUser();
 	if (!user) error(401, 'Unauthorized');
