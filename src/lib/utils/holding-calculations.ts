@@ -35,7 +35,10 @@ export function calculateHoldingMetrics(transactions: Transaction[]): HoldingMet
 		if (transaction.type === 'buy' || transaction.type === 'reinvestment') {
 			totalUnits += transaction.quantity;
 			// Brokerage on acquisition forms part of the cost base.
-			totalCost += transaction.quantity * transaction.pricePerUnit + transaction.brokerage;
+			// The contract note's stated value is authoritative where present.
+			totalCost +=
+				(transaction.value ?? transaction.quantity * transaction.pricePerUnit) +
+				transaction.brokerage;
 		} else if (transaction.type === 'sell') {
 			// Average cost: the disposed units take their proportional share of the cost.
 			if (totalUnits > 0) {

@@ -59,6 +59,7 @@
 		"layerchart": "^2.5.0",
 		"postgres": "^3.4.7",
 		"simple-icons": "^16.30.0",
+		"unpdf": "^1.8.1",
 		"uuid": "^14.0.2",
 		"zod": "^4.6.2"
 	},

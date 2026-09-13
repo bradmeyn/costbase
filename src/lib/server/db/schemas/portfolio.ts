@@ -40,6 +40,13 @@ export const transactionTable = pgTable('transaction', {
 	quantity: integer('quantity').notNull(),
 	pricePerUnit: integer('price_per_unit').notNull(),
 	brokerage: integer('brokerage').notNull().default(0), // in cents
+	/**
+	 * Total consideration in cents, as stated on the contract note. Authoritative where
+	 * present: broker prices carry four decimals and quantity * pricePerUnit does not
+	 * reproduce the stated value. Null for hand-entered rows, which fall back to
+	 * quantity * pricePerUnit.
+	 */
+	value: integer('value'),
 	transactionDate: timestamp('transaction_date').notNull(),
 	type: text('type').notNull(), // 'buy', 'sell', or 'reinvestment'
 	...timesStamps
@@ -160,6 +167,32 @@ export const amitStatementTable = pgTable(
 	(t) => [unique('amit_statement_holding_year').on(t.holdingId, t.financialYear)]
 );
 
+/*
+  An attached source document (contract note, distribution or AMMA statement).
+  Exactly one of the three owner columns is set; separate nullable foreign keys are
+  used rather than a polymorphic entity_type/entity_id pair so that referential
+  integrity and cascade deletes are enforced by the database.
+*/
+export const documentTable = pgTable('document', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	transactionId: uuid('transaction_id').references(() => transactionTable.id, {
+		onDelete: 'cascade'
+	}),
+	distributionId: uuid('distribution_id').references(() => distributionTable.id, {
+		onDelete: 'cascade'
+	}),
+	amitStatementId: uuid('amit_statement_id').references(() => amitStatementTable.id, {
+		onDelete: 'cascade'
+	}),
+	/** Original filename as uploaded. */
+	filename: text('filename').notNull(),
+	/** Path relative to the configured document store root. */
+	path: text('path').notNull(),
+	sizeBytes: integer('size_bytes').notNull(),
+	contentType: text('content_type').notNull().default('application/pdf'),
+	...timesStamps
+});
+
 export const portfolioRelations = relations(portfolioTable, ({ many }) => ({
 	holdings: many(holdingTable)
 }));
@@ -204,3 +237,4 @@ export type Investment = typeof investmentTable.$inferSelect;
 export type Distribution = typeof distributionTable.$inferSelect;
 export type Holding = typeof holdingTable.$inferSelect;
 export type AmitStatement = typeof amitStatementTable.$inferSelect;
+export type Document = typeof documentTable.$inferSelect;
