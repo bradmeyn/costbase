@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { getPortfolioUnrealisedGains } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
@@ -56,18 +55,6 @@
 		downloadCSV(csv, 'Unrealised-Gains-Report');
 	}
 </script>
-
-<div class="mb-4 flex items-center gap-3">
-	<a
-		href={resolve('/(dashboard)/portfolios')}
-		class="text-sm text-muted-foreground hover:text-foreground">← Portfolios</a
-	>
-	<span class="text-muted-foreground">/</span>
-	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })}
-		class="text-sm text-muted-foreground hover:text-foreground">Holdings</a
-	>
-</div>
 
 <div class="mb-6 flex items-center justify-between">
 	<Button onclick={generateUnrealisedGainsReport}>

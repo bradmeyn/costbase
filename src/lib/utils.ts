@@ -5,6 +5,13 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+/**
+ * Format an amount held in CENTS, as the database stores money.
+ *
+ * Not to be confused with formatCurrency in utils/formatters.ts, which takes
+ * DOLLARS and is for the calculators. Passing cents to that one renders every
+ * figure a hundred times too large.
+ */
 export function formatCurrency(amount: number, currency: string = 'USD'): string {
 	return new Intl.NumberFormat('en-US', {
 		style: 'currency',

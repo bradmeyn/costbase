@@ -4,7 +4,7 @@
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
-	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { formatCurrency } from '#lib/utils.js';
 	import {
 		netCostBaseAmount,
 		financialYearStart,

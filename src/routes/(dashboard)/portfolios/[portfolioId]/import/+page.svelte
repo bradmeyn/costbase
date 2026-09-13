@@ -9,7 +9,7 @@
 	import { ArrowLeft, TriangleAlert, FileText } from '@lucide/svelte';
 	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 	import { previewContractNote, importContractNote } from '#lib/remotes/import.remote.js';
-	import { formatCurrency } from '#lib/utils/formatters.js';
+	import { formatCurrency } from '#lib/utils.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const portfolio = $derived(await getPortfolio(portfolioId));
