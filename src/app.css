@@ -1,60 +1,89 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Class-based dark variant. `<html>` carries `.dark` permanently — Costbase is dark-only,
+   but registry components ship `dark:` utilities that need the class to resolve. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Costbase is a ledger, not a marketing dashboard.
+  Ground is a cool blue-slate ink; elevation comes from surface lightness, never shadow.
+  Sky is the only interactive colour. Orange is the secondary accent, used deliberately
+  (chart series, selected state) — never as generic button chrome.
+  Gain/loss are data colours, reserved exclusively for signed values, and held at
+  matched perceived weight so a losing day doesn't shout louder than a winning one.
+*/
 :root {
-	--radius: 0.625rem;
-	--background: oklch(98.5% 0.002 240);
-	--foreground: oklch(20% 0.01 260);
-	--card: oklch(100% 0 0);
-	--card-foreground: oklch(22% 0.01 260);
-	--popover: oklch(100% 0 0);
-	--popover-foreground: oklch(22% 0.01 260);
-	--primary: oklch(38.524% 0.11064 255.687);
-	--primary-foreground: oklch(98% 0 0);
-	--secondary: oklch(95% 0.003 240);
-	--secondary-foreground: oklch(30% 0.01 260);
-	--muted: oklch(93% 0.003 240);
-	--muted-foreground: oklch(52% 0.008 240);
-	--accent: oklch(94% 0.005 240);
-	--accent-foreground: oklch(25% 0.01 260);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(91% 0.004 240);
-	--input: oklch(91% 0.004 240);
-	--ring: oklch(70% 0.1 255);
-	--chart-1: oklch(38.524% 0.11064 255.687);
-	--chart-2: oklch(58% 0.15 195);
-	--chart-3: oklch(52% 0.18 280);
-	--chart-4: oklch(65% 0.15 230);
-	--chart-5: oklch(45% 0.2 265);
-	--chart-6: oklch(60% 0.12 210);
-	--chart-7: oklch(55% 0.2 290);
-	--chart-8: oklch(70% 0.12 240);
-	--chart-9: oklch(42% 0.16 270);
-	--chart-10: oklch(62% 0.18 220);
-	--surface-100: oklch(100% 0 0);
-	--surface-200: oklch(93% 0.003 240);
-	--surface-300: oklch(91% 0.004 240);
-	--surface-content: oklch(28% 0.01 260);
-	--sidebar: oklch(99% 0.001 260);
-	--sidebar-foreground: oklch(30% 0.01 260);
-	--sidebar-primary: oklch(38.524% 0.11064 255.687);
-	--sidebar-primary-foreground: oklch(98% 0 0);
-	--sidebar-accent: oklch(95% 0.01 240);
-	--sidebar-accent-foreground: oklch(30% 0.018 250);
-	--sidebar-border: oklch(90% 0.01 240);
-	--sidebar-ring: oklch(70% 0.1 255);
-	--brand: oklch(62% 0.18 255);
-	--primary-light: oklch(62% 0.16 255);
-	--primary-dark: oklch(26% 0.12 255);
-	--font-serif-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', serif;
-	--font-ui: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
+	--radius: 0.375rem;
+
+	/* Ground and surfaces — four steps, lightest is furthest forward */
+	--background: oklch(17% 0.012 250);
+	--card: oklch(21% 0.014 250);
+	--popover: oklch(23% 0.015 250);
+	--secondary: oklch(25% 0.014 250);
+	--muted: oklch(24% 0.013 250);
+	--accent: oklch(27% 0.016 250);
+	--border: oklch(30% 0.016 250);
+	--input: oklch(28% 0.015 250);
+
+	/* Text */
+	--foreground: oklch(93% 0.006 250);
+	--card-foreground: oklch(93% 0.006 250);
+	--popover-foreground: oklch(93% 0.006 250);
+	--secondary-foreground: oklch(93% 0.006 250);
+	--accent-foreground: oklch(95% 0.005 250);
+	--muted-foreground: oklch(66% 0.018 250);
+
+	/* Sky — the single interactive colour */
+	--primary: oklch(71% 0.145 234);
+	--primary-foreground: oklch(17% 0.02 250);
+	--ring: oklch(71% 0.145 234);
+
+	/* Orange — secondary accent, applied deliberately */
+	--brand-2: oklch(72% 0.172 47);
+	--brand-2-foreground: oklch(17% 0.02 250);
+
+	/* Green — tertiary accent. Shares the gain family so the palette reads as one
+	   system, but is a UI colour: used for progress and third chart series. */
+	--brand-3: oklch(73% 0.15 152);
+	--brand-3-foreground: oklch(17% 0.02 250);
+
+	/* Signed values. Matched perceived weight; loss sits at crimson, well clear of
+	   the orange accent so a negative number never reads as a highlight. */
+	--gain: oklch(72% 0.148 158);
+	--loss: oklch(66% 0.19 12);
+	--destructive: oklch(66% 0.19 12);
+	--destructive-foreground: oklch(97% 0.005 250);
+
+	/* Charts: sky first, orange second, then hues held apart around the wheel */
+	--chart-1: oklch(71% 0.145 234);
+	--chart-2: oklch(72% 0.172 47);
+	--chart-3: var(--brand-3);
+	--chart-4: oklch(68% 0.16 300);
+	--chart-5: oklch(80% 0.14 90);
+	--chart-6: oklch(64% 0.15 265);
+	--chart-7: oklch(74% 0.14 140);
+	--chart-8: oklch(70% 0.13 205);
+	--chart-9: oklch(66% 0.17 20);
+	--chart-10: oklch(76% 0.11 120);
+
+	--sidebar: oklch(19% 0.013 250);
+	--sidebar-foreground: oklch(90% 0.006 250);
+	--sidebar-primary: oklch(71% 0.145 234);
+	--sidebar-primary-foreground: oklch(17% 0.02 250);
+	--sidebar-accent: oklch(26% 0.015 250);
+	--sidebar-accent-foreground: oklch(95% 0.005 250);
+	--sidebar-border: oklch(30% 0.016 250);
+	--sidebar-ring: oklch(71% 0.145 234);
+
+	--font-ui: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 @theme inline {
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	--radius-sm: calc(var(--radius) - 2px);
+	--radius-md: var(--radius);
+	--radius-lg: calc(var(--radius) + 2px);
+	--radius-xl: calc(var(--radius) + 6px);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -70,9 +99,18 @@
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+
+	--color-gain: var(--gain);
+	--color-loss: var(--loss);
+	--color-brand-2: var(--brand-2);
+	--color-brand-2-foreground: var(--brand-2-foreground);
+	--color-brand-3: var(--brand-3);
+	--color-brand-3-foreground: var(--brand-3-foreground);
+
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -83,10 +121,7 @@
 	--color-chart-8: var(--chart-8);
 	--color-chart-9: var(--chart-9);
 	--color-chart-10: var(--chart-10);
-	--color-surface-100: var(--surface-100);
-	--color-surface-200: var(--surface-200);
-	--color-surface-300: var(--surface-300);
-	--color-surface-content: var(--surface-content);
+
 	--color-sidebar: var(--sidebar);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar-primary: var(--sidebar-primary);
@@ -96,27 +131,35 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
-	--color-primary-light: var(--primary-light);
-	--color-primary-dark: var(--primary-dark);
-	--color-brand: var(--brand);
-	--font-serif-display: var(--font-serif-display);
 	--font-ui: var(--font-ui);
+	--font-sans: var(--font-ui);
 }
 
 @layer base {
 	* {
 		@apply border-border;
 	}
+
 	body {
 		@apply bg-background text-foreground;
 		font-family: var(--font-ui);
+		font-size: 13px;
+		line-height: 1.5;
+	}
+
+	/* Lining, tabular figures everywhere numbers are read in a column.
+	   This is the single highest-value change for a ledger: it makes digits align. */
+	table,
+	input,
+	.num {
+		font-variant-numeric: tabular-nums lining-nums;
 	}
 
 	h1,
-	h2 {
-		font-family: var(--font-ui);
+	h2,
+	h3 {
 		font-weight: 600;
-		letter-spacing: -0.02em;
+		letter-spacing: -0.015em;
 	}
 
 	.container {
@@ -125,36 +168,42 @@
 	}
 
 	.calculator-heading {
-		@apply text-xl md:text-2xl font-bold;
-	}
-
-	.heading-secondary {
-		@apply text-lg font-semibold text-primary-light leading-none mb-2;
+		@apply text-lg font-semibold md:text-xl;
 	}
 
 	label {
-		@apply text-sm text-foreground mb-2 block;
+		@apply mb-1.5 block text-[13px] text-muted-foreground;
 	}
 
 	table {
-		@apply w-full table-auto border-collapse  text-sm;
+		@apply w-full table-auto border-collapse text-[13px];
 	}
 
 	th,
 	td {
-		@apply border-b p-4 py-2 text-left bg-transparent;
+		@apply border-b border-border/60 bg-transparent px-3 py-1.5 text-left;
 	}
+
 	th {
-		@apply text-left text-xs border-t-transparent text-muted-foreground;
+		@apply border-t-transparent text-[11px] font-medium tracking-wide text-muted-foreground;
 	}
+
 	td {
 		@apply text-foreground;
+	}
+
+	/* Numeric columns read right-aligned; alignment is set per-column in markup. */
+	td.num,
+	th.num {
+		@apply text-right;
 	}
 }
 
 @layer components {
+	/* Panels: a hairline and a lighter surface. No shadow — on a dark ground a shadow
+	   is invisible work. Elevation is expressed by surface lightness alone. */
 	.card {
-		@apply rounded-2xl border p-4 md:p-6 bg-card shadow-sm;
+		@apply rounded-md border border-border bg-card p-4;
 	}
 
 	.lc-chart {
@@ -162,29 +211,31 @@
 	}
 
 	.tab-trigger {
-		@apply rounded-none bg-transparent w-20;
-		@apply data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-primary data-[state=active]:px-2 data-[state=active]:py-1;
-		@apply data-[state=inactive]:text-muted-foreground data-[state=inactive]:px-2 data-[state=inactive]:py-1;
-	}
-
-	.tab-trigger--scenarios {
-		@apply bg-transparent px-4 py-2 data-[state=active]:border-b data-[state=active]:bg-transparent border-b-white rounded-none;
+		@apply rounded-none bg-transparent px-3 py-1.5 text-[13px];
+		@apply data-[state=active]:border-b-2 data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground;
+		@apply data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground;
 	}
 }
 
 .heading-primary {
-	@apply text-3xl font-semibold mb-4;
+	@apply mb-3 text-2xl font-semibold tracking-tight;
 }
 
 .heading-secondary {
-	@apply text-xl font-semibold mb-2;
+	@apply mb-2 text-sm font-semibold text-muted-foreground;
 }
 
-.app-shell {
-	background: oklch(97.5% 0.002 260);
+/* Signed values. Use these rather than raw palette utilities so gain/loss stay
+   consistent and stay out of the accent hues. */
+.value-gain {
+	color: var(--gain);
 }
 
-/* For Webkit (Chrome, Safari, Edge) */
+.value-loss {
+	color: var(--loss);
+}
+
+/* Scrollbars, matched to the dark ground */
 .overflow-y-auto::-webkit-scrollbar,
 .overflow-x-auto::-webkit-scrollbar {
 	width: 8px;
@@ -193,36 +244,41 @@
 
 .overflow-y-auto::-webkit-scrollbar-track,
 .overflow-x-auto::-webkit-scrollbar-track {
-	background: oklch(93% 0.002 260);
+	background: var(--background);
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb,
 .overflow-x-auto::-webkit-scrollbar-thumb {
-	background: oklch(80% 0.004 260);
+	background: oklch(33% 0.016 250);
 	border-radius: 4px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover,
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-	background: oklch(72% 0.02 72);
+	background: oklch(42% 0.02 250);
 }
 
-/* For Firefox */
 .overflow-y-auto,
 .overflow-x-auto {
 	scrollbar-width: thin;
-	scrollbar-color: oklch(82% 0.01 76) oklch(93% 0.006 82);
+	scrollbar-color: oklch(33% 0.016 250) var(--background);
 }
 
 .lc-root-container {
-	/* Default marks color when not using explicit color or color scale */
 	--color-primary: var(--color-chart-1);
-
-	/* Chart surfaces mapped to existing app theme tokens. */
 	--color-surface-100: var(--color-card);
 	--color-surface-200: var(--color-muted);
 	--color-surface-300: var(--color-border);
-
-	/* Content (text) color */
 	--color-surface-content: var(--color-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
 }

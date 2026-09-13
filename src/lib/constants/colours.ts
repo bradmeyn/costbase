@@ -1,18 +1,24 @@
+/*
+  Chart series, tuned for the dark ground. Sky leads (it is the app's primary),
+  orange follows as the secondary accent; the rest are held apart around the hue
+  wheel at similar luminance so no single series dominates a stacked or pie chart.
+  Keep these in step with --chart-1..10 in app.css.
+*/
 export const COLOURS = [
-	'oklch(0.50 0.14 255)',
-	'oklch(0.62 0.15 195)',
-	'oklch(0.55 0.2 285)',
-	'oklch(0.65 0.15 230)',
-	'oklch(0.72 0.18 65)',
-	'oklch(0.6 0.22 20)',
-	'oklch(0.65 0.2 340)',
-	'oklch(0.7 0.12 270)',
-	'oklch(0.5 0.22 215)',
-	'oklch(0.78 0.14 200)'
+	'oklch(0.71 0.145 234)', // sky — primary
+	'oklch(0.72 0.172 47)', // orange — secondary accent
+	'oklch(0.73 0.15 152)', // green — tertiary accent
+	'oklch(0.68 0.16 300)', // violet
+	'oklch(0.80 0.14 90)', // amber
+	'oklch(0.64 0.15 265)', // indigo
+	'oklch(0.74 0.14 140)', // green
+	'oklch(0.70 0.13 205)', // cyan
+	'oklch(0.66 0.17 20)', // crimson
+	'oklch(0.76 0.11 120)' // moss
 ];
 
-export const COLOUR_BRAND = 'oklch(0.38524 0.11064 255.687)';
-export const COLOUR_BRAND_LIGHT = 'oklch(0.62 0.16 255)';
-export const COLOUR_BRAND_DARK = 'oklch(0.26 0.12 255)';
+export const COLOUR_BRAND = 'oklch(0.71 0.145 234)';
+export const COLOUR_BRAND_LIGHT = 'oklch(0.80 0.11 234)';
+export const COLOUR_BRAND_DARK = 'oklch(0.55 0.14 238)';
 
 export const BRAND = [COLOUR_BRAND, COLOUR_BRAND_LIGHT, COLOUR_BRAND_DARK];
