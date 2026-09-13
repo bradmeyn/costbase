@@ -69,7 +69,7 @@
 
 		<div class="mt-3 grid gap-3 md:grid-cols-3">
 			{#each calculators as calculator (calculator.href)}
-				{@const Icon = calculator.icon}
+				{const Icon = calculator.icon}
 				<a
 					href={calculator.href}
 					class="group flex items-start gap-3 rounded-md border border-border bg-card p-4 transition-colors hover:border-primary/40"

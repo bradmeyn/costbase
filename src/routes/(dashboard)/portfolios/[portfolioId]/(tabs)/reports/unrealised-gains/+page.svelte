@@ -64,36 +64,12 @@
 	>
 	<span class="text-muted-foreground">/</span>
 	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })}
 		class="text-sm text-muted-foreground hover:text-foreground">Holdings</a
 	>
 </div>
 
 <div class="mb-6 flex items-center justify-between">
-	<div class="mr-4 flex flex-1 gap-1 border-b">
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
-			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-			>Holdings</a
-		>
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/unrealised-gains', {
-				portfolioId
-			})}
-			class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary"
-			>Unrealised Gains</a
-		>
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/cgt', { portfolioId })}
-			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-			>CGT Report</a
-		>
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/tax', { portfolioId })}
-			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-			>Capital Gains</a
-		>
-	</div>
 	<Button onclick={generateUnrealisedGainsReport}>
 		<Download class="size-4" />
 		<span>Download</span>
@@ -161,7 +137,7 @@
 										><Check class="inline-block size-4 " /></span
 									>
 								{:else}
-									<span class="rounded px-2 py-1 text-xs text-brand-2"
+									<span class="rounded px-2 py-1 text-xs"
 										><Minus class="inline-block size-4" /></span
 									>
 								{/if}

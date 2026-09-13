@@ -288,3 +288,57 @@
 		scroll-behavior: auto !important;
 	}
 }
+
+/*
+  Print / save-as-PDF. The app is dark, which prints badly and wastes ink, so the
+  tokens are redefined for paper rather than restyling each component. Anything
+  marked print:hidden (nav, tabs, buttons) drops out.
+*/
+@media print {
+	:root {
+		color-scheme: light;
+		--background: oklch(100% 0 0);
+		--card: oklch(100% 0 0);
+		--popover: oklch(100% 0 0);
+		--secondary: oklch(96% 0 0);
+		--muted: oklch(96% 0 0);
+		--accent: oklch(96% 0 0);
+		--border: oklch(82% 0 0);
+		--input: oklch(82% 0 0);
+		--foreground: oklch(18% 0 0);
+		--card-foreground: oklch(18% 0 0);
+		--muted-foreground: oklch(42% 0 0);
+		--primary: oklch(45% 0.14 240);
+		--gain: oklch(45% 0.13 155);
+		--loss: oklch(45% 0.17 20);
+		--brand-2: oklch(50% 0.15 47);
+		--brand-3: oklch(45% 0.13 152);
+	}
+
+	body {
+		background: #fff;
+	}
+
+	/* Site chrome has no place on a printed report. */
+	header,
+	footer,
+	nav {
+		display: none !important;
+	}
+
+	.card {
+		break-inside: avoid;
+	}
+
+	tr {
+		break-inside: avoid;
+	}
+
+	thead {
+		display: table-header-group;
+	}
+
+	@page {
+		margin: 14mm;
+	}
+}

@@ -28,7 +28,9 @@
 			class="card relative mb-3 flex items-center justify-between transition-all hover:border-primary hover:shadow-sm"
 		>
 			<a
-				href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId: portfolio.id })}
+				href={resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', {
+					portfolioId: portfolio.id
+				})}
 				class="flex flex-1 items-center justify-between focus:outline-none"
 			>
 				<span class="absolute inset-0" aria-hidden="true"></span>

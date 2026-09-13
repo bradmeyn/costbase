@@ -191,35 +191,12 @@
 	>
 	<span class="text-muted-foreground">/</span>
 	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })}
 		class="text-sm text-muted-foreground hover:text-foreground">Holdings</a
 	>
 </div>
 
 <div class="mb-6 flex items-center justify-between">
-	<div class="mr-4 flex flex-1 gap-1 border-b">
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
-			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-			>Holdings</a
-		>
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/unrealised-gains', {
-				portfolioId
-			})}
-			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-			>Unrealised Gains</a
-		>
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/cgt', { portfolioId })}
-			class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary">CGT Report</a
-		>
-		<a
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/tax', { portfolioId })}
-			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-			>Capital Gains</a
-		>
-	</div>
 	<Button onclick={generateCGTReport}>
 		<Download class="size-4" />
 		<span>Download</span>
@@ -489,7 +466,7 @@
 						{/each}
 					</NativeSelect.Root>
 				</span>
-				<span class="font-bold text-brand-2">{formatCurrency(estimatedTax)}</span>
+				<span class="font-bold">{formatCurrency(estimatedTax)}</span>
 			</div>
 		</div>
 	</div>
@@ -559,7 +536,7 @@
 							</Table.Cell>
 							<Table.Cell class="text-right">
 								{#if mockResult}
-									<span class="text-brand-2">{formatCurrency(mockResult.estimatedTax)}</span>
+									<span class="">{formatCurrency(mockResult.estimatedTax)}</span>
 								{:else}
 									-
 								{/if}
@@ -623,7 +600,7 @@
 					</div>
 					<div>
 						<p class="text-sm text-muted-foreground">Estimated Tax</p>
-						<p class="text-xl font-semibold text-brand-2 tabular-nums">
+						<p class="text-xl font-semibold tabular-nums">
 							{formatCurrency(combinedMockSale.estimatedTax)}
 						</p>
 						<p class="text-xs text-muted-foreground">

@@ -42,7 +42,7 @@
 
 <div class="mb-4">
 	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })}
 		class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
 	>
 		<ArrowLeft class="size-4" /> Back to portfolio
@@ -208,7 +208,7 @@
 			<div class="flex items-center justify-end gap-2 border-t border-border pt-4">
 				<Button
 					variant="ghost"
-					href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
+					href={resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })}
 				>
 					Cancel
 				</Button>

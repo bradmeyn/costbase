@@ -12,8 +12,12 @@
 	} from '#lib/utils/amit-calculations.js';
 	import { calculateCGT } from '#lib/utils/cgt-calculations.js';
 	import { AMIT_PART_A } from '#lib/schemas/amit.js';
+	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
+	import Button from '$ui/button/button.svelte';
+	import { Printer } from '@lucide/svelte';
 
 	const portfolioId = $derived(page.params.portfolioId!);
+	const portfolio = $derived(await getPortfolio(portfolioId));
 
 	const [taxSummary, statements] = $derived(
 		await Promise.all([
@@ -85,39 +89,49 @@
 	<title>Capital gains report {fyLabel} | Costbase</title>
 </svelte:head>
 
-<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+<!-- Only shown on paper: the app chrome that normally names the portfolio is hidden. -->
+<div class="mb-4 hidden print:block">
+	<h1 class="text-xl font-semibold">{portfolio.name} — capital gains report</h1>
+	<p class="text-[13px]">
+		{formatDate(fyStart)} to {formatDate(fyEnd)} · prepared {formatDate(new Date())}
+	</p>
+</div>
+
+<div class="mb-5 flex flex-wrap items-end justify-between gap-3 print:hidden">
 	<div>
 		<h1 class="text-2xl font-semibold tracking-tight">Capital gains report</h1>
 		<p class="mt-1 text-[13px] text-muted-foreground">
 			{formatDate(fyStart)} to {formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments
 		</p>
 	</div>
-	{#if availableYears.length > 1}
-		<div class="flex gap-1">
-			{#each availableYears as year (year)}
-				<button
-					type="button"
-					onclick={() => (selectedFy = year)}
-					class="rounded-md border px-2.5 py-1 text-[13px] tabular-nums transition-colors {year ===
-					reportFy
-						? 'border-primary/30 bg-primary/15 text-foreground'
-						: 'border-transparent text-muted-foreground hover:text-foreground'}"
-				>
-					FY{year}
-				</button>
-			{/each}
-		</div>
-	{/if}
+	<div class="flex items-end gap-3">
+		<Button variant="ghost" onclick={() => window.print()}>
+			<Printer class="size-4" />
+			Export PDF
+		</Button>
+		{#if availableYears.length > 1}
+			<div class="flex gap-1">
+				{#each availableYears as year (year)}
+					<button
+						type="button"
+						onclick={() => (selectedFy = year)}
+						class="rounded-md border px-2.5 py-1 text-[13px] tabular-nums transition-colors {year ===
+						reportFy
+							? 'border-primary/30 bg-primary/15 text-foreground'
+							: 'border-transparent text-muted-foreground hover:text-foreground'}"
+					>
+						FY{year}
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </div>
 
 <!-- Headline labels -->
 <div class="mb-5 grid gap-2 sm:grid-cols-3">
 	<SummaryCard label="Total current year capital gains (18H)" value={formatCurrency(label18H)} />
-	<SummaryCard
-		label="Net capital gain (18A)"
-		value={formatCurrency(cgt.totalTaxableGain)}
-		valueClass={cgt.totalTaxableGain > 0 ? 'text-brand-2' : ''}
-	/>
+	<SummaryCard label="Net capital gain (18A)" value={formatCurrency(cgt.totalTaxableGain)} />
 	<SummaryCard label="CGT discount applied" value={formatCurrency(cgt.cgtDiscount)} />
 </div>
 

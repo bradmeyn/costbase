@@ -34,13 +34,7 @@
 </script>
 
 <div class="mb-4 flex items-center justify-between">
-	<div>
-		<a
-			href={resolve('/(dashboard)/portfolios')}
-			class="pb-4 text-sm text-muted-foreground hover:text-foreground">← Portfolios</a
-		>
-		<h1 class="heading-primary">{portfolio.name}</h1>
-	</div>
+	<div></div>
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger
 			class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-accent-foreground"
@@ -72,30 +66,6 @@
 </div>
 
 <AddHoldingDialog {portfolioId} bind:open={addHoldingOpen} showTrigger={false} />
-
-<div class="mb-6 flex gap-1 border-b">
-	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
-		class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary">Holdings</a
-	>
-	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/unrealised-gains', {
-			portfolioId
-		})}
-		class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-		>Unrealised Gains</a
-	>
-	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/cgt', { portfolioId })}
-		class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-		>CGT Report</a
-	>
-	<a
-		href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/tax', { portfolioId })}
-		class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-		>Capital Gains</a
-	>
-</div>
 
 {#if portfolio.holdings.length > 0}
 	<!-- Portfolio Summary -->
