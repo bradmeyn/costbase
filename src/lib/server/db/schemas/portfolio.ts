@@ -47,6 +47,11 @@ export const transactionTable = pgTable('transaction', {
 	 * quantity * pricePerUnit.
 	 */
 	value: integer('value'),
+	/**
+	 * Broker's confirmation number, where the row came from a contract note. Unique so
+	 * the same note cannot be imported twice.
+	 */
+	confirmationNumber: text('confirmation_number').unique(),
 	transactionDate: timestamp('transaction_date').notNull(),
 	type: text('type').notNull(), // 'buy', 'sell', or 'reinvestment'
 	...timesStamps
