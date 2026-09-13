@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import Button from '$ui/button/button.svelte';
 	import * as DropdownMenu from '$ui/dropdown-menu';
-	import * as NativeSelect from '$ui/native-select';
+	import * as Select from '$ui/select';
 	import { Download, ChevronDown } from '@lucide/svelte';
 	import { setReportExport } from '#lib/report-export.svelte.js';
 
@@ -55,16 +55,20 @@
 <div class="mb-4 flex flex-wrap items-center justify-end gap-3 print:hidden">
 	<div class="flex items-center gap-2">
 		{#if active?.byYear && years.length > 0}
-			<NativeSelect.Root
+			<Select.Root
+				type="single"
 				value={String(selectedFy)}
-				onchange={(e) => goto(`${page.url.pathname}?fy=${e.currentTarget.value}`)}
-				class="w-32"
-				aria-label="Financial year"
+				onValueChange={(v) => v && goto(`${page.url.pathname}?fy=${v}`)}
 			>
-				{#each years as year (year)}
-					<NativeSelect.Option value={String(year)}>FY{year}</NativeSelect.Option>
-				{/each}
-			</NativeSelect.Root>
+				<Select.Trigger class="w-28" aria-label="Financial year">
+					FY{selectedFy}
+				</Select.Trigger>
+				<Select.Content>
+					{#each years as year (year)}
+						<Select.Item value={String(year)}>FY{year}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		{/if}
 
 		{#if active}

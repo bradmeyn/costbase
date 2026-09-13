@@ -2,7 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import * as NativeSelect from '$ui/native-select';
+	import * as Select from '$ui/select';
 	import { getPortfolio, getPortfolios } from '#lib/remotes/portfolio.remote.js';
 	import { LayoutGrid, FileText, TrendingUp, Receipt, Coins, Calculator } from '@lucide/svelte';
 
@@ -73,20 +73,21 @@
 -->
 <div class="flex gap-6">
 	<aside class="w-52 shrink-0 print:hidden">
-		<NativeSelect.Root
+		<Select.Root
+			type="single"
 			value={portfolioId}
-			onchange={(e) =>
-				goto(
-					resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', {
-						portfolioId: e.currentTarget.value
-					})
-				)}
-			aria-label="Portfolio"
+			onValueChange={(v) =>
+				v && goto(resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId: v }))}
 		>
-			{#each portfolios as p (p.id)}
-				<NativeSelect.Option value={p.id}>{p.name}</NativeSelect.Option>
-			{/each}
-		</NativeSelect.Root>
+			<Select.Trigger class="w-full" aria-label="Portfolio">
+				{portfolio.name}
+			</Select.Trigger>
+			<Select.Content>
+				{#each portfolios as p (p.id)}
+					<Select.Item value={p.id}>{p.name}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 
 		<nav class="mt-5 space-y-5">
 			{#each groups as group (group.heading)}
