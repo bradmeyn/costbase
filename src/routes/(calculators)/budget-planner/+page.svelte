@@ -54,12 +54,12 @@
 		property="og:description"
 		content="Create and manage your personal budget with our free budget planner. Track income, expenses, and savings goals."
 	/>
-	<meta property="og:url" content="https://moneykit.au/budget-planner" />
-	<meta property="og:image" content="https://moneykit.au/budget-preview.jpg" />
+	<meta property="og:url" content="https://costbase.au/budget-planner" />
+	<meta property="og:image" content="https://costbase.au/budget-preview.jpg" />
 
 	<!-- Additional SEO -->
 	<meta name="robots" content="index, follow" />
-	<link rel="canonical" href="https://moneykit.au/budget-planner" />
+	<link rel="canonical" href="https://costbase.au/budget-planner" />
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-300 flex-1 flex-col px-4 md:px-6">

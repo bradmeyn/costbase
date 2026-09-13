@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>MoneyKit</title>
+	<title>Costbase</title>
 	<meta
 		name="description"
 		content="Free personal finance tools to help you budget, save, and plan for the future."
@@ -21,6 +21,6 @@
 		{@render children()}
 	</div>
 	<footer class="mt-auto border-t border-border bg-card py-4">
-		<p class="text-center text-xs">© {year} MoneyKit</p>
+		<p class="text-center text-xs">© {year} Costbase</p>
 	</footer>
 </div>

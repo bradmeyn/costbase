@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>Income Tax Calculator | MoneyKit</title>
+	<title>Income Tax Calculator | Costbase</title>
 	<meta
 		name="description"
 		content="Estimate your Australian income tax for {CURRENT_FINANCIAL_YEAR} including Medicare Levy, Medicare Levy Surcharge, and HELP repayments."

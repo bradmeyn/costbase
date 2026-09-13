@@ -8,7 +8,7 @@
 		<div class="flex w-full items-center justify-between gap-8 py-5">
 			<a href="/" class="flex items-center">
 				<span class="text-xl font-medium tracking-tight text-foreground"
-					>Money<span class="text-primary">Kit</span>
+					>Cost<span class="text-primary">base</span>
 				</span>
 			</a>
 

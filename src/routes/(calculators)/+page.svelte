@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>MoneyKit</title>
+	<title>Costbase</title>
 	<meta name="description" content="My personal financial toolkit." />
 </svelte:head>
 

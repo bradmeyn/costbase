@@ -36,7 +36,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>Create account — MoneyKit</title>
+	<title>Create account — Costbase</title>
 </svelte:head>
 
 <div class="w-full max-w-lg">

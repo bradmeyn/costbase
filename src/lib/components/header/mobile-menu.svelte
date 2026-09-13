@@ -47,7 +47,7 @@
 		>
 			<div class="flex items-center justify-between border-b border-border p-4">
 				<span class="text-xl font-medium tracking-tight text-foreground">
-					Money<span class="text-primary">Kit</span>
+					Cost<span class="text-primary">base</span>
 				</span>
 				<button
 					onclick={closeMenu}

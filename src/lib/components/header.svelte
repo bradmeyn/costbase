@@ -13,7 +13,7 @@
 	<div class="container flex items-center justify-between py-3">
 		<div class="flex items-center gap-8">
 			<a href="/" class="text-xl font-medium tracking-tight">
-				Money<span class="text-primary">Kit</span>
+				Cost<span class="text-primary">base</span>
 			</a>
 
 			<nav class="hidden items-center gap-6 md:flex">

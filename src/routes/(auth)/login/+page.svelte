@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>Log in — MoneyKit</title>
+	<title>Log in — Costbase</title>
 </svelte:head>
 
 <div class="w-full max-w-sm">

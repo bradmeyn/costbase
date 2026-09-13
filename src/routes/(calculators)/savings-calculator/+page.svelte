@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Savings & FIRE Calculator | MoneyKit</title>
+	<title>Savings & FIRE Calculator | Costbase</title>
 	<meta
 		name="description"
 		content="Project your savings growth, track progress towards a savings goal, or calculate your FIRE number and time to financial independence."

@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>MoneyKit — Dashboard</title>
+	<title>Costbase — Dashboard</title>
 </svelte:head>
 
 <div class="flex min-h-screen flex-col bg-background">
