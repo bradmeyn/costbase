@@ -210,6 +210,11 @@
 			href="/dashboard/portfolios/{portfolioId}/reports/cgt"
 			class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary">CGT Report</a
 		>
+		<a
+			href="/dashboard/portfolios/{portfolioId}/reports/tax"
+			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+			>Capital Gains</a
+		>
 	</div>
 	<Button onclick={generateCGTReport}>
 		<Download class="size-4" />

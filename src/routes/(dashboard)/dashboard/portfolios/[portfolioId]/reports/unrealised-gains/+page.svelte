@@ -84,6 +84,11 @@
 			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 			>CGT Report</a
 		>
+		<a
+			href="/dashboard/portfolios/{portfolioId}/reports/tax"
+			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+			>Capital Gains</a
+		>
 	</div>
 	<Button onclick={generateUnrealisedGainsReport}>
 		<Download class="size-4" />

@@ -80,7 +80,7 @@
 						<a
 							href="/portfolios"
 							onclick={closeMenu}
-							class="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+							class="flex w-full items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 						>
 							Dashboard
 						</a>
@@ -95,7 +95,7 @@
 						<a
 							href="/register"
 							onclick={closeMenu}
-							class="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+							class="flex w-full items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 						>
 							Sign up
 						</a>

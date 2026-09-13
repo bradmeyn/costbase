@@ -124,16 +124,6 @@
 								{...LC_TOOLTIP_PROPS.item}
 							/>
 						{/each}
-						{#if series.length > 1}
-							<Tooltip.Separator />
-							<Tooltip.Item
-								label="Total"
-								value={series.reduce((acc, s) => acc + Number(data[s.key] ?? 0), 0)}
-								format={(v: unknown) => formatCurrency(Number(v), false)}
-								valueAlign="right"
-								{...LC_TOOLTIP_PROPS.item}
-							/>
-						{/if}
 					</Tooltip.List>
 				{/snippet}
 			</Tooltip.Root>

@@ -34,9 +34,14 @@
 	--accent-foreground: oklch(95% 0.005 250);
 	--muted-foreground: oklch(66% 0.018 250);
 
-	/* Sky — the single interactive colour */
+	/* Sky — the single interactive colour.
+	   Two steps, because one cannot serve both jobs on a dark ground:
+	   --primary is the bright accent for links, icons and charts (7.6:1 on the page).
+	   --primary-solid is the deeper fill behind white button text (5.2:1); the bright
+	   sky would only give white 2.5:1, well under WCAG AA. */
 	--primary: oklch(71% 0.145 234);
-	--primary-foreground: oklch(17% 0.02 250);
+	--primary-solid: oklch(52% 0.15 240);
+	--primary-foreground: oklch(99% 0.002 250);
 	--ring: oklch(71% 0.145 234);
 
 	/* Orange — secondary accent, applied deliberately */
@@ -91,6 +96,7 @@
 	--color-popover: var(--popover);
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
+	--color-primary-solid: var(--primary-solid);
 	--color-primary-foreground: var(--primary-foreground);
 	--color-secondary: var(--secondary);
 	--color-secondary-foreground: var(--secondary-foreground);

@@ -8,6 +8,7 @@ import { error } from '@sveltejs/kit';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { transactionTable } from '$db/schemas/portfolio';
 import { getStockPrices } from '#lib/server/prices.js';
+import { apportionCostBaseAdjustment, financialYearEnd } from '$utils/amit-calculations';
 
 type Transaction = InferSelectModel<typeof transactionTable>;
 
@@ -213,6 +214,12 @@ interface TaxLot {
 	holdingId: string;
 	holdingName: string;
 	holdingCode: string;
+	/**
+	 * Cumulative AMIT cost base adjustment for the units still in this lot, in cents.
+	 * Negative reduces cost base. Held separately from costPerUnit so partial disposals
+	 * apportion it exactly rather than losing cents to per-unit rounding.
+	 */
+	costBaseAdjustment: number;
 }
 
 interface RealisedGain {
@@ -270,6 +277,11 @@ export interface TaxSummary {
 		longTermTaxable: number;
 		totalTaxableGain: number;
 	};
+	/**
+	 * Capital gains arising where an AMIT cost base excess exceeded a parcel's
+	 * remaining cost base (CGT event E10), keyed by holding code.
+	 */
+	amitExcessGains: { code: string; name: string; amount: number }[];
 	unrealisedLots: UnrealisedTaxLot[];
 	holdings: {
 		id: string;
@@ -292,7 +304,8 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 			holdings: {
 				with: {
 					investment: true,
-					transactions: true
+					transactions: true,
+					amitStatements: true
 				}
 			}
 		}
@@ -309,6 +322,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 	const realisedGainsLongTerm: RealisedGain[] = [];
 	const unrealisedLots: UnrealisedTaxLot[] = [];
 	const holdingsSummary: TaxSummary['holdings'] = [];
+	const amitExcessGainsByHolding: TaxSummary['amitExcessGains'] = [];
 
 	for (const holding of portfolio.holdings) {
 		const currentPrice = prices.get(holding.investment.code) ?? 0;
@@ -321,7 +335,52 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 		// Tax lots using FIFO
 		const taxLots: TaxLot[] = [];
 
-		for (const tx of sortedTransactions) {
+		/*
+		  AMIT cost base adjustments are applied as events at 30 June of each year that
+		  has a statement, interleaved with the transactions in date order. Ordering
+		  matters: an adjustment must land before any later disposal, so that sale uses
+		  the adjusted cost base.
+		*/
+		type ReplayEvent =
+			| { at: Date; kind: 'tx'; tx: (typeof sortedTransactions)[number] }
+			| { at: Date; kind: 'amit'; statement: (typeof holding.amitStatements)[number] };
+
+		const events: ReplayEvent[] = [
+			...sortedTransactions.map((tx) => ({
+				at: new Date(tx.transactionDate),
+				kind: 'tx' as const,
+				tx
+			})),
+			...holding.amitStatements.map((statement) => ({
+				at: financialYearEnd(statement.financialYear),
+				kind: 'amit' as const,
+				statement
+			}))
+		].sort((a, b) => a.at.getTime() - b.at.getTime());
+
+		/** Cents of excess that could not be absorbed by a cost base (CGT event E10). */
+		let amitExcessGains = 0;
+
+		for (const event of events) {
+			if (event.kind === 'amit') {
+				const result = apportionCostBaseAdjustment(
+					event.statement,
+					taxLots.map((lot, i) => ({
+						id: String(i),
+						date: lot.date,
+						quantity: lot.quantity,
+						costBase: lot.quantity * lot.costPerUnit + lot.costBaseAdjustment
+					}))
+				);
+				for (const p of result.perParcel) {
+					const lot = taxLots[Number(p.parcelId)];
+					if (lot) lot.costBaseAdjustment += p.adjustment + p.excessGain;
+				}
+				amitExcessGains += result.totalExcessGain;
+				continue;
+			}
+
+			const tx = event.tx;
 			if (tx.type === 'buy' || tx.type === 'reinvestment') {
 				// Add to tax lots
 				taxLots.push({
@@ -330,7 +389,8 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 					costPerUnit: tx.pricePerUnit,
 					holdingId: holding.id,
 					holdingName: holding.investment.name,
-					holdingCode: holding.investment.code
+					holdingCode: holding.investment.code,
+					costBaseAdjustment: 0
 				});
 			} else if (tx.type === 'sell') {
 				// FIFO: consume oldest lots first
@@ -344,7 +404,12 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 
 					// Calculate gain for this portion
 					const proceeds = quantityFromLot * salePrice;
-					const costBase = quantityFromLot * lot.costPerUnit;
+					// The disposed units take their proportional share of the lot's AMIT adjustment.
+					const adjustmentShare =
+						lot.quantity > 0
+							? Math.round((lot.costBaseAdjustment * quantityFromLot) / lot.quantity)
+							: 0;
+					const costBase = Math.max(quantityFromLot * lot.costPerUnit + adjustmentShare, 0);
 					const gain = proceeds - costBase;
 
 					// Check if held > 12 months
@@ -369,6 +434,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 					}
 
 					// Update lot
+					lot.costBaseAdjustment -= adjustmentShare;
 					lot.quantity -= quantityFromLot;
 					remainingToSell -= quantityFromLot;
 
@@ -380,6 +446,14 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 			}
 		}
 
+		if (amitExcessGains > 0) {
+			amitExcessGainsByHolding.push({
+				code: holding.investment.code,
+				name: holding.investment.name,
+				amount: amitExcessGains
+			});
+		}
+
 		// Remaining lots are unrealised
 		let totalUnits = 0;
 		let totalCostBase = 0;
@@ -387,7 +461,8 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 		for (const lot of taxLots) {
 			const holdingPeriodMs = Date.now() - lot.date.getTime();
 			const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
-			const unrealisedGain = lot.quantity * (currentPrice - lot.costPerUnit);
+			const lotCostBase = Math.max(lot.quantity * lot.costPerUnit + lot.costBaseAdjustment, 0);
+			const unrealisedGain = lot.quantity * currentPrice - lotCostBase;
 
 			unrealisedLots.push({
 				...lot,
@@ -397,7 +472,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 			});
 
 			totalUnits += lot.quantity;
-			totalCostBase += lot.quantity * lot.costPerUnit;
+			totalCostBase += lotCostBase;
 		}
 
 		const currentValue = totalUnits * currentPrice;
@@ -517,6 +592,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 			longTermTaxable,
 			totalTaxableGain
 		},
+		amitExcessGains: amitExcessGainsByHolding,
 		unrealisedLots,
 		holdings: holdingsSummary
 	};
@@ -536,7 +612,8 @@ export const getPortfolioUnrealisedGains = query(
 				holdings: {
 					with: {
 						investment: true,
-						transactions: true
+						transactions: true,
+						amitStatements: true
 					}
 				}
 			}
@@ -560,10 +637,46 @@ export const getPortfolioUnrealisedGains = query(
 				(a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
 			);
 
-			// Tax lots using FIFO
+			// Tax lots using FIFO, with AMIT cost base adjustments interleaved at each
+			// 30 June so the unrealised figures match the capital gains report.
 			const taxLots: TaxLot[] = [];
 
-			for (const tx of sortedTransactions) {
+			type ReplayEvent =
+				| { at: Date; kind: 'tx'; tx: (typeof sortedTransactions)[number] }
+				| { at: Date; kind: 'amit'; statement: (typeof holding.amitStatements)[number] };
+
+			const events: ReplayEvent[] = [
+				...sortedTransactions.map((tx) => ({
+					at: new Date(tx.transactionDate),
+					kind: 'tx' as const,
+					tx
+				})),
+				...holding.amitStatements.map((statement) => ({
+					at: financialYearEnd(statement.financialYear),
+					kind: 'amit' as const,
+					statement
+				}))
+			].sort((a, b) => a.at.getTime() - b.at.getTime());
+
+			for (const event of events) {
+				if (event.kind === 'amit') {
+					const result = apportionCostBaseAdjustment(
+						event.statement,
+						taxLots.map((lot, i) => ({
+							id: String(i),
+							date: lot.date,
+							quantity: lot.quantity,
+							costBase: lot.quantity * lot.costPerUnit + lot.costBaseAdjustment
+						}))
+					);
+					for (const p of result.perParcel) {
+						const lot = taxLots[Number(p.parcelId)];
+						if (lot) lot.costBaseAdjustment += p.adjustment + p.excessGain;
+					}
+					continue;
+				}
+
+				const tx = event.tx;
 				if (tx.type === 'buy' || tx.type === 'reinvestment') {
 					// Add to tax lots
 					taxLots.push({
@@ -572,7 +685,8 @@ export const getPortfolioUnrealisedGains = query(
 						costPerUnit: tx.pricePerUnit,
 						holdingId: holding.id,
 						holdingName: holding.investment.name,
-						holdingCode: holding.investment.code
+						holdingCode: holding.investment.code,
+						costBaseAdjustment: 0
 					});
 				} else if (tx.type === 'sell') {
 					// FIFO: consume oldest lots first
@@ -582,7 +696,12 @@ export const getPortfolioUnrealisedGains = query(
 						const lot = taxLots[0];
 						const quantityFromLot = Math.min(lot.quantity, remainingToSell);
 
-						// Update lot
+						// Update lot, carrying its share of the AMIT adjustment out with the units
+						const adjustmentShare =
+							lot.quantity > 0
+								? Math.round((lot.costBaseAdjustment * quantityFromLot) / lot.quantity)
+								: 0;
+						lot.costBaseAdjustment -= adjustmentShare;
 						lot.quantity -= quantityFromLot;
 						remainingToSell -= quantityFromLot;
 
@@ -601,7 +720,8 @@ export const getPortfolioUnrealisedGains = query(
 			for (const lot of taxLots) {
 				const holdingPeriodMs = Date.now() - lot.date.getTime();
 				const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
-				const unrealisedGain = lot.quantity * (currentPrice - lot.costPerUnit);
+				const lotCostBase = Math.max(lot.quantity * lot.costPerUnit + lot.costBaseAdjustment, 0);
+				const unrealisedGain = lot.quantity * currentPrice - lotCostBase;
 
 				unrealisedLots.push({
 					...lot,
@@ -611,7 +731,7 @@ export const getPortfolioUnrealisedGains = query(
 				});
 
 				totalUnits += lot.quantity;
-				totalCostBase += lot.quantity * lot.costPerUnit;
+				totalCostBase += lotCostBase;
 			}
 
 			const currentValue = totalUnits * currentPrice;

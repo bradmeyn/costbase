@@ -32,7 +32,7 @@
 		{#if user}
 			<a
 				href="/dashboard"
-				class="rounded-md bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+				class="rounded-md bg-primary-solid px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 			>
 				Dashboard
 			</a>
@@ -45,7 +45,7 @@
 			</a>
 			<a
 				href="/register"
-				class="rounded-md bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+				class="rounded-md bg-primary-solid px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 			>
 				Sign up
 			</a>

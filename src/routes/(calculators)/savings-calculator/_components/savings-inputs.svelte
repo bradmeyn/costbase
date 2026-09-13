@@ -18,7 +18,7 @@
 			<button
 				onclick={() => (calculator.mode = 'savings')}
 				class="px-3 py-1.5 transition-colors {calculator.mode === 'savings'
-					? 'bg-primary text-primary-foreground'
+					? 'bg-primary-solid text-primary-foreground'
 					: 'text-muted-foreground hover:text-foreground'}"
 			>
 				Savings
@@ -26,7 +26,7 @@
 			<button
 				onclick={() => (calculator.mode = 'fire')}
 				class="px-3 py-1.5 transition-colors {calculator.mode === 'fire'
-					? 'bg-primary text-primary-foreground'
+					? 'bg-primary-solid text-primary-foreground'
 					: 'text-muted-foreground hover:text-foreground'}"
 			>
 				FIRE
