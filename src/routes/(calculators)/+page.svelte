@@ -1,15 +1,26 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { calculators } from '#lib/constants/calculators.js';
-	import { getCurrentFinancialYear } from '#lib/utils/cgt-calculations.js';
-	import { ArrowRight } from '@lucide/svelte';
+	import { ArrowRight, Layers, RefreshCcw, FileText } from '@lucide/svelte';
 
-	const fy = getCurrentFinancialYear();
-	/** The date every Australian tax figure is measured to. */
-	const daysToYearEnd = Math.max(
-		0,
-		Math.ceil((fy.end.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-	);
-	const fyLabel = `${fy.year}–${String(fy.year + 1).slice(2)}`;
+	/** What the app actually does, in the order you'd meet it. */
+	const features = [
+		{
+			icon: Layers,
+			title: 'Every parcel, separately',
+			body: 'Each buy is its own parcel with its own cost base and acquisition date. Disposals match first in, first out, so the twelve-month discount lands on the right units.'
+		},
+		{
+			icon: RefreshCcw,
+			title: 'AMIT adjustments applied',
+			body: 'Enter the annual AMMA statement and the cost base net amount is apportioned across the parcels you held at 30 June — excess down, shortfall up.'
+		},
+		{
+			icon: FileText,
+			title: 'Tax return figures, ready',
+			body: 'A capital gains report per financial year: 18H and 18A with the full working, plus the 13 and 20 series labels from each holding.'
+		}
+	];
 </script>
 
 <svelte:head>
@@ -20,7 +31,7 @@
 	/>
 </svelte:head>
 
-<section class="container flex max-w-2xl flex-col items-center py-20 text-center md:py-28">
+<section class="container flex max-w-5xl flex-col items-center py-20 text-center md:py-24">
 	<h1 class="max-w-xl text-3xl leading-[1.15] font-semibold tracking-tight md:text-4xl">
 		Capital gains, parcel by parcel.
 	</h1>
@@ -30,56 +41,54 @@
 	</p>
 
 	<a
-		href="/dashboard/portfolios"
+		href={resolve('/(dashboard)/portfolios')}
 		class="mt-7 inline-flex items-center gap-1.5 rounded-md bg-primary-solid px-4 py-2 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 	>
 		Open portfolios
 		<ArrowRight class="size-4" />
 	</a>
 
-	<!-- The financial year is the unit everything here is measured in. -->
-	<div class="mt-10 flex w-full items-baseline justify-center gap-10 border-y border-border py-4">
-		<div>
-			<p class="text-[11px] text-muted-foreground">Financial year</p>
-			<p class="mt-0.5 text-xl font-semibold tabular-nums">FY{fyLabel}</p>
-		</div>
-		<div>
-			<p class="text-[11px] text-muted-foreground">Days to 30 June</p>
-			<p class="mt-0.5 text-xl font-semibold tabular-nums">{daysToYearEnd}</p>
-		</div>
+	<!--
+		Features are informational, so they deliberately carry no card chrome — only the
+		calculators below are clickable, and cards signal that.
+	-->
+	<div class="mt-16 grid w-full gap-8 text-left md:grid-cols-3 md:gap-10">
+		{#each features as feature (feature.title)}
+			{@const Icon = feature.icon}
+			<div>
+				<Icon class="size-4 text-primary" aria-hidden="true" />
+				<h2 class="mt-3 text-sm font-semibold">{feature.title}</h2>
+				<p class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{feature.body}</p>
+			</div>
+		{/each}
 	</div>
 
-	<h2 class="mt-10 text-sm font-semibold">Calculators</h2>
-	<p class="mb-3 text-[11px] text-muted-foreground">Standalone, nothing saved.</p>
+	<div class="mt-16 w-full border-t border-border pt-8 text-left">
+		<h2 class="text-sm font-semibold">Other tools</h2>
+		<p class="mt-1 text-[11px] text-muted-foreground">Standalone calculators. Nothing saved.</p>
 
-	<!-- Rows stay left-aligned inside the centred column: centring the label and its
-	     description as well would make them hard to scan. -->
-	<ul class="w-full border-t border-border text-left">
-		{#each calculators as calculator (calculator.href)}
-			<li>
+		<div class="mt-3 grid gap-3 md:grid-cols-3">
+			{#each calculators as calculator (calculator.href)}
+				{@const Icon = calculator.icon}
 				<a
 					href={calculator.href}
-					class="group flex items-center gap-4 border-b border-border py-3 transition-colors hover:bg-accent/40"
+					class="group flex items-start gap-3 rounded-md border border-border bg-card p-4 transition-colors hover:border-primary/40"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox={calculator.viewBox}
-						class="ml-1 size-4 shrink-0 fill-muted-foreground transition-colors group-hover:fill-primary"
-						aria-hidden="true"
+					<span
+						class="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"
 					>
-						{#each calculator.paths as d (d)}<path {d} />{/each}
-					</svg>
-					<span class="min-w-0 flex-1">
-						<span class="block text-[13px] font-medium transition-colors group-hover:text-primary">
+						<Icon class="size-4" aria-hidden="true" />
+					</span>
+					<span class="min-w-0">
+						<span class="block text-sm font-medium transition-colors group-hover:text-primary">
 							{calculator.name}
 						</span>
-						<span class="block text-[11px] text-muted-foreground">{calculator.description}</span>
+						<span class="mt-1 block text-[11px] leading-relaxed text-muted-foreground">
+							{calculator.description}
+						</span>
 					</span>
-					<ArrowRight
-						class="mr-1 size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-primary"
-					/>
 				</a>
-			</li>
-		{/each}
-	</ul>
+			{/each}
+		</div>
+	</div>
 </section>
