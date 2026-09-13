@@ -12,23 +12,24 @@
 	const tabs = $derived([
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId }),
-			label: 'Holdings'
+			label: 'Holdings',
+			match: (p: string) =>
+				p === resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId })
 		},
 		{
-			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/unrealised-gains', {
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/capital-gains', {
 				portfolioId
 			}),
-			label: 'Unrealised Gains'
+			label: 'Reports',
+			match: (p: string) => p.includes('/reports/')
 		},
 		{
-			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/cgt', { portfolioId }),
-			label: 'CGT Report'
-		},
-		{
-			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/tax', { portfolioId }),
-			label: 'Capital Gains'
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/cgt-estimator', { portfolioId }),
+			label: 'CGT Estimator',
+			match: (p: string) => p.endsWith('/cgt-estimator')
 		}
 	]);
+
 	const current = $derived(page.url.pathname.replace(/\/$/, ''));
 </script>
 
@@ -48,7 +49,7 @@
 		{#each tabs as tab (tab.href)}
 			<a
 				href={tab.href}
-				class="border-b-2 px-3 py-2 text-sm font-medium transition-colors {current === tab.href
+				class="border-b-2 px-3 py-2 text-sm font-medium transition-colors {tab.match(current)
 					? 'border-primary text-primary'
 					: 'border-transparent text-muted-foreground hover:text-foreground'}"
 			>

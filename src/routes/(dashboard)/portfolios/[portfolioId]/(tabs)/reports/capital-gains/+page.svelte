@@ -12,16 +12,19 @@
 	} from '#lib/utils/amit-calculations.js';
 	import { calculateCGT } from '#lib/utils/cgt-calculations.js';
 	import { AMIT_PART_A } from '#lib/schemas/amit.js';
-	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
-	import Button from '$ui/button/button.svelte';
-	import { Printer } from '@lucide/svelte';
+	import { getPortfolio, getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const portfolio = $derived(await getPortfolio(portfolioId));
 
+	/* Driven by ?fy= so the report is linkable and the server does the filtering.
+	   With no year given, fall back to the most recent one that has activity. */
+	const financialYears = $derived(await getPortfolioFinancialYears(portfolioId));
+	const reportFy = $derived(Number(page.url.searchParams.get('fy')) || financialYears[0]);
+
 	const [taxSummary, statements] = $derived(
 		await Promise.all([
-			getPortfolioTaxSummary(portfolioId),
+			getPortfolioTaxSummary({ id: portfolioId, financialYear: reportFy }),
 			getPortfolioAmitStatements(portfolioId)
 		])
 	);
@@ -37,21 +40,6 @@
 		const date = new Date(d);
 		return date.getMonth() >= 6 ? date.getFullYear() + 1 : date.getFullYear();
 	};
-
-	/** Years with either a disposal or an AMMA statement, newest first. */
-	const availableYears = $derived(
-		[
-			...new Set([
-				...allGains.map((g) => fyOf(g.saleDate)),
-				...statements.map((s) => s.financialYear)
-			])
-		].sort((a, b) => b - a)
-	);
-
-	// Default to the most recent year with activity — at tax time you file the year
-	// that just ended, not the one you are in.
-	let selectedFy = $state<number | null>(null);
-	const reportFy = $derived(selectedFy ?? availableYears[0] ?? new Date().getFullYear());
 
 	const fyStart = $derived(financialYearStart(reportFy));
 	const fyEnd = $derived(financialYearEnd(reportFy));
@@ -103,28 +91,6 @@
 		<p class="mt-1 text-[13px] text-muted-foreground">
 			{formatDate(fyStart)} to {formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments
 		</p>
-	</div>
-	<div class="flex items-end gap-3">
-		<Button variant="ghost" onclick={() => window.print()}>
-			<Printer class="size-4" />
-			Export PDF
-		</Button>
-		{#if availableYears.length > 1}
-			<div class="flex gap-1">
-				{#each availableYears as year (year)}
-					<button
-						type="button"
-						onclick={() => (selectedFy = year)}
-						class="rounded-md border px-2.5 py-1 text-[13px] tabular-nums transition-colors {year ===
-						reportFy
-							? 'border-primary/30 bg-primary/15 text-foreground'
-							: 'border-transparent text-muted-foreground hover:text-foreground'}"
-					>
-						FY{year}
-					</button>
-				{/each}
-			</div>
-		{/if}
 	</div>
 </div>
 

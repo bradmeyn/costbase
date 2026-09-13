@@ -33,8 +33,7 @@
 	let dialog = $state<Dialog>(null);
 </script>
 
-<div class="mb-4 flex items-center justify-between">
-	<div></div>
+<div class="mb-4 flex items-center justify-end">
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger
 			class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-accent-foreground"

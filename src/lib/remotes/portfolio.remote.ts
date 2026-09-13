@@ -305,325 +305,337 @@ export interface TaxSummary {
 	}[];
 }
 
-export const getPortfolioTaxSummary = query(z.string(), async (id: string): Promise<TaxSummary> => {
-	const user = await getCurrentUser();
-	if (!user) error(401, 'Unauthorized');
+export const getPortfolioTaxSummary = query(
+	z.object({
+		id: z.string(),
+		/** Year the FY ends in; defaults to the current one. */
+		financialYear: z.number().int().optional()
+	}),
+	async ({ id, financialYear }): Promise<TaxSummary> => {
+		const user = await getCurrentUser();
+		if (!user) error(401, 'Unauthorized');
 
-	const portfolio = await db.query.portfolioTable.findFirst({
-		where: eq(portfolioTable.id, id),
-		with: {
-			holdings: {
-				with: {
-					investment: true,
-					transactions: true,
-					amitStatements: true
+		const portfolio = await db.query.portfolioTable.findFirst({
+			where: eq(portfolioTable.id, id),
+			with: {
+				holdings: {
+					with: {
+						investment: true,
+						transactions: true,
+						amitStatements: true
+					}
 				}
 			}
-		}
-	});
+		});
 
-	if (!portfolio) error(404, 'Portfolio not found');
-	if (portfolio.userId !== user.id) error(403, 'Forbidden');
+		if (!portfolio) error(404, 'Portfolio not found');
+		if (portfolio.userId !== user.id) error(403, 'Forbidden');
 
-	// Get current prices
-	const codes = [...new Set(portfolio.holdings.map((h) => h.investment.code))];
-	const prices = await getStockPrices(codes);
+		// Get current prices
+		const codes = [...new Set(portfolio.holdings.map((h) => h.investment.code))];
+		const prices = await getStockPrices(codes);
 
-	const realisedGainsShortTerm: RealisedGain[] = [];
-	const realisedGainsLongTerm: RealisedGain[] = [];
-	const unrealisedLots: UnrealisedTaxLot[] = [];
-	const holdingsSummary: TaxSummary['holdings'] = [];
-	const amitExcessGainsByHolding: TaxSummary['amitExcessGains'] = [];
+		const realisedGainsShortTerm: RealisedGain[] = [];
+		const realisedGainsLongTerm: RealisedGain[] = [];
+		const unrealisedLots: UnrealisedTaxLot[] = [];
+		const holdingsSummary: TaxSummary['holdings'] = [];
+		const amitExcessGainsByHolding: TaxSummary['amitExcessGains'] = [];
 
-	for (const holding of portfolio.holdings) {
-		const currentPrice = prices.get(holding.investment.code) ?? 0;
+		for (const holding of portfolio.holdings) {
+			const currentPrice = prices.get(holding.investment.code) ?? 0;
 
-		// Sort transactions by date for FIFO processing
-		const sortedTransactions = [...holding.transactions].sort(
-			(a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
-		);
+			// Sort transactions by date for FIFO processing
+			const sortedTransactions = [...holding.transactions].sort(
+				(a, b) => new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime()
+			);
 
-		// Tax lots using FIFO
-		const taxLots: TaxLot[] = [];
+			// Tax lots using FIFO
+			const taxLots: TaxLot[] = [];
 
-		/*
+			/*
 		  AMIT cost base adjustments are applied as events at 30 June of each year that
 		  has a statement, interleaved with the transactions in date order. Ordering
 		  matters: an adjustment must land before any later disposal, so that sale uses
 		  the adjusted cost base.
 		*/
-		type ReplayEvent =
-			| { at: Date; kind: 'tx'; tx: (typeof sortedTransactions)[number] }
-			| { at: Date; kind: 'amit'; statement: (typeof holding.amitStatements)[number] };
+			type ReplayEvent =
+				| { at: Date; kind: 'tx'; tx: (typeof sortedTransactions)[number] }
+				| { at: Date; kind: 'amit'; statement: (typeof holding.amitStatements)[number] };
 
-		const events: ReplayEvent[] = [
-			...sortedTransactions.map((tx) => ({
-				at: new Date(tx.transactionDate),
-				kind: 'tx' as const,
-				tx
-			})),
-			...holding.amitStatements.map((statement) => ({
-				at: financialYearEnd(statement.financialYear),
-				kind: 'amit' as const,
-				statement
-			}))
-		].sort((a, b) => a.at.getTime() - b.at.getTime());
+			const events: ReplayEvent[] = [
+				...sortedTransactions.map((tx) => ({
+					at: new Date(tx.transactionDate),
+					kind: 'tx' as const,
+					tx
+				})),
+				...holding.amitStatements.map((statement) => ({
+					at: financialYearEnd(statement.financialYear),
+					kind: 'amit' as const,
+					statement
+				}))
+			].sort((a, b) => a.at.getTime() - b.at.getTime());
 
-		/** Cents of excess that could not be absorbed by a cost base (CGT event E10). */
-		let amitExcessGains = 0;
+			/** Cents of excess that could not be absorbed by a cost base (CGT event E10). */
+			let amitExcessGains = 0;
 
-		for (const event of events) {
-			if (event.kind === 'amit') {
-				const result = apportionCostBaseAdjustment(
-					event.statement,
-					taxLots.map((lot, i) => ({
-						id: String(i),
-						date: lot.date,
-						quantity: lot.quantity,
-						costBase: lot.costTotal + lot.acquisitionCosts + lot.costBaseAdjustment
-					}))
-				);
-				for (const p of result.perParcel) {
-					const lot = taxLots[Number(p.parcelId)];
-					if (lot) lot.costBaseAdjustment += p.adjustment + p.excessGain;
+			for (const event of events) {
+				if (event.kind === 'amit') {
+					const result = apportionCostBaseAdjustment(
+						event.statement,
+						taxLots.map((lot, i) => ({
+							id: String(i),
+							date: lot.date,
+							quantity: lot.quantity,
+							costBase: lot.costTotal + lot.acquisitionCosts + lot.costBaseAdjustment
+						}))
+					);
+					for (const p of result.perParcel) {
+						const lot = taxLots[Number(p.parcelId)];
+						if (lot) lot.costBaseAdjustment += p.adjustment + p.excessGain;
+					}
+					amitExcessGains += result.totalExcessGain;
+					continue;
 				}
-				amitExcessGains += result.totalExcessGain;
-				continue;
-			}
 
-			const tx = event.tx;
-			if (tx.type === 'buy' || tx.type === 'reinvestment') {
-				// Add to tax lots
-				taxLots.push({
-					date: new Date(tx.transactionDate),
-					quantity: tx.quantity,
-					costPerUnit: tx.pricePerUnit,
-					holdingId: holding.id,
-					holdingName: holding.investment.name,
-					holdingCode: holding.investment.code,
-					costTotal: tx.value ?? tx.quantity * tx.pricePerUnit,
-					acquisitionCosts: tx.brokerage,
-					costBaseAdjustment: 0
-				});
-			} else if (tx.type === 'sell') {
-				// FIFO: consume oldest lots first
-				let remainingToSell = tx.quantity;
-				const saleDate = new Date(tx.transactionDate);
-				const salePrice = tx.pricePerUnit;
-
-				while (remainingToSell > 0 && taxLots.length > 0) {
-					const lot = taxLots[0];
-					const quantityFromLot = Math.min(lot.quantity, remainingToSell);
-
-					// Calculate gain for this portion
-					// The disposed units take their proportional share of the lot's acquisition
-					// brokerage and AMIT adjustment; the sale's own brokerage reduces proceeds.
-					const share = (total: number) =>
-						lot.quantity > 0 ? Math.round((total * quantityFromLot) / lot.quantity) : 0;
-					const adjustmentShare = share(lot.costBaseAdjustment);
-					const acquisitionShare = share(lot.acquisitionCosts);
-					const costShare = share(lot.costTotal);
-
-					// The sale's stated value and brokerage split across the units disposed.
-					const saleValue = tx.value ?? tx.quantity * salePrice;
-					const perUnitOfSale = (total: number) =>
-						tx.quantity > 0 ? Math.round((total * quantityFromLot) / tx.quantity) : 0;
-					const disposalCosts = perUnitOfSale(tx.brokerage);
-
-					const proceeds = perUnitOfSale(saleValue) - disposalCosts;
-					const costBase = Math.max(costShare + acquisitionShare + adjustmentShare, 0);
-					const gain = proceeds - costBase;
-
-					// Check if held > 12 months
-					const holdingPeriodMs = saleDate.getTime() - lot.date.getTime();
-					const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
-
-					const realisedGain: RealisedGain = {
+				const tx = event.tx;
+				if (tx.type === 'buy' || tx.type === 'reinvestment') {
+					// Add to tax lots
+					taxLots.push({
+						date: new Date(tx.transactionDate),
+						quantity: tx.quantity,
+						costPerUnit: tx.pricePerUnit,
+						holdingId: holding.id,
 						holdingName: holding.investment.name,
 						holdingCode: holding.investment.code,
-						saleDate,
-						quantity: quantityFromLot,
-						proceeds,
-						costBase,
-						gain,
-						isLongTerm
-					};
+						costTotal: tx.value ?? tx.quantity * tx.pricePerUnit,
+						acquisitionCosts: tx.brokerage,
+						costBaseAdjustment: 0
+					});
+				} else if (tx.type === 'sell') {
+					// FIFO: consume oldest lots first
+					let remainingToSell = tx.quantity;
+					const saleDate = new Date(tx.transactionDate);
+					const salePrice = tx.pricePerUnit;
 
-					if (isLongTerm) {
-						realisedGainsLongTerm.push(realisedGain);
-					} else {
-						realisedGainsShortTerm.push(realisedGain);
-					}
+					while (remainingToSell > 0 && taxLots.length > 0) {
+						const lot = taxLots[0];
+						const quantityFromLot = Math.min(lot.quantity, remainingToSell);
 
-					// Update lot
-					lot.costBaseAdjustment -= adjustmentShare;
-					lot.acquisitionCosts -= acquisitionShare;
-					lot.costTotal -= costShare;
-					lot.quantity -= quantityFromLot;
-					remainingToSell -= quantityFromLot;
+						// Calculate gain for this portion
+						// The disposed units take their proportional share of the lot's acquisition
+						// brokerage and AMIT adjustment; the sale's own brokerage reduces proceeds.
+						const share = (total: number) =>
+							lot.quantity > 0 ? Math.round((total * quantityFromLot) / lot.quantity) : 0;
+						const adjustmentShare = share(lot.costBaseAdjustment);
+						const acquisitionShare = share(lot.acquisitionCosts);
+						const costShare = share(lot.costTotal);
 
-					// Remove exhausted lot
-					if (lot.quantity === 0) {
-						taxLots.shift();
+						// The sale's stated value and brokerage split across the units disposed.
+						const saleValue = tx.value ?? tx.quantity * salePrice;
+						const perUnitOfSale = (total: number) =>
+							tx.quantity > 0 ? Math.round((total * quantityFromLot) / tx.quantity) : 0;
+						const disposalCosts = perUnitOfSale(tx.brokerage);
+
+						const proceeds = perUnitOfSale(saleValue) - disposalCosts;
+						const costBase = Math.max(costShare + acquisitionShare + adjustmentShare, 0);
+						const gain = proceeds - costBase;
+
+						// Check if held > 12 months
+						const holdingPeriodMs = saleDate.getTime() - lot.date.getTime();
+						const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
+
+						const realisedGain: RealisedGain = {
+							holdingName: holding.investment.name,
+							holdingCode: holding.investment.code,
+							saleDate,
+							quantity: quantityFromLot,
+							proceeds,
+							costBase,
+							gain,
+							isLongTerm
+						};
+
+						if (isLongTerm) {
+							realisedGainsLongTerm.push(realisedGain);
+						} else {
+							realisedGainsShortTerm.push(realisedGain);
+						}
+
+						// Update lot
+						lot.costBaseAdjustment -= adjustmentShare;
+						lot.acquisitionCosts -= acquisitionShare;
+						lot.costTotal -= costShare;
+						lot.quantity -= quantityFromLot;
+						remainingToSell -= quantityFromLot;
+
+						// Remove exhausted lot
+						if (lot.quantity === 0) {
+							taxLots.shift();
+						}
 					}
 				}
 			}
+
+			if (amitExcessGains > 0) {
+				amitExcessGainsByHolding.push({
+					code: holding.investment.code,
+					name: holding.investment.name,
+					amount: amitExcessGains
+				});
+			}
+
+			// Remaining lots are unrealised
+			let totalUnits = 0;
+			let totalCostBase = 0;
+
+			for (const lot of taxLots) {
+				const holdingPeriodMs = Date.now() - lot.date.getTime();
+				const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
+				const lotCostBase = Math.max(
+					lot.costTotal + lot.acquisitionCosts + lot.costBaseAdjustment,
+					0
+				);
+				const unrealisedGain = lot.quantity * currentPrice - lotCostBase;
+
+				unrealisedLots.push({
+					...lot,
+					currentPrice,
+					unrealisedGain,
+					isLongTerm
+				});
+
+				totalUnits += lot.quantity;
+				totalCostBase += lotCostBase;
+			}
+
+			const currentValue = totalUnits * currentPrice;
+			const unrealisedGain = currentValue - totalCostBase;
+
+			if (totalUnits > 0) {
+				holdingsSummary.push({
+					id: holding.id,
+					name: holding.investment.name,
+					code: holding.investment.code,
+					units: totalUnits,
+					currentPrice,
+					currentValue,
+					unrealisedGain
+				});
+			}
 		}
 
-		if (amitExcessGains > 0) {
-			amitExcessGainsByHolding.push({
-				code: holding.investment.code,
-				name: holding.investment.name,
-				amount: amitExcessGains
-			});
-		}
+		// Sort by sale date
+		realisedGainsShortTerm.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
+		realisedGainsLongTerm.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
 
-		// Remaining lots are unrealised
-		let totalUnits = 0;
-		let totalCostBase = 0;
+		const totalShortTermGain = realisedGainsShortTerm.reduce((sum, g) => sum + g.gain, 0);
+		const totalLongTermGain = realisedGainsLongTerm.reduce((sum, g) => sum + g.gain, 0);
+		const totalShortTermUnits = realisedGainsShortTerm.reduce((sum, g) => sum + g.quantity, 0);
+		const totalLongTermUnits = realisedGainsLongTerm.reduce((sum, g) => sum + g.quantity, 0);
 
-		for (const lot of taxLots) {
-			const holdingPeriodMs = Date.now() - lot.date.getTime();
-			const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
-			const lotCostBase = Math.max(
-				lot.costTotal + lot.acquisitionCosts + lot.costBaseAdjustment,
-				0
-			);
-			const unrealisedGain = lot.quantity * currentPrice - lotCostBase;
+		// Calculate current Australian Financial Year (July 1 - June 30)
+		const now = new Date();
+		// financialYear names the year the FY *ends* in; fyYear is the year it starts.
+		const fyYear = financialYear
+			? financialYear - 1
+			: now.getMonth() >= 6
+				? now.getFullYear()
+				: now.getFullYear() - 1;
+		const fyStart = new Date(fyYear, 6, 1); // July 1
+		const fyEnd = new Date(fyYear + 1, 5, 30, 23, 59, 59); // June 30
 
-			unrealisedLots.push({
-				...lot,
-				currentPrice,
-				unrealisedGain,
-				isLongTerm
-			});
+		// Filter gains/losses for current FY
+		const allFYGains = [...realisedGainsLongTerm, ...realisedGainsShortTerm].filter((g) => {
+			return g.saleDate >= fyStart && g.saleDate <= fyEnd;
+		});
 
-			totalUnits += lot.quantity;
-			totalCostBase += lotCostBase;
-		}
+		const fyShortTermGains = allFYGains
+			.filter((g) => !g.isLongTerm && g.gain > 0)
+			.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
 
-		const currentValue = totalUnits * currentPrice;
-		const unrealisedGain = currentValue - totalCostBase;
+		const fyLongTermGains = allFYGains
+			.filter((g) => g.isLongTerm && g.gain > 0)
+			.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
 
-		if (totalUnits > 0) {
-			holdingsSummary.push({
-				id: holding.id,
-				name: holding.investment.name,
-				code: holding.investment.code,
-				units: totalUnits,
-				currentPrice,
-				currentValue,
-				unrealisedGain
-			});
-		}
+		const fyCapitalLosses = allFYGains
+			.filter((g) => g.gain < 0)
+			.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
+
+		const fyTotalShortTermGains = fyShortTermGains.reduce((sum, g) => sum + g.gain, 0);
+		const fyTotalLongTermGains = fyLongTermGains.reduce((sum, g) => sum + g.gain, 0);
+		const fyTotalCapitalLosses = fyCapitalLosses.reduce((sum, g) => sum + g.gain, 0);
+
+		const fyTotalShortTermUnits = fyShortTermGains.reduce((sum, g) => sum + g.quantity, 0);
+		const fyTotalLongTermUnits = fyLongTermGains.reduce((sum, g) => sum + g.quantity, 0);
+		const fyTotalCapitalLossUnits = fyCapitalLosses.reduce((sum, g) => sum + g.quantity, 0);
+
+		const fyTotalShortTermProceeds = fyShortTermGains.reduce((sum, g) => sum + g.proceeds, 0);
+		const fyTotalLongTermProceeds = fyLongTermGains.reduce((sum, g) => sum + g.proceeds, 0);
+		const fyTotalCapitalLossProceeds = fyCapitalLosses.reduce((sum, g) => sum + g.proceeds, 0);
+
+		// CGT Calculation: Apply losses (offset short-term first, then long-term)
+		const totalLosses = Math.abs(fyTotalCapitalLosses);
+		let remainingLosses = totalLosses;
+
+		// Apply losses to short-term gains first
+		const lossesAppliedToShortTerm = Math.min(remainingLosses, fyTotalShortTermGains);
+		remainingLosses -= lossesAppliedToShortTerm;
+		const shortTermAfterLosses = fyTotalShortTermGains - lossesAppliedToShortTerm;
+
+		// Apply remaining losses to long-term gains
+		const lossesAppliedToLongTerm = Math.min(remainingLosses, fyTotalLongTermGains);
+		const longTermAfterLosses = fyTotalLongTermGains - lossesAppliedToLongTerm;
+
+		// Apply 50% CGT discount to long-term gains
+		const cgtDiscount = longTermAfterLosses > 0 ? longTermAfterLosses * 0.5 : 0;
+		const longTermTaxable = longTermAfterLosses - cgtDiscount;
+
+		const totalTaxableGain = shortTermAfterLosses + longTermTaxable;
+
+		return {
+			realisedGains: {
+				shortTerm: realisedGainsShortTerm,
+				longTerm: realisedGainsLongTerm,
+				totalShortTermGain,
+				totalLongTermGain,
+				totalGain: totalShortTermGain + totalLongTermGain,
+				totalShortTermUnits,
+				totalLongTermUnits
+			},
+			currentFY: {
+				label: `FY${fyYear}-${fyYear + 1}`,
+				start: fyStart,
+				end: fyEnd,
+				shortTermGains: fyShortTermGains,
+				longTermGains: fyLongTermGains,
+				capitalLosses: fyCapitalLosses,
+				totalShortTermGains: fyTotalShortTermGains,
+				totalLongTermGains: fyTotalLongTermGains,
+				totalCapitalLosses: fyTotalCapitalLosses,
+				totalShortTermUnits: fyTotalShortTermUnits,
+				totalLongTermUnits: fyTotalLongTermUnits,
+				totalCapitalLossUnits: fyTotalCapitalLossUnits,
+				totalShortTermProceeds: fyTotalShortTermProceeds,
+				totalLongTermProceeds: fyTotalLongTermProceeds,
+				totalCapitalLossProceeds: fyTotalCapitalLossProceeds
+			},
+			cgtCalculation: {
+				shortTermGains: fyTotalShortTermGains,
+				lossesAppliedToShortTerm,
+				shortTermAfterLosses,
+				longTermGains: fyTotalLongTermGains,
+				lossesAppliedToLongTerm,
+				longTermAfterLosses,
+				cgtDiscount,
+				longTermTaxable,
+				totalTaxableGain
+			},
+			amitExcessGains: amitExcessGainsByHolding,
+			unrealisedLots,
+			holdings: holdingsSummary
+		};
 	}
-
-	// Sort by sale date
-	realisedGainsShortTerm.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
-	realisedGainsLongTerm.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
-
-	const totalShortTermGain = realisedGainsShortTerm.reduce((sum, g) => sum + g.gain, 0);
-	const totalLongTermGain = realisedGainsLongTerm.reduce((sum, g) => sum + g.gain, 0);
-	const totalShortTermUnits = realisedGainsShortTerm.reduce((sum, g) => sum + g.quantity, 0);
-	const totalLongTermUnits = realisedGainsLongTerm.reduce((sum, g) => sum + g.quantity, 0);
-
-	// Calculate current Australian Financial Year (July 1 - June 30)
-	const now = new Date();
-	const fyYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-	const fyStart = new Date(fyYear, 6, 1); // July 1
-	const fyEnd = new Date(fyYear + 1, 5, 30, 23, 59, 59); // June 30
-
-	// Filter gains/losses for current FY
-	const allFYGains = [...realisedGainsLongTerm, ...realisedGainsShortTerm].filter((g) => {
-		return g.saleDate >= fyStart && g.saleDate <= fyEnd;
-	});
-
-	const fyShortTermGains = allFYGains
-		.filter((g) => !g.isLongTerm && g.gain > 0)
-		.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
-
-	const fyLongTermGains = allFYGains
-		.filter((g) => g.isLongTerm && g.gain > 0)
-		.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
-
-	const fyCapitalLosses = allFYGains
-		.filter((g) => g.gain < 0)
-		.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
-
-	const fyTotalShortTermGains = fyShortTermGains.reduce((sum, g) => sum + g.gain, 0);
-	const fyTotalLongTermGains = fyLongTermGains.reduce((sum, g) => sum + g.gain, 0);
-	const fyTotalCapitalLosses = fyCapitalLosses.reduce((sum, g) => sum + g.gain, 0);
-
-	const fyTotalShortTermUnits = fyShortTermGains.reduce((sum, g) => sum + g.quantity, 0);
-	const fyTotalLongTermUnits = fyLongTermGains.reduce((sum, g) => sum + g.quantity, 0);
-	const fyTotalCapitalLossUnits = fyCapitalLosses.reduce((sum, g) => sum + g.quantity, 0);
-
-	const fyTotalShortTermProceeds = fyShortTermGains.reduce((sum, g) => sum + g.proceeds, 0);
-	const fyTotalLongTermProceeds = fyLongTermGains.reduce((sum, g) => sum + g.proceeds, 0);
-	const fyTotalCapitalLossProceeds = fyCapitalLosses.reduce((sum, g) => sum + g.proceeds, 0);
-
-	// CGT Calculation: Apply losses (offset short-term first, then long-term)
-	const totalLosses = Math.abs(fyTotalCapitalLosses);
-	let remainingLosses = totalLosses;
-
-	// Apply losses to short-term gains first
-	const lossesAppliedToShortTerm = Math.min(remainingLosses, fyTotalShortTermGains);
-	remainingLosses -= lossesAppliedToShortTerm;
-	const shortTermAfterLosses = fyTotalShortTermGains - lossesAppliedToShortTerm;
-
-	// Apply remaining losses to long-term gains
-	const lossesAppliedToLongTerm = Math.min(remainingLosses, fyTotalLongTermGains);
-	const longTermAfterLosses = fyTotalLongTermGains - lossesAppliedToLongTerm;
-
-	// Apply 50% CGT discount to long-term gains
-	const cgtDiscount = longTermAfterLosses > 0 ? longTermAfterLosses * 0.5 : 0;
-	const longTermTaxable = longTermAfterLosses - cgtDiscount;
-
-	const totalTaxableGain = shortTermAfterLosses + longTermTaxable;
-
-	return {
-		realisedGains: {
-			shortTerm: realisedGainsShortTerm,
-			longTerm: realisedGainsLongTerm,
-			totalShortTermGain,
-			totalLongTermGain,
-			totalGain: totalShortTermGain + totalLongTermGain,
-			totalShortTermUnits,
-			totalLongTermUnits
-		},
-		currentFY: {
-			label: `FY${fyYear}-${fyYear + 1}`,
-			start: fyStart,
-			end: fyEnd,
-			shortTermGains: fyShortTermGains,
-			longTermGains: fyLongTermGains,
-			capitalLosses: fyCapitalLosses,
-			totalShortTermGains: fyTotalShortTermGains,
-			totalLongTermGains: fyTotalLongTermGains,
-			totalCapitalLosses: fyTotalCapitalLosses,
-			totalShortTermUnits: fyTotalShortTermUnits,
-			totalLongTermUnits: fyTotalLongTermUnits,
-			totalCapitalLossUnits: fyTotalCapitalLossUnits,
-			totalShortTermProceeds: fyTotalShortTermProceeds,
-			totalLongTermProceeds: fyTotalLongTermProceeds,
-			totalCapitalLossProceeds: fyTotalCapitalLossProceeds
-		},
-		cgtCalculation: {
-			shortTermGains: fyTotalShortTermGains,
-			lossesAppliedToShortTerm,
-			shortTermAfterLosses,
-			longTermGains: fyTotalLongTermGains,
-			lossesAppliedToLongTerm,
-			longTermAfterLosses,
-			cgtDiscount,
-			longTermTaxable,
-			totalTaxableGain
-		},
-		amitExcessGains: amitExcessGainsByHolding,
-		unrealisedLots,
-		holdings: holdingsSummary
-	};
-});
+);
 
 export const getPortfolioUnrealisedGains = query(
 	z.string(),
@@ -788,3 +800,23 @@ export const getPortfolioUnrealisedGains = query(
 		};
 	}
 );
+
+/** Financial years (by ending year) that have a disposal or an AMMA statement. */
+export const getPortfolioFinancialYears = query(z.string(), async (id: string) => {
+	const summary = await getPortfolioTaxSummary({ id });
+	const fyOf = (d: Date) => (d.getMonth() >= 6 ? d.getFullYear() + 1 : d.getFullYear());
+
+	const years = new Set<number>([
+		...summary.realisedGains.shortTerm.map((g) => fyOf(new Date(g.saleDate))),
+		...summary.realisedGains.longTerm.map((g) => fyOf(new Date(g.saleDate)))
+	]);
+
+	// Only years with activity. At tax time you want the year that just ended, not
+	// the empty one you are in, so the newest of these becomes the default.
+	if (years.size === 0) {
+		const now = new Date();
+		years.add(now.getMonth() >= 6 ? now.getFullYear() + 1 : now.getFullYear());
+	}
+
+	return [...years].sort((a, b) => b - a);
+});

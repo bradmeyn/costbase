@@ -9,7 +9,7 @@
 	import { Download } from '@lucide/svelte';
 
 	const portfolioId = page.params.portfolioId!;
-	const taxSummary = $derived(await getPortfolioTaxSummary(portfolioId));
+	const taxSummary = $derived(await getPortfolioTaxSummary({ id: portfolioId }));
 
 	// Tax rate options (Australian marginal rates)
 	const taxRates = [
