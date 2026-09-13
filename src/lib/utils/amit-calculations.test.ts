@@ -4,9 +4,6 @@ import {
 	netCostBaseAmount,
 	financialYearEnd,
 	financialYearStart,
-	cumulativeAdjustments,
-	fyEndingYear,
-	fyStartingYear,
 	type ParcelForAdjustment
 } from './amit-calculations';
 
@@ -37,11 +34,6 @@ describe('financial year boundaries', () => {
 	it('FY2026 runs 1 Jul 2025 to 30 Jun 2026', () => {
 		expect(localDate(financialYearStart(2026))).toBe('2025-07-01');
 		expect(localDate(financialYearEnd(2026))).toBe('2026-06-30');
-	});
-
-	it('converts between starting-year and ending-year FY labels', () => {
-		expect(fyEndingYear(2025)).toBe(2026);
-		expect(fyStartingYear(2026)).toBe(2025);
 	});
 });
 
@@ -132,18 +124,5 @@ describe('apportionCostBaseAdjustment', () => {
 		]);
 		expect(r.netAmount).toBe(-74_161);
 		expect(r.perParcel.reduce((s, p) => s + p.adjustment, 0)).toBe(-74_161);
-	});
-});
-
-describe('cumulativeAdjustments', () => {
-	it('accumulates across years and stops at the requested year', () => {
-		const parcels = [parcel('a', '2021-01-01', 100, 10_000)];
-		const totals = cumulativeAdjustments(
-			[stmt(2025, 0, 500), stmt(2026, 200, 0), stmt(2027, 0, 900)],
-			() => parcels,
-			2026
-		);
-		// FY2025 +500, FY2026 -200, FY2027 excluded.
-		expect(totals.get('a')).toBe(300);
 	});
 });

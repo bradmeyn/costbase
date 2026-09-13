@@ -142,8 +142,4 @@ export const amitStatementSchema = z.object({
 	netCashDistribution: dollars
 });
 
-export const updateAmitStatementSchema = amitStatementSchema.extend({
-	id: z.string().min(1)
-});
-
 export type AmitStatementInput = z.infer<typeof amitStatementSchema>;

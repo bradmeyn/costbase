@@ -3,26 +3,6 @@
  * These functions are separated from the data fetching logic to make them testable
  */
 
-export interface RealisedGain {
-	holdingName: string;
-	holdingCode: string;
-	saleDate: Date;
-	quantity: number;
-	proceeds: number; // in cents
-	costBase: number; // in cents
-	gain: number; // in cents
-	isLongTerm: boolean; // held > 12 months
-}
-
-export interface TaxLot {
-	date: Date;
-	quantity: number;
-	costPerUnit: number; // in cents
-	holdingId: string;
-	holdingName: string;
-	holdingCode: string;
-}
-
 export interface CGTCalculation {
 	shortTermGains: number;
 	lossesAppliedToShortTerm: number;
@@ -33,59 +13,6 @@ export interface CGTCalculation {
 	cgtDiscount: number;
 	longTermTaxable: number;
 	totalTaxableGain: number;
-}
-
-/**
- * Calculate if a holding period qualifies for long-term CGT discount (> 12 months)
- */
-export function isLongTermHolding(purchaseDate: Date, saleDate: Date): boolean {
-	const holdingPeriodMs = saleDate.getTime() - purchaseDate.getTime();
-	const oneYearMs = 365 * 24 * 60 * 60 * 1000;
-	return holdingPeriodMs > oneYearMs;
-}
-
-/**
- * Calculate realised gains from a sale transaction using FIFO
- */
-export function calculateRealisedGains(
-	taxLots: TaxLot[],
-	quantity: number,
-	salePrice: number,
-	saleDate: Date
-): { gains: RealisedGain[]; remainingLots: TaxLot[] } {
-	const gains: RealisedGain[] = [];
-	const lots = [...taxLots]; // Clone to avoid mutation
-	let remainingToSell = quantity;
-
-	while (remainingToSell > 0 && lots.length > 0) {
-		const lot = lots[0];
-		const quantityFromLot = Math.min(lot.quantity, remainingToSell);
-
-		const proceeds = quantityFromLot * salePrice;
-		const costBase = quantityFromLot * lot.costPerUnit;
-		const gain = proceeds - costBase;
-		const isLongTerm = isLongTermHolding(lot.date, saleDate);
-
-		gains.push({
-			holdingName: lot.holdingName,
-			holdingCode: lot.holdingCode,
-			saleDate,
-			quantity: quantityFromLot,
-			proceeds,
-			costBase,
-			gain,
-			isLongTerm
-		});
-
-		lot.quantity -= quantityFromLot;
-		remainingToSell -= quantityFromLot;
-
-		if (lot.quantity === 0) {
-			lots.shift();
-		}
-	}
-
-	return { gains, remainingLots: lots };
 }
 
 /**
@@ -148,41 +75,5 @@ export function getCurrentFinancialYear(date: Date = new Date()): {
 		start,
 		end,
 		label: `FY${fyYear}-${fyYear + 1}`
-	};
-}
-
-/**
- * Filter gains for a specific financial year
- */
-export function filterGainsByFinancialYear(
-	gains: RealisedGain[],
-	fyStart: Date,
-	fyEnd: Date
-): RealisedGain[] {
-	return gains.filter((g) => g.saleDate >= fyStart && g.saleDate <= fyEnd);
-}
-
-/**
- * Calculate unrealised gain for a tax lot
- */
-export function calculateUnrealisedGain(
-	lot: TaxLot,
-	currentPrice: number
-): {
-	unrealisedGain: number;
-	currentValue: number;
-	costBase: number;
-	isLongTerm: boolean;
-} {
-	const costBase = lot.quantity * lot.costPerUnit;
-	const currentValue = lot.quantity * currentPrice;
-	const unrealisedGain = currentValue - costBase;
-	const isLongTerm = isLongTermHolding(lot.date, new Date());
-
-	return {
-		unrealisedGain,
-		currentValue,
-		costBase,
-		isLongTerm
 	};
 }

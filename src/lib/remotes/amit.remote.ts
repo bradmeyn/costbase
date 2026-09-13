@@ -1,4 +1,4 @@
-import { command, form, query } from '$app/server';
+import { form, query } from '$app/server';
 import { z } from 'zod';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
@@ -7,7 +7,6 @@ import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import {
 	amitStatementSchema,
-	updateAmitStatementSchema,
 	AMIT_AMOUNT_FIELDS,
 	type AmitAmountField
 } from '#lib/schemas/amit.js';
@@ -92,42 +91,4 @@ export const saveAmitStatement = form(amitStatementSchema, async (data) => {
 		});
 
 	return { success: true };
-});
-
-export const updateAmitStatement = form(updateAmitStatementSchema, async (data) => {
-	await assertOwnsHolding(data.holdingId);
-
-	const existing = await db.query.amitStatementTable.findFirst({
-		where: eq(amitStatementTable.id, data.id)
-	});
-	if (!existing) error(404, 'Statement not found');
-	if (existing.holdingId !== data.holdingId) error(403, 'Forbidden');
-
-	await db
-		.update(amitStatementTable)
-		.set({
-			financialYear: data.financialYear,
-			...amountsToCents(data as unknown as Record<string, unknown>),
-			updatedAt: new Date()
-		})
-		.where(eq(amitStatementTable.id, data.id));
-
-	return { success: true };
-});
-
-export const deleteAmitStatement = command(z.object({ id: z.string() }), async ({ id }) => {
-	const statement = await db.query.amitStatementTable.findFirst({
-		where: eq(amitStatementTable.id, id)
-	});
-	if (!statement) error(404, 'Statement not found');
-	await assertOwnsHolding(statement.holdingId);
-
-	await db.delete(amitStatementTable).where(eq(amitStatementTable.id, id));
-	return { success: true };
-});
-
-/** Financial years that have at least one statement in this portfolio. */
-export const getAmitFinancialYears = query(z.string(), async (portfolioId: string) => {
-	const statements = await getPortfolioAmitStatements(portfolioId);
-	return [...new Set(statements.map((s) => s.financialYear))].sort((a, b) => b - a);
 });

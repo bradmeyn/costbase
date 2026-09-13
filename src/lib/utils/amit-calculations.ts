@@ -15,8 +15,7 @@ import type { AmitStatement } from '$db/schemas/portfolio';
  * Financial year convention: `financialYear` is the year the FY *ends* in, matching
  * the statement's own wording ("year ended 30 June 2026" -> 2026). Note this differs
  * from getCurrentFinancialYear() in cgt-calculations, which labels a year by its
- * *starting* year (FY2025-26 -> 2025). Use fyEndingYear()/fyStartingYear() to convert
- * rather than doing the arithmetic inline.
+ * *starting* year (FY2025-26 -> 2025).
  *
  * A parcel's cost base cannot go below zero. Where an excess would take it
  * negative, the cost base is floored at zero and the remainder is reported as an
@@ -51,16 +50,6 @@ export interface AmitAdjustmentResult {
 	perParcel: ParcelAdjustment[];
 	/** Total cents of unabsorbed excess across all parcels (CGT event E10). */
 	totalExcessGain: number;
-}
-
-/** Convert a starting-year FY label (as used by cgt-calculations) to an ending year. */
-export function fyEndingYear(startingYear: number): number {
-	return startingYear + 1;
-}
-
-/** Convert an ending-year FY label (as used here and on AMMA statements) to a starting year. */
-export function fyStartingYear(endingYear: number): number {
-	return endingYear - 1;
 }
 
 /** 30 June of the given financial year, at end of day, in local time. */
@@ -134,34 +123,4 @@ export function apportionCostBaseAdjustment(
 		perParcel,
 		totalExcessGain: perParcel.reduce((sum, p) => sum + p.excessGain, 0)
 	};
-}
-
-/**
- * Cumulative adjustment per parcel across every statement up to and including a
- * financial year. Cost base adjustments accumulate over the life of a holding, so
- * a parcel sold in FY2027 carries every adjustment from FY2022 onward.
- */
-export function cumulativeAdjustments(
-	statements: Pick<
-		AmitStatement,
-		'amitCostBaseExcess' | 'amitCostBaseShortfall' | 'financialYear'
-	>[],
-	parcelsAtYearEnd: (financialYear: number) => ParcelForAdjustment[],
-	upToFinancialYear: number
-): Map<string, number> {
-	const totals = new Map<string, number>();
-
-	for (const statement of statements
-		.filter((s) => s.financialYear <= upToFinancialYear)
-		.sort((a, b) => a.financialYear - b.financialYear)) {
-		const result = apportionCostBaseAdjustment(
-			statement,
-			parcelsAtYearEnd(statement.financialYear)
-		);
-		for (const p of result.perParcel) {
-			totals.set(p.parcelId, (totals.get(p.parcelId) ?? 0) + p.adjustment);
-		}
-	}
-
-	return totals;
 }
