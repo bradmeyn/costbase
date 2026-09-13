@@ -20,25 +20,31 @@
 			ready: true
 		},
 		{
-			href: '',
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/transactions', {
+				portfolioId
+			}),
 			label: 'Transactions',
 			body: 'Every buy, sell and reinvestment in the year, with cost base and brokerage.',
 			byYear: true,
-			ready: false
+			ready: true
 		},
 		{
-			href: '',
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/distributions', {
+				portfolioId
+			}),
 			label: 'Distributions',
 			body: 'Cash distributions received in the year, per holding.',
 			byYear: true,
-			ready: false
+			ready: true
 		},
 		{
-			href: '',
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', {
+				portfolioId
+			}),
 			label: 'AMMA statements',
 			body: 'Attribution components and cost base adjustments as entered from each annual statement.',
 			byYear: true,
-			ready: false
+			ready: true
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/unrealised-gains', {

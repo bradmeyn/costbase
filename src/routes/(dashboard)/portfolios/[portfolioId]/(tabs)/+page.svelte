@@ -33,7 +33,14 @@
 	let dialog = $state<Dialog>(null);
 </script>
 
-<div class="mb-4 flex items-center justify-end">
+<div class="mb-5 flex items-start justify-between gap-3">
+	<div>
+		<h1 class="text-2xl font-semibold tracking-tight">Overview</h1>
+		<p class="mt-1 text-[13px] text-muted-foreground">
+			{portfolio.holdings.length}
+			{portfolio.holdings.length === 1 ? 'holding' : 'holdings'} · positions at today’s prices
+		</p>
+	</div>
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger
 			class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-accent-foreground"

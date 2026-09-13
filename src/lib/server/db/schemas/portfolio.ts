@@ -72,6 +72,15 @@ export const distributionTable = pgTable('distribution', {
 		.notNull()
 		.references(() => holdingTable.id, { onDelete: 'cascade' }),
 	datePaid: timestamp('date_paid').notNull(),
+	/** Record date — who is entitled. Distinct from the payment date. */
+	recordDate: timestamp('record_date'),
+	/** Units held at the record date, as stated. */
+	units: integer('units'),
+	/**
+	 * Cash per security, in millionths of a cent. Distribution rates carry eight
+	 * decimals (0.48829897), which cents cannot hold.
+	 */
+	centsPerUnit: integer('cents_per_unit'),
 	// All amounts stored in cents
 	grossPayment: integer('gross_payment').notNull().default(0),
 	taxWithheld: integer('tax_withheld').notNull().default(0),

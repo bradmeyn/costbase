@@ -24,6 +24,25 @@
 			byYear: true
 		},
 		{
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/transactions', {
+				portfolioId
+			}),
+			label: 'Transactions',
+			byYear: true
+		},
+		{
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/distributions', {
+				portfolioId
+			}),
+			label: 'Distributions',
+			byYear: true
+		},
+		{
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', { portfolioId }),
+			label: 'AMMA statements',
+			byYear: true
+		},
+		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/unrealised-gains', {
 				portfolioId
 			}),

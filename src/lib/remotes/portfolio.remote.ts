@@ -820,3 +820,81 @@ export const getPortfolioFinancialYears = query(z.string(), async (id: string) =
 
 	return [...years].sort((a, b) => b - a);
 });
+
+/** 1 July to 30 June of the financial year named by the year it ends in. */
+function fyRange(financialYear: number) {
+	return {
+		start: new Date(financialYear - 1, 6, 1),
+		end: new Date(financialYear, 5, 30, 23, 59, 59, 999)
+	};
+}
+
+/** Every transaction in a financial year, newest first, flattened across holdings. */
+export const getPortfolioTransactions = query(
+	z.object({ id: z.string(), financialYear: z.number().int() }),
+	async ({ id, financialYear }) => {
+		const user = await getCurrentUser();
+		if (!user) error(401, 'Unauthorized');
+
+		const portfolio = await db.query.portfolioTable.findFirst({
+			where: eq(portfolioTable.id, id),
+			with: { holdings: { with: { investment: true, transactions: true } } }
+		});
+		if (!portfolio) error(404, 'Portfolio not found');
+		if (portfolio.userId !== user.id) error(403, 'Forbidden');
+
+		const { start, end } = fyRange(financialYear);
+
+		return portfolio.holdings
+			.flatMap((h) =>
+				h.transactions.map((t) => ({
+					...t,
+					holdingId: h.id,
+					code: h.investment.code,
+					name: h.investment.name,
+					/** Consideration as stated on the note where known. */
+					total: t.value ?? t.quantity * t.pricePerUnit
+				}))
+			)
+			.filter((t) => {
+				const d = new Date(t.transactionDate);
+				return d >= start && d <= end;
+			})
+			.sort(
+				(a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
+			);
+	}
+);
+
+/** Every distribution paid in a financial year, newest first. */
+export const getPortfolioDistributions = query(
+	z.object({ id: z.string(), financialYear: z.number().int() }),
+	async ({ id, financialYear }) => {
+		const user = await getCurrentUser();
+		if (!user) error(401, 'Unauthorized');
+
+		const portfolio = await db.query.portfolioTable.findFirst({
+			where: eq(portfolioTable.id, id),
+			with: { holdings: { with: { investment: true, distributions: true } } }
+		});
+		if (!portfolio) error(404, 'Portfolio not found');
+		if (portfolio.userId !== user.id) error(403, 'Forbidden');
+
+		const { start, end } = fyRange(financialYear);
+
+		return portfolio.holdings
+			.flatMap((h) =>
+				h.distributions.map((d) => ({
+					...d,
+					code: h.investment.code,
+					name: h.investment.name,
+					net: d.grossPayment - d.taxWithheld
+				}))
+			)
+			.filter((d) => {
+				const paid = new Date(d.datePaid);
+				return paid >= start && paid <= end;
+			})
+			.sort((a, b) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime());
+	}
+);

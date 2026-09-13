@@ -43,9 +43,30 @@
 					icon: TrendingUp,
 					ready: true
 				},
-				{ href: '', label: 'Transactions', icon: Receipt, ready: false },
-				{ href: '', label: 'Distributions', icon: Coins, ready: false },
-				{ href: '', label: 'AMMA statements', icon: FileText, ready: false }
+				{
+					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/transactions', {
+						portfolioId
+					}),
+					label: 'Transactions',
+					icon: Receipt,
+					ready: true
+				},
+				{
+					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/distributions', {
+						portfolioId
+					}),
+					label: 'Distributions',
+					icon: Coins,
+					ready: true
+				},
+				{
+					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', {
+						portfolioId
+					}),
+					label: 'AMMA statements',
+					icon: FileText,
+					ready: true
+				}
 			]
 		},
 		{
