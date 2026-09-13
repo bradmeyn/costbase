@@ -22,15 +22,15 @@
 	<table class="w-full">
 		<thead class="sticky top-0">
 			<tr>
-				{#each data.columns as column, i}
+				{#each data.columns as column, i (i)}
 					<th class="{getAlignment(i)} p-2">{column}</th>
 				{/each}
 			</tr>
 		</thead>
 		<tbody>
-			{#each data.rows as row}
+			{#each data.rows as row, rowIndex (rowIndex)}
 				<tr>
-					{#each row as cell, i}
+					{#each row as cell, i (i)}
 						<td class="p-2 {getAlignment(i)}">
 							{cell}
 						</td>

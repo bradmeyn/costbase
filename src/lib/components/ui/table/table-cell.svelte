@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from '#lib/utils.js';
+	import { cn, type WithElementRef } from '#lib/utils/tailwind.js';
 	import type { HTMLTdAttributes } from 'svelte/elements';
 
 	let {
@@ -13,10 +13,7 @@
 <td
 	bind:this={ref}
 	data-slot="table-cell"
-	class={cn(
-		'whitespace-nowrap bg-clip-padding p-2 align-middle [&:has([role=checkbox])]:pe-0',
-		className
-	)}
+	class={cn('p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0', className)}
 	{...restProps}
 >
 	{@render children?.()}

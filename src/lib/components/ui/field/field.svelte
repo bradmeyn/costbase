@@ -1,21 +1,15 @@
 <script lang="ts" module>
 	import { tv, type VariantProps } from 'tailwind-variants';
 
-	const fieldVariants = tv({
-		base: 'group/field data-[invalid=true]:text-destructive flex w-full',
+	export const fieldVariants = tv({
+		base: 'data-[invalid=true]:text-destructive gap-2 group/field flex w-full',
 		variants: {
 			orientation: {
-				vertical: 'flex-col [&>*]:w-full [&>.sr-only]:w-auto',
-				horizontal: [
-					'flex-row items-center',
-					'[&>[data-slot=field-label]]:flex-auto',
-					'has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px has-[>[data-slot=field-content]]:items-start'
-				],
-				responsive: [
-					'@md/field-group:flex-row @md/field-group:items-center @md/field-group:[&>*]:w-auto flex-col [&>*]:w-full [&>.sr-only]:w-auto',
-					'@md/field-group:[&>[data-slot=field-label]]:flex-auto',
-					'@md/field-group:has-[>[data-slot=field-content]]:items-start @md/field-group:has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px'
-				]
+				vertical: 'flex-col *:w-full [&>.sr-only]:w-auto',
+				horizontal:
+					'flex-row items-center has-[>[data-slot=field-content]]:items-start *:data-[slot=field-label]:flex-auto has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px',
+				responsive:
+					'flex-col *:w-full @md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto @md/field-group:has-[>[data-slot=field-content]]:items-start @md/field-group:*:data-[slot=field-label]:flex-auto [&>.sr-only]:w-auto @md/field-group:has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px'
 			}
 		},
 		defaultVariants: {
@@ -27,20 +21,22 @@
 </script>
 
 <script lang="ts">
-	import { cn } from '#lib/utils.js';
+	import { cn, type WithElementRef } from '#lib/utils/tailwind.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	let {
+		ref = $bindable(null),
 		class: className,
 		orientation = 'vertical',
 		children,
 		...restProps
-	}: HTMLAttributes<HTMLDivElement> & {
+	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		orientation?: FieldOrientation;
 	} = $props();
 </script>
 
 <div
+	bind:this={ref}
 	role="group"
 	data-slot="field"
 	data-orientation={orientation}

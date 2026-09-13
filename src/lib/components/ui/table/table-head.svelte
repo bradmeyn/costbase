@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from '#lib/utils.js';
+	import { cn, type WithElementRef } from '#lib/utils/tailwind.js';
 	import type { HTMLThAttributes } from 'svelte/elements';
 
 	let {
@@ -14,7 +14,7 @@
 	bind:this={ref}
 	data-slot="table-head"
 	class={cn(
-		'text-foreground h-10 whitespace-nowrap bg-clip-padding px-2 text-start align-middle font-medium [&:has([role=checkbox])]:pe-0',
+		'h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0',
 		className
 	)}
 	{...restProps}
