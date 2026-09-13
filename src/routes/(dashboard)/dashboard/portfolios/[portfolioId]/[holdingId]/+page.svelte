@@ -38,24 +38,24 @@
 </div>
 
 <!-- Holding Summary -->
-<div class="mb-6 grid gap-4 md:grid-cols-3">
+<div class="mb-5 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
 	<SummaryCard label="Units" value={String(holding.units || 0)} />
 	<SummaryCard
-		label="Avg. Price"
+		label="Avg. price"
 		value={holding.averagePrice ? formatCurrency(holding.averagePrice) : '$0.00'}
 	/>
-	<SummaryCard label="Cost Base" value={formatCurrency(holding.costBase)} />
-	<SummaryCard label="Current Price" value={formatCurrency(holding.currentPrice)} />
-	<SummaryCard label="Current Value" value={formatCurrency(holding.currentValue)} />
+	<SummaryCard label="Cost base" value={formatCurrency(holding.costBase)} />
+	<SummaryCard label="Current price" value={formatCurrency(holding.currentPrice)} />
+	<SummaryCard label="Current value" value={formatCurrency(holding.currentValue)} />
 	<SummaryCard
-		label="Unrealised Gain"
+		label="Unrealised gain"
 		value={formatCurrency(holding.unrealisedGain)}
-		valueClass={holding.unrealisedGain >= 0 ? 'text-emerald-600' : 'text-red-600'}
+		valueClass={holding.unrealisedGain >= 0 ? 'text-gain' : 'text-loss'}
 	>
 		<p
 			class="mt-1 text-sm font-medium {holding.unrealisedGainPercent >= 0
-				? 'text-emerald-600'
-				: 'text-red-600'}"
+				? 'text-gain'
+				: 'text-loss'}"
 		>
 			{holding.unrealisedGainPercent >= 0 ? '+' : ''}{holding.unrealisedGainPercent.toFixed(2)}%
 		</p>
@@ -65,7 +65,7 @@
 <!-- Transactions Section -->
 <div>
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-2xl font-bold">Transactions</h2>
+		<h2 class="text-base font-semibold">Transactions</h2>
 		<Button onclick={() => (addTransactionsOpen = true)}>Add Transactions</Button>
 	</div>
 
@@ -84,8 +84,8 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each holding.transactions as transaction}
-						<TransactionRow {transaction} {holdingId} />
+					{#each holding.transactions as transaction (transaction.id)}
+						<TransactionRow {transaction} />
 					{/each}
 				</Table.Body>
 			</Table.Root>
@@ -103,7 +103,7 @@
 <!-- Distributions Section -->
 <div class="mt-8">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-2xl font-bold">Distributions</h2>
+		<h2 class="text-base font-semibold">Distributions</h2>
 		<Button onclick={() => (addDistributionOpen = true)}>Add Distribution</Button>
 	</div>
 	<AddDistributionDialog {holdingId} bind:open={addDistributionOpen} showTrigger={false} />
@@ -122,7 +122,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each holding.distributions as distribution}
+					{#each holding.distributions as distribution (distribution.id)}
 						<DistributionRow {distribution} {holdingId} />
 					{/each}
 				</Table.Body>

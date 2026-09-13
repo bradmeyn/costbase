@@ -26,7 +26,8 @@
 
 	let series = $derived.by(() => {
 		const baseColor = COLOURS[0];
-		const goalColor = COLOURS[1];
+		// green (tertiary) reads as a target; orange is reserved for tax owed elsewhere
+		const goalColor = COLOURS[2];
 		const bandColor = COLOURS[0];
 
 		const result = [];
@@ -80,7 +81,7 @@
 	});
 </script>
 
-<div class="h-100 relative md:h-80 lg:h-100 min-w-50 border overflow-hidden p-4 rounded-2xl">
+<div class="relative h-100 min-w-50 overflow-hidden pt-2 md:h-80 lg:h-100">
 	<LineChart
 		data={chartData}
 		x="year"

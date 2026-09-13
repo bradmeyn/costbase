@@ -15,12 +15,12 @@
 	/>
 </svelte:head>
 
-<div class="antialiased min-h-screen flex flex-col bg-background text-foreground app-shell">
+<div class="flex min-h-screen flex-col bg-background text-foreground antialiased">
 	<Header />
 	<div class="pb-12">
 		{@render children()}
 	</div>
 	<footer class="mt-auto border-t border-border bg-card py-4">
-		<p class="text-xs text-center">© {year} MoneyKit</p>
+		<p class="text-center text-xs">© {year} MoneyKit</p>
 	</footer>
 </div>

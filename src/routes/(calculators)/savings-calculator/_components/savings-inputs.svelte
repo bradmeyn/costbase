@@ -11,10 +11,10 @@
 	let calculator = getCalculatorState();
 </script>
 
-<aside class="min-w-75 max-w-250 space-y-4">
+<aside class="max-w-250 min-w-75 space-y-4">
 	<div class="flex items-center justify-between border-b pb-3">
 		<h2 class="heading-secondary">Inputs</h2>
-		<div class="flex rounded-md border border-border text-xs font-medium overflow-hidden">
+		<div class="flex overflow-hidden rounded-md border border-border text-xs font-medium">
 			<button
 				onclick={() => (calculator.mode = 'savings')}
 				class="px-3 py-1.5 transition-colors {calculator.mode === 'savings'
@@ -66,7 +66,7 @@
 	/>
 
 	<div>
-		<div class="flex gap-2 mb-2 items-center">
+		<div class="mb-2 flex items-center gap-2">
 			<Label class="mb-0" id="years-invested">Years Invested</Label>
 			<Explainer text="The number of years you plan to invest." />
 		</div>
@@ -78,7 +78,7 @@
 			step={1}
 			id="years-invested"
 		/>
-		<div class="text-sm text-muted-foreground mt-1">{calculator.years}</div>
+		<div class="mt-1 text-sm text-muted-foreground">{calculator.years}</div>
 	</div>
 
 	<hr class="border-border" />
@@ -88,7 +88,7 @@
 			<Label for="savings-goal">Savings Goal</Label>
 			<CurrencyInput bind:value={calculator.savingsGoal} id="savings-goal" />
 			{#if calculator.savingsGoal <= 0}
-				<p class="text-destructive text-xs mt-1">Savings goal must be greater than 0.</p>
+				<p class="mt-1 text-xs text-destructive">Savings goal must be greater than 0.</p>
 			{/if}
 		</div>
 	{:else}
@@ -96,7 +96,7 @@
 			<Label for="annual-expenses">Annual Expenses</Label>
 			<CurrencyInput bind:value={calculator.annualExpenses} id="annual-expenses" />
 			{#if calculator.annualExpenses <= 0}
-				<p class="text-destructive text-xs mt-1">Annual expenses must be greater than 0.</p>
+				<p class="mt-1 text-xs text-destructive">Annual expenses must be greater than 0.</p>
 			{/if}
 		</div>
 
@@ -126,7 +126,7 @@
 		onclick={() => (calculator.useVolatility = !calculator.useVolatility)}
 	>
 		{calculator.useVolatility ? 'Hide Volatility' : 'Add Volatility'}
-		<Explainer text="Include market volatility for more realistic returns." />
+		<Explainer text="Include market volatility for more realistic returns." inline />
 	</Button>
 
 	{#if calculator.useVolatility}

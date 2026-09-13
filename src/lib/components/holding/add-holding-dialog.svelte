@@ -39,8 +39,8 @@
 			<Dialog.Description>Add a new stock or asset to your portfolio.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each addHolding.fields.issues() as issue}
-			<p class="text-sm text-red-600">{issue.message}</p>
+		{#each addHolding.fields.issues() as issue, i (i)}
+			<p class="text-sm text-loss">{issue.message}</p>
 		{/each}
 
 		<form
@@ -65,7 +65,7 @@
 					class="w-full rounded-md border border-input bg-background px-3 py-2"
 				>
 					<option value="">Select an investment</option>
-					{#each investments as investment}
+					{#each investments as investment (investment.id)}
 						<option value={investment.id}>
 							{investment.name} ({investment.code})
 						</option>

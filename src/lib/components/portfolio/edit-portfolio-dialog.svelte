@@ -27,8 +27,8 @@
 			<Dialog.Description>Update your portfolio details.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each updatePortfolio.fields.issues() as issue}
-			<p class="text-sm text-red-600">{issue.message}</p>
+		{#each updatePortfolio.fields.issues() as issue, i (i)}
+			<p class="text-sm text-loss">{issue.message}</p>
 		{/each}
 
 		<form

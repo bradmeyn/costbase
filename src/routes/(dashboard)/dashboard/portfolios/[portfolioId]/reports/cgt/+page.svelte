@@ -6,7 +6,7 @@
 	import Input from '$ui/input/input.svelte';
 	import Button from '$ui/button/button.svelte';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
-	import { Check, Download, Minus } from '@lucide/svelte';
+	import { Download } from '@lucide/svelte';
 
 	const portfolioId = page.params.portfolioId!;
 	const taxSummary = $derived(await getPortfolioTaxSummary(portfolioId));
@@ -195,7 +195,7 @@
 </div>
 
 <div class="mb-6 flex items-center justify-between">
-	<div class="flex gap-1 border-b flex-1 mr-4">
+	<div class="mr-4 flex flex-1 gap-1 border-b">
 		<a
 			href="/dashboard/portfolios/{portfolioId}"
 			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -220,7 +220,7 @@
 <!-- Short-Term Gains Table -->
 <div class="mb-8">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-2xl font-bold">Short-Term Gains</h2>
+		<h2 class="text-base font-semibold">Short-Term Gains</h2>
 		<div class="text-right">
 			<p class="text-xl font-bold">
 				{formatCurrency(taxSummary.currentFY.totalShortTermGains)}
@@ -243,7 +243,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each taxSummary.currentFY.shortTermGains as gain}
+					{#each taxSummary.currentFY.shortTermGains as gain, i (i)}
 						<Table.Row>
 							<Table.Cell>{formatDate(gain.saleDate)}</Table.Cell>
 							<Table.Cell class="font-medium">{gain.holdingName} ({gain.holdingCode})</Table.Cell>
@@ -283,7 +283,7 @@
 <!-- Long-Term Gains Table -->
 <div class="mb-8">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-2xl font-bold">Long-Term Gains</h2>
+		<h2 class="text-base font-semibold">Long-Term Gains</h2>
 		<div class="text-right">
 			<p class="text-xl font-bold">
 				{formatCurrency(taxSummary.currentFY.totalLongTermGains)}
@@ -306,7 +306,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each taxSummary.currentFY.longTermGains as gain}
+					{#each taxSummary.currentFY.longTermGains as gain, i (i)}
 						<Table.Row>
 							<Table.Cell>{formatDate(gain.saleDate)}</Table.Cell>
 							<Table.Cell class="font-medium">{gain.holdingName} ({gain.holdingCode})</Table.Cell>
@@ -346,9 +346,9 @@
 <!-- Capital Losses Table -->
 <div class="mb-8">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-2xl font-bold">Capital Losses</h2>
+		<h2 class="text-base font-semibold">Capital Losses</h2>
 		<div class="text-right">
-			<p class="text-xl font-bold text-red-600">
+			<p class="text-xl font-bold text-loss">
 				{formatCurrency(taxSummary.currentFY.totalCapitalLosses)}
 			</p>
 			<p class="text-xs text-muted-foreground">Offset against gains</p>
@@ -369,14 +369,14 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each taxSummary.currentFY.capitalLosses as loss}
+					{#each taxSummary.currentFY.capitalLosses as loss, i (i)}
 						<Table.Row>
 							<Table.Cell>{formatDate(loss.saleDate)}</Table.Cell>
 							<Table.Cell class="font-medium">{loss.holdingName} ({loss.holdingCode})</Table.Cell>
 							<Table.Cell class="text-right">{loss.quantity}</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(loss.proceeds)}</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(loss.costBase)}</Table.Cell>
-							<Table.Cell class="text-right text-red-600">
+							<Table.Cell class="text-right text-loss">
 								{formatCurrency(loss.gain)}
 							</Table.Cell>
 						</Table.Row>
@@ -392,7 +392,7 @@
 							{formatCurrency(taxSummary.currentFY.totalCapitalLossProceeds)}
 						</Table.Cell>
 						<Table.Cell></Table.Cell>
-						<Table.Cell class="text-right font-bold text-red-600">
+						<Table.Cell class="text-right font-bold text-loss">
 							{formatCurrency(taxSummary.currentFY.totalCapitalLosses)}
 						</Table.Cell>
 					</Table.Row>
@@ -408,7 +408,7 @@
 
 <!-- CGT Summary -->
 <div class="mb-8">
-	<h2 class="mb-4 text-2xl font-bold">Summary</h2>
+	<h2 class="mb-3 text-base font-semibold">Summary</h2>
 	<p class="mb-4 text-sm text-muted-foreground">
 		Capital losses are first offset against short-term gains, then long-term gains. Long-term gains
 		receive a 50% CGT discount.
@@ -427,7 +427,7 @@
 				</div>
 				<div class="flex justify-between border-b pb-2">
 					<span class="italic">less Capital losses available to offset</span>
-					<span class="text-red-600"
+					<span class="text-loss"
 						>{formatCurrency(-taxSummary.cgtCalculation.lossesAppliedToShortTerm)}</span
 					>
 				</div>
@@ -450,7 +450,7 @@
 				</div>
 				<div class="flex justify-between border-b pb-2">
 					<span class="italic">less Capital losses available to offset</span>
-					<span class="text-red-600"
+					<span class="text-loss"
 						>{formatCurrency(-taxSummary.cgtCalculation.lossesAppliedToLongTerm)}</span
 					>
 				</div>
@@ -460,7 +460,7 @@
 				</div>
 				<div class="flex justify-between border-b pb-2">
 					<span class="italic">less CGT Concession Amount @ 50%</span>
-					<span class="text-red-600">{formatCurrency(-taxSummary.cgtCalculation.cgtDiscount)}</span>
+					<span class="text-loss">{formatCurrency(-taxSummary.cgtCalculation.cgtDiscount)}</span>
 				</div>
 			</div>
 		</div>
@@ -475,12 +475,12 @@
 				<span class="flex items-center gap-2">
 					Estimated Tax @
 					<NativeSelect.Root class="w-40" bind:value={selectedTaxRate}>
-						{#each taxRates as rate}
+						{#each taxRates as rate (rate.value)}
 							<NativeSelect.Option value={rate.value}>{rate.value}%</NativeSelect.Option>
 						{/each}
 					</NativeSelect.Root>
 				</span>
-				<span class="font-bold text-orange-600">{formatCurrency(estimatedTax)}</span>
+				<span class="font-bold text-brand-2">{formatCurrency(estimatedTax)}</span>
 			</div>
 		</div>
 	</div>
@@ -488,7 +488,7 @@
 
 <!-- Sale Simulator -->
 <div class="mb-8">
-	<h2 class="mb-4 text-2xl font-bold">Sale Simulator</h2>
+	<h2 class="mb-3 text-base font-semibold">Sale Simulator</h2>
 	<p class="mb-4 text-muted-foreground">
 		Estimate the tax impact of selling units using FIFO (First In, First Out) method.
 	</p>
@@ -509,7 +509,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each taxSummary.holdings as holding}
+					{#each taxSummary.holdings as holding (holding.id)}
 						{@const unitsToSell = unitsToSellByHolding[holding.id] || 0}
 						{@const mockResult = calculateMockSale(holding.id, unitsToSell)}
 						<Table.Row>
@@ -541,7 +541,7 @@
 							</Table.Cell>
 							<Table.Cell class="text-right">
 								{#if mockResult}
-									<span class={mockResult.totalGain >= 0 ? '' : 'text-red-600'}>
+									<span class={mockResult.totalGain >= 0 ? '' : 'text-loss'}>
 										{formatCurrency(mockResult.totalGain)}
 									</span>
 								{:else}
@@ -550,7 +550,7 @@
 							</Table.Cell>
 							<Table.Cell class="text-right">
 								{#if mockResult}
-									<span class="text-orange-600">{formatCurrency(mockResult.estimatedTax)}</span>
+									<span class="text-brand-2">{formatCurrency(mockResult.estimatedTax)}</span>
 								{:else}
 									-
 								{/if}
@@ -590,16 +590,20 @@
 				<div class="grid gap-4 md:grid-cols-4">
 					<div>
 						<p class="text-sm text-muted-foreground">Total Proceeds</p>
-						<p class="text-2xl font-bold">{formatCurrency(combinedMockSale.totalProceeds)}</p>
+						<p class="text-base font-semibold">{formatCurrency(combinedMockSale.totalProceeds)}</p>
 						<p class="text-xs text-muted-foreground">{combinedMockSale.totalUnits} units</p>
 					</div>
 					<div>
 						<p class="text-sm text-muted-foreground">Cost Base</p>
-						<p class="text-2xl font-bold">{formatCurrency(combinedMockSale.totalCostBase)}</p>
+						<p class="text-base font-semibold">{formatCurrency(combinedMockSale.totalCostBase)}</p>
 					</div>
 					<div>
 						<p class="text-sm text-muted-foreground">Total Gain</p>
-						<p class="text-2xl font-bold {combinedMockSale.totalGain >= 0 ? '' : 'text-red-600'}">
+						<p
+							class="text-xl font-semibold tabular-nums {combinedMockSale.totalGain >= 0
+								? ''
+								: 'text-loss'}"
+						>
 							{formatCurrency(combinedMockSale.totalGain)}
 						</p>
 						<p class="text-xs text-muted-foreground">
@@ -610,7 +614,7 @@
 					</div>
 					<div>
 						<p class="text-sm text-muted-foreground">Estimated Tax</p>
-						<p class="text-2xl font-bold text-orange-600">
+						<p class="text-xl font-semibold text-brand-2 tabular-nums">
 							{formatCurrency(combinedMockSale.estimatedTax)}
 						</p>
 						<p class="text-xs text-muted-foreground">
@@ -620,10 +624,8 @@
 				</div>
 
 				{#if combinedMockSale.longTermGain > 0}
-					<div
-						class="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950"
-					>
-						<p class="text-sm text-green-800 dark:text-green-200">
+					<div class="mt-4 rounded-md border border-gain/30 bg-gain/10 p-3">
+						<p class="text-sm text-gain dark:text-gain">
 							<strong>CGT Discount Applied:</strong> Long-term gains of {formatCurrency(
 								combinedMockSale.longTermGain
 							)}

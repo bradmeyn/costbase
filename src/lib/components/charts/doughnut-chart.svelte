@@ -14,7 +14,7 @@
 	let cRange = $derived(data.map((_, i) => COLOURS[i % COLOURS.length]));
 </script>
 
-<div class="w-full relative h-55 md:h-60 min-w-50">
+<div class="relative mx-auto aspect-square w-full max-w-56">
 	<PieChart
 		{data}
 		key="label"

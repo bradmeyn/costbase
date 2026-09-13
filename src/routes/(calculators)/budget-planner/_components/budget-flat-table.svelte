@@ -27,11 +27,11 @@
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b border-border">
-					<th class="text-left font-medium text-muted-foreground pb-2 pr-2">Name</th>
-					<th class="text-left font-medium text-muted-foreground pb-2 pr-2">Category</th>
-					<th class="text-left font-medium text-muted-foreground pb-2 pr-2">Amount</th>
-					<th class="text-left font-medium text-muted-foreground pb-2 pr-2">Frequency</th>
-					<th class="text-right font-medium text-muted-foreground pb-2 pr-2">
+					<th class="pr-2 pb-2 text-left font-medium text-muted-foreground">Name</th>
+					<th class="pr-2 pb-2 text-left font-medium text-muted-foreground">Category</th>
+					<th class="pr-2 pb-2 text-left font-medium text-muted-foreground">Amount</th>
+					<th class="pr-2 pb-2 text-left font-medium text-muted-foreground">Frequency</th>
+					<th class="pr-2 pb-2 text-right font-medium text-muted-foreground">
 						Total/{FREQUENCIES[budget.frequency].singular}
 					</th>
 					<th class="pb-2"></th>
@@ -49,7 +49,7 @@
 								onkeydown={(e) => {
 									if (e.key === 'Enter') e.currentTarget.blur();
 								}}
-								class="w-full bg-transparent border-b border-transparent hover:border-border focus:border-border focus:outline-none px-1 py-0.5 min-w-[100px]"
+								class="w-full min-w-[100px] border-b border-transparent bg-transparent px-1 py-0.5 hover:border-border focus:border-border focus:outline-none"
 							/>
 						</td>
 						<td class="py-1.5 pr-2">
@@ -68,13 +68,13 @@
 								</Select.Content>
 							</Select.Root>
 						</td>
-						<td class="py-1.5 pr-2 w-36">
+						<td class="w-36 py-1.5 pr-2">
 							<CurrencyInput
 								value={item.amount}
 								onchange={(value) => budget.updateItem({ ...item, amount: value })}
 							/>
 						</td>
-						<td class="py-1.5 pr-2 w-40">
+						<td class="w-40 py-1.5 pr-2">
 							<FrequencySelect
 								value={item.frequency}
 								onchange={(frequency) => budget.updateItem({ ...item, frequency })}
@@ -82,10 +82,10 @@
 								name={item.id + '-frequency'}
 							/>
 						</td>
-						<td class="text-right font-semibold py-1.5 pr-2 min-w-[80px]">
+						<td class="min-w-[80px] py-1.5 pr-2 text-right font-semibold">
 							{formatCurrency(convertToFrequency(item.amount, item.frequency, budget.frequency))}
 						</td>
-						<td class="py-1.5 px-0">
+						<td class="px-0 py-1.5">
 							<Button
 								size="icon"
 								variant="ghost"

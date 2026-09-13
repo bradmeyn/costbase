@@ -20,6 +20,10 @@
 
 	const totalUnrealisedGain = $derived(data.holdings.reduce((sum, h) => sum + h.unrealisedGain, 0));
 
+	const sortedLots = $derived(
+		[...data.unrealisedLots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+	);
+
 	const longTermLots = $derived(data.unrealisedLots.filter((lot) => lot.isLongTerm));
 	const shortTermLots = $derived(data.unrealisedLots.filter((lot) => !lot.isLongTerm));
 
@@ -44,9 +48,6 @@
 		csv += 'Unrealised Tax Lots (FIFO)\n';
 		csv +=
 			'Holding,Code,Purchase Date,Units,Cost/Unit,Current Price,Unrealised Gain,Discount Eligible\n';
-		const sortedLots = [...data.unrealisedLots].sort(
-			(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-		);
 		sortedLots.forEach((lot) => {
 			csv += `${lot.holdingName},${lot.holdingCode},${formatDate(lot.date)},${lot.quantity},${(lot.costPerUnit / 100).toFixed(2)},${(lot.currentPrice / 100).toFixed(2)},${(lot.unrealisedGain / 100).toFixed(2)},${lot.isLongTerm ? 'Yes' : 'No'}\n`;
 		});
@@ -67,7 +68,7 @@
 </div>
 
 <div class="mb-6 flex items-center justify-between">
-	<div class="flex gap-1 border-b flex-1 mr-4">
+	<div class="mr-4 flex flex-1 gap-1 border-b">
 		<a
 			href="/dashboard/portfolios/{portfolioId}"
 			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -93,21 +94,21 @@
 <!-- Summary Cards -->
 <div class="mb-8 grid gap-4 md:grid-cols-3">
 	<SummaryCard
-		label="Total Unrealised Gain"
+		label="Total unrealised gain"
 		value={formatCurrency(totalUnrealisedGain)}
-		valueClass={totalUnrealisedGain >= 0 ? '' : 'text-red-600'}
+		valueClass={totalUnrealisedGain >= 0 ? '' : 'text-loss'}
 	/>
 	<SummaryCard
-		label="Long-Term Unrealised Gain"
+		label="Long-term unrealised gain"
 		value={formatCurrency(totalLongTermGain)}
-		valueClass={totalLongTermGain >= 0 ? '' : 'text-red-600'}
+		valueClass={totalLongTermGain >= 0 ? '' : 'text-loss'}
 	>
 		<p class="mt-1 text-xs text-muted-foreground">Held &gt; 12 months (50% discount eligible)</p>
 	</SummaryCard>
 	<SummaryCard
-		label="Short-Term Unrealised Gain"
+		label="Short-term unrealised gain"
 		value={formatCurrency(totalShortTermGain)}
-		valueClass={totalShortTermGain >= 0 ? '' : 'text-red-600'}
+		valueClass={totalShortTermGain >= 0 ? '' : 'text-loss'}
 	>
 		<p class="mt-1 text-xs text-muted-foreground">Held ≤ 12 months</p>
 	</SummaryCard>
@@ -115,7 +116,7 @@
 
 <!-- Unrealised Tax Lots -->
 <div class="mb-8">
-	<h2 class="mb-4 text-2xl font-bold">Unrealised Tax Lots (FIFO)</h2>
+	<h2 class="mb-3 text-base font-semibold">Unrealised Tax Lots (FIFO)</h2>
 	<p class="mb-4 text-muted-foreground">
 		Your current holdings broken down by purchase date for CGT purposes.
 	</p>
@@ -135,23 +136,23 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each data.unrealisedLots.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) as lot}
+					{#each sortedLots as lot, i (i)}
 						<Table.Row>
 							<Table.Cell class="font-medium">{lot.holdingName} ({lot.holdingCode})</Table.Cell>
 							<Table.Cell>{formatDate(lot.date)}</Table.Cell>
 							<Table.Cell class="text-right">{lot.quantity}</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(lot.costPerUnit)}</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(lot.currentPrice)}</Table.Cell>
-							<Table.Cell class="text-right {lot.unrealisedGain >= 0 ? '' : 'text-red-600'}">
+							<Table.Cell class="text-right {lot.unrealisedGain >= 0 ? '' : 'text-loss'}">
 								{formatCurrency(lot.unrealisedGain)}
 							</Table.Cell>
 							<Table.Cell class="text-center">
 								{#if lot.isLongTerm}
-									<span class=" size-4 rounded-full bg-green-200 p-2 text-xs"
+									<span class=" size-4 rounded-full bg-gain/20 p-2 text-xs"
 										><Check class="inline-block size-4 " /></span
 									>
 								{:else}
-									<span class="rounded px-2 py-1 text-xs text-amber-800"
+									<span class="rounded px-2 py-1 text-xs text-brand-2"
 										><Minus class="inline-block size-4" /></span
 									>
 								{/if}
@@ -170,7 +171,7 @@
 
 <!-- Holdings Summary -->
 <div class="mb-8">
-	<h2 class="mb-4 text-2xl font-bold">Holdings Summary</h2>
+	<h2 class="mb-3 text-base font-semibold">Holdings Summary</h2>
 	{#if data.holdings.length > 0}
 		<div class="card">
 			<Table.Root>
@@ -184,13 +185,13 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each data.holdings as holding}
+					{#each data.holdings as holding (holding.id)}
 						<Table.Row>
 							<Table.Cell class="font-medium">{holding.name} ({holding.code})</Table.Cell>
 							<Table.Cell class="text-right">{holding.units}</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(holding.currentPrice)}</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(holding.currentValue)}</Table.Cell>
-							<Table.Cell class="text-right {holding.unrealisedGain >= 0 ? '' : 'text-red-600'}">
+							<Table.Cell class="text-right {holding.unrealisedGain >= 0 ? '' : 'text-loss'}">
 								{formatCurrency(holding.unrealisedGain)}
 							</Table.Cell>
 						</Table.Row>
@@ -202,9 +203,7 @@
 						<Table.Cell class="text-right font-bold">
 							{formatCurrency(data.holdings.reduce((sum, h) => sum + h.currentValue, 0))}
 						</Table.Cell>
-						<Table.Cell
-							class="text-right font-bold {totalUnrealisedGain >= 0 ? '' : 'text-red-600'}"
-						>
+						<Table.Cell class="text-right font-bold {totalUnrealisedGain >= 0 ? '' : 'text-loss'}">
 							{formatCurrency(totalUnrealisedGain)}
 						</Table.Cell>
 					</Table.Row>

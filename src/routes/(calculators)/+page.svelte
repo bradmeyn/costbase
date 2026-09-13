@@ -7,30 +7,30 @@
 	<meta name="description" content="My personal financial toolkit." />
 </svelte:head>
 
-<section class="container py-24 md:py-36 flex flex-col items-center text-center">
-	<h1 class="text-4xl md:text-6xl font-semibold tracking-tight mb-8 max-w-2xl leading-[1.05]">
+<section class="container flex flex-col items-center py-24 text-center md:py-36">
+	<h1 class="mb-6 max-w-2xl text-3xl leading-[1.1] font-semibold tracking-tight md:text-4xl">
 		My Financial Toolkit
 	</h1>
 
-	<div class="space-y-4 w-full max-w-xl">
-		{#each calculators as calculator}
+	<div class="w-full max-w-xl space-y-4">
+		{#each calculators as calculator (calculator.href)}
 			<a
 				href={calculator.href}
-				class="card group hover:border-primary/50 hover:shadow-md transition-all text-left flex items-center gap-4"
+				class="card group flex items-center gap-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
 			>
 				<div
-					class="size-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors"
+					class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/15"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox={calculator.viewBox}
 						class="size-5 fill-primary"
 					>
-						{#each calculator.paths as d}<path {d} />{/each}
+						{#each calculator.paths as d (d)}<path {d} />{/each}
 					</svg>
 				</div>
 				<div>
-					<p class="font-semibold group-hover:text-primary transition-colors">{calculator.name}</p>
+					<p class="font-semibold transition-colors group-hover:text-primary">{calculator.name}</p>
 					<p class="text-xs text-muted-foreground">{calculator.description}</p>
 				</div>
 			</a>

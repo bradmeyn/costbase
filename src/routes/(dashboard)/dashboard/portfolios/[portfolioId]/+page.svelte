@@ -34,14 +34,14 @@
 
 <div class="mb-4 flex items-center justify-between">
 	<div>
-		<a href="/dashboard/portfolios" class="text-sm text-muted-foreground hover:text-foreground pb-4"
+		<a href="/dashboard/portfolios" class="pb-4 text-sm text-muted-foreground hover:text-foreground"
 			>← Portfolios</a
 		>
 		<h1 class="heading-primary">{portfolio.name}</h1>
 	</div>
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger
-			class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+			class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-accent-foreground"
 			aria-label="Portfolio actions for {portfolio.name}"
 		>
 			<EllipsisVertical class="size-4" />
@@ -90,17 +90,17 @@
 
 {#if portfolio.holdings.length > 0}
 	<!-- Portfolio Summary -->
-	<div class="mb-6 grid gap-4 md:grid-cols-3">
-		<SummaryCard label="Current Value" value={formatCurrency(portfolio.totalValue)} />
+	<div class="mb-5 grid gap-2 md:grid-cols-3">
+		<SummaryCard label="Current value" value={formatCurrency(portfolio.totalValue)} />
 		<SummaryCard
-			label="Unrealised Gain"
+			label="Unrealised gain"
 			value={`${portfolio.totalUnrealisedGain >= 0 ? '+' : ''}${formatCurrency(portfolio.totalUnrealisedGain)}`}
-			valueClass={portfolio.totalUnrealisedGain >= 0 ? 'text-emerald-600' : 'text-red-600'}
+			valueClass={portfolio.totalUnrealisedGain >= 0 ? 'text-gain' : 'text-loss'}
 		/>
 		<SummaryCard
 			label="Return"
 			value={`${portfolio.totalUnrealisedGainPercent >= 0 ? '+' : ''}${portfolio.totalUnrealisedGainPercent.toFixed(2)}%`}
-			valueClass={portfolio.totalUnrealisedGainPercent >= 0 ? 'text-emerald-600' : 'text-red-600'}
+			valueClass={portfolio.totalUnrealisedGainPercent >= 0 ? 'text-gain' : 'text-loss'}
 		/>
 	</div>
 	<div class="card">
@@ -118,7 +118,7 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each portfolio.holdings as holding}
+				{#each portfolio.holdings as holding (holding.id)}
 					<Table.Row>
 						<Table.Cell class="font-medium">{holding.name}</Table.Cell>
 						<Table.Cell>{holding.code}</Table.Cell>
@@ -127,15 +127,17 @@
 						<Table.Cell class="text-right">{formatCurrency(holding.currentPrice)}</Table.Cell>
 						<Table.Cell class="text-right">{formatCurrency(holding.currentValue)}</Table.Cell>
 						<Table.Cell
-							class="text-right {holding.unrealisedGain >= 0 ? 'text-emerald-600' : 'text-red-600'}"
+							class="text-right {holding.unrealisedGain >= 0 ? 'text-gain' : 'text-loss'}"
 						>
 							{holding.unrealisedGain >= 0 ? '+' : ''}{formatCurrency(holding.unrealisedGain)}
 							<span class="text-xs">({holding.unrealisedGainPercent.toFixed(1)}%)</span>
 						</Table.Cell>
 						<Table.Cell class="text-right">
 							<div class="flex items-center justify-end gap-1">
-								<Button href="/dashboard/portfolios/{portfolioId}/{holding.id}" size="sm"
-									>View</Button
+								<Button
+									href="/dashboard/portfolios/{portfolioId}/{holding.id}"
+									variant="ghost"
+									size="sm">View</Button
 								>
 								<RowActionsMenu
 									label={holding.name}

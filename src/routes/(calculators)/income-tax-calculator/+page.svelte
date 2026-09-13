@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>Income Tax Calculator | BudgetKit</title>
+	<title>Income Tax Calculator | MoneyKit</title>
 	<meta
 		name="description"
 		content="Estimate your Australian income tax for {CURRENT_FINANCIAL_YEAR} including Medicare Levy, Medicare Levy Surcharge, and HELP repayments."
@@ -23,7 +23,7 @@
 </svelte:head>
 
 <main class="container">
-	<div class="flex justify-between items-center mb-4">
+	<div class="mb-4 flex items-center justify-between">
 		<h1 class="heading-primary">Income Tax Calculator</h1>
 		<CalculatorActions
 			filename="income-tax-calculator.csv"
@@ -31,12 +31,12 @@
 		/>
 	</div>
 
-	<section class="flex flex-col lg:flex-row gap-8">
+	<section class="flex flex-col gap-8 lg:flex-row">
 		<Inputs />
 
 		<div class="w-full min-w-0 space-y-4">
 			<div class="card">
-				<div class="flex gap-2 flex-col md:flex-row md:justify-between w-full mb-4">
+				<div class="mb-4 flex w-full flex-col gap-2 md:flex-row md:justify-between">
 					<div>
 						<h2 class="heading-secondary">Outcome</h2>
 						<p class="text-xs text-muted-foreground">{CURRENT_FINANCIAL_YEAR} financial year</p>
@@ -53,23 +53,25 @@
 					</Tabs.Root>
 				</div>
 
-				<!-- Take-home pay — primary metric -->
+				<!-- Take-home pay — the one number that gets to be large -->
 				<div class="mb-4">
-					<p class="text-muted-foreground text-sm">Take-Home Pay</p>
-					<p class="text-3xl md:text-4xl font-bold leading-none">
+					<p class="text-[11px] text-muted-foreground">Take-home pay</p>
+					<p
+						class="mt-0.5 text-2xl leading-none font-semibold tracking-tight tabular-nums md:text-3xl"
+					>
 						{formatCurrency(calc.takeHomePay)}
-						<span class="text-lg font-normal text-muted-foreground">/ year</span>
+						<span class="text-sm font-normal text-muted-foreground">/ year</span>
 					</p>
 				</div>
 
-				<!-- Secondary metrics -->
-				<div class="flex gap-8 flex-wrap mb-6">
-					{@render metric('Taxable Income', formatCurrency(calc.result.taxableIncome))}
-					{@render metric('Total Tax', formatCurrency(calc.result.totalTax))}
-					{@render metric('Effective Rate', formatPercentage(calc.effectiveRate))}
+				<!-- Secondary metrics, deliberately a step below the hero -->
+				<div class="mb-5 flex flex-wrap gap-x-8 gap-y-3">
+					{@render metric('Taxable income', formatCurrency(calc.result.taxableIncome))}
+					{@render metric('Total tax', formatCurrency(calc.result.totalTax))}
+					{@render metric('Effective rate', formatPercentage(calc.effectiveRate))}
 				</div>
 
-				<div class="mb-6">
+				<div class="mb-5 border-t border-border/60 pt-4">
 					<TaxBracketBar />
 				</div>
 
@@ -88,7 +90,7 @@
 
 {#snippet metric(label: string, value: string)}
 	<div>
-		<p class="text-muted-foreground text-sm">{label}</p>
-		<p class="font-semibold text-xl md:text-2xl">{value}</p>
+		<p class="text-[11px] text-muted-foreground">{label}</p>
+		<p class="mt-0.5 text-base font-semibold tabular-nums">{value}</p>
 	</div>
 {/snippet}

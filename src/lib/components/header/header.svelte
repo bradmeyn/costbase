@@ -4,13 +4,11 @@
 </script>
 
 <header class="relative">
-	<div class="container relative">
-		<div class="flex items-center gap-8 w-full py-5 justify-between">
+	<div class="relative container">
+		<div class="flex w-full items-center justify-between gap-8 py-5">
 			<a href="/" class="flex items-center">
-				<span class="text-foreground text-xl font-medium tracking-tight"
-					>Money<span class="text-transparent bg-clip-text bg-linear-to-b from-primary to-brand"
-						>Kit</span
-					>
+				<span class="text-xl font-medium tracking-tight text-foreground"
+					>Money<span class="text-primary">Kit</span>
 				</span>
 			</a>
 

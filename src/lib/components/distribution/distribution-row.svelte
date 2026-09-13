@@ -46,7 +46,7 @@
 	<Table.Cell class="text-right font-medium">{formatCurrency(netPayment * 100)}</Table.Cell>
 	<Table.Cell>
 		{#if distribution.reinvested}
-			<CircleCheck class="size-6 text-green-600" />
+			<CircleCheck class="size-6 text-gain" />
 		{:else}
 			<CircleCheck class="size-6 text-muted-foreground opacity-30" />
 		{/if}

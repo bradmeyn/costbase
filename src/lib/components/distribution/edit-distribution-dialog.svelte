@@ -43,7 +43,7 @@
 			<Dialog.Description>Update the distribution details.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each fields.allIssues?.() ?? [] as issue}
+		{#each fields.allIssues?.() ?? [] as issue, i (i)}
 			<p class="text-sm text-destructive">{issue.message}</p>
 		{/each}
 

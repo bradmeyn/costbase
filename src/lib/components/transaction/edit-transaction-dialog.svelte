@@ -9,12 +9,10 @@
 
 	let {
 		transactionId,
-		holdingId,
 		transaction,
 		open = $bindable(false)
 	}: {
 		transactionId: string;
-		holdingId: string;
 		transaction: {
 			type: string;
 			quantity: number;
@@ -37,7 +35,7 @@
 			<Dialog.Description>Update your transaction details.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each fields.allIssues?.() ?? [] as issue}
+		{#each fields.allIssues?.() ?? [] as issue, i (i)}
 			<p class="text-sm text-destructive">{issue.message}</p>
 		{/each}
 

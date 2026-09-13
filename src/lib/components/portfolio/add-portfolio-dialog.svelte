@@ -31,8 +31,8 @@
 			<Dialog.Description>Create a new portfolio to track your investments.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each addPortfolio.fields.issues() as issue}
-			<p class="text-sm text-red-600">{issue.message}</p>
+		{#each addPortfolio.fields.issues() as issue, i (i)}
+			<p class="text-sm text-loss">{issue.message}</p>
 		{/each}
 
 		<form

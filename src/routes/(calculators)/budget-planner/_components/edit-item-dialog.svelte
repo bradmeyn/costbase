@@ -93,7 +93,7 @@
 					placeholder="Enter item name"
 					onblur={() => (nameTouched = true)}
 				/>
-				{#if nameError}<p class="text-destructive text-xs mt-1">{nameError}</p>{/if}
+				{#if nameError}<p class="mt-1 text-xs text-destructive">{nameError}</p>{/if}
 			</div>
 
 			<div class="grid grid-cols-2 gap-4">
@@ -104,7 +104,7 @@
 						bind:value={editedItem.amount}
 						onchange={() => (amountTouched = true)}
 					/>
-					{#if amountError}<p class="text-destructive text-xs mt-1">{amountError}</p>{/if}
+					{#if amountError}<p class="mt-1 text-xs text-destructive">{amountError}</p>{/if}
 				</div>
 
 				<div class="space-y-2">
@@ -129,7 +129,7 @@
 					</Select.Trigger>
 					<Select.Content>
 						<Select.Group>
-							{#each [...budget.categories[budgetItem.type]] as category}
+							{#each [...budget.categories[budgetItem.type]] as category (category)}
 								<Select.Item value={category} />
 							{/each}
 						</Select.Group>

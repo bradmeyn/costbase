@@ -8,9 +8,11 @@
 	<title>MoneyKit</title>
 </svelte:head>
 
-<div class="min-h-screen flex flex-col items-center justify-center bg-white text-foreground px-4">
+<div
+	class="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-foreground"
+>
 	<a href="/" class="mb-8 text-4xl font-medium tracking-tight">
-		Money<span class="text-brand">Kit</span>
+		Money<span class="text-primary">Kit</span>
 	</a>
 	{@render children()}
 </div>

@@ -134,11 +134,11 @@
 			<!-- Existing categories -->
 			<div class="space-y-2">
 				<Label>Existing Categories</Label>
-				<div class="space-y-2 max-h-60 overflow-y-auto">
+				<div class="max-h-60 space-y-2 overflow-y-auto">
 					{#each categories as category (category)}
-						<div class="flex items-center justify-between p-2 border rounded-md">
+						<div class="flex items-center justify-between rounded-md border p-2">
 							{#if editingCategory === category}
-								<div class="flex gap-2 flex-1">
+								<div class="flex flex-1 gap-2">
 									<Input
 										bind:value={editCategoryName}
 										onkeydown={(e) => handleKeydown(e, 'edit')}
@@ -180,7 +180,7 @@
 					{/each}
 
 					{#if categories.length === 0}
-						<div class="text-center text-muted-foreground py-4">
+						<div class="py-4 text-center text-muted-foreground">
 							No categories yet. Add one above to get started.
 						</div>
 					{/if}

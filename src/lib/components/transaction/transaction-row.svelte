@@ -6,13 +6,12 @@
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import { deleteTransaction } from '#lib/remotes/transaction.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
+	import type { Transaction } from '$db/schemas/portfolio';
 
 	let {
-		transaction,
-		holdingId
+		transaction
 	}: {
-		transaction: any;
-		holdingId: string;
+		transaction: Transaction;
 	} = $props();
 
 	let editOpen = $state(false);
@@ -27,9 +26,9 @@
 	};
 
 	const TYPE_BADGES = {
-		buy: { label: 'Buy', dot: 'bg-emerald-500' },
-		sell: { label: 'Sell', dot: 'bg-rose-500' },
-		reinvestment: { label: 'Reinvestment', dot: 'bg-sky-500' }
+		buy: { label: 'Buy', dot: 'bg-gain' },
+		sell: { label: 'Sell', dot: 'bg-loss' },
+		reinvestment: { label: 'Reinvestment', dot: 'bg-primary' }
 	} as const;
 
 	const badge = $derived(
@@ -74,12 +73,7 @@
 </Table.Row>
 
 <!-- Edit Transaction Dialog -->
-<EditTransactionDialog
-	transactionId={transaction.id}
-	{holdingId}
-	{transaction}
-	bind:open={editOpen}
-/>
+<EditTransactionDialog transactionId={transaction.id} {transaction} bind:open={editOpen} />
 
 <!-- Delete Transaction Dialog -->
 <DeleteDialog

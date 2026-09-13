@@ -204,7 +204,7 @@
 			</div>
 		</div>
 
-		{#each addTransactions.fields.allIssues?.() ?? [] as issue}
+		{#each addTransactions.fields.allIssues?.() ?? [] as issue, i (i)}
 			<p class="text-sm text-destructive">{issue.message}</p>
 		{/each}
 

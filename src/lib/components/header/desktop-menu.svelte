@@ -9,19 +9,19 @@
 	let calculatorsActive = $derived(calculators.some((c) => activeUrl === c.href));
 </script>
 
-<nav class="hidden md:flex items-center gap-6">
+<nav class="hidden items-center gap-6 md:flex">
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger
 			class="flex items-center gap-1 text-sm transition-colors duration-200 {calculatorsActive
-				? 'text-primary font-medium'
+				? 'font-medium text-primary'
 				: 'text-muted-foreground hover:text-foreground'}"
 		>
 			Calculators
 			<ChevronDown class="size-3.5" />
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content align="start" class="w-52">
-			{#each calculators as calculator}
-				<DropdownMenu.Item class={activeUrl === calculator.href ? 'text-primary font-medium' : ''}>
+			{#each calculators as calculator (calculator.href)}
+				<DropdownMenu.Item class={activeUrl === calculator.href ? 'font-medium text-primary' : ''}>
 					<a href={calculator.href} class="w-full">{calculator.name}</a>
 				</DropdownMenu.Item>
 			{/each}
@@ -31,21 +31,21 @@
 	<div class="ml-2 flex items-center gap-2">
 		{#if user}
 			<a
-				href={'/dashboard'}
-				class="rounded-md bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+				href="/dashboard"
+				class="rounded-md bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 			>
 				Dashboard
 			</a>
 		{:else}
 			<a
-				href={'/login'}
-				class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+				href="/login"
+				class="text-sm text-muted-foreground transition-colors hover:text-foreground"
 			>
 				Log in
 			</a>
 			<a
-				href={'/register'}
-				class="rounded-md bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+				href="/register"
+				class="rounded-md bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 			>
 				Sign up
 			</a>

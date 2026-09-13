@@ -8,7 +8,7 @@
 	let calc = getCalculatorState();
 </script>
 
-<aside class="min-w-75 max-w-250 space-y-4">
+<aside class="max-w-250 min-w-75 space-y-4">
 	<h2 class="heading-secondary">Inputs</h2>
 
 	<div class="grid grid-cols-2 gap-2">

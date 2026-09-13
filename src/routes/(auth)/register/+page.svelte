@@ -52,7 +52,7 @@
 		{/if}
 
 		<form {...registerUser} class="space-y-4">
-			{#each registerUser.fields.issues() as issue}
+			{#each registerUser.fields.issues() as issue, i (i)}
 				<p class="text-sm text-destructive">{issue.message}</p>
 			{/each}
 
