@@ -1,3 +1,4 @@
+import { resolve as resolveRoute } from '$app/paths';
 import { auth } from '#lib/server/auth.js'; // path to your auth file
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/env';
@@ -15,14 +16,14 @@ export async function handle({ event, resolve }) {
 	}
 
 	// Define protected routes
-	const protectedRoutes = ['/dashboard'];
+	const protectedRoutes = ['/portfolios'];
 
 	// Check if current path is protected
 	const isProtectedRoute = protectedRoutes.some((route) => event.url.pathname.startsWith(route));
 
 	// Redirect to login if accessing protected route without auth
 	if (isProtectedRoute && !event.locals.user) {
-		redirect(303, '/login');
+		redirect(303, resolveRoute('/(auth)/login'));
 	}
 	return svelteKitHandler({ event, resolve, auth, building });
 }

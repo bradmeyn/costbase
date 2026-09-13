@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { X } from '@lucide/svelte';
 	import { calculators } from '#lib/constants/calculators.js';
@@ -78,22 +79,22 @@
 				<div class="mt-2 space-y-2 border-t border-border pt-3">
 					{#if user}
 						<a
-							href="/portfolios"
+							href={resolve('/(dashboard)/portfolios')}
 							onclick={closeMenu}
 							class="flex w-full items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 						>
-							Dashboard
+							Portfolios
 						</a>
 					{:else}
 						<a
-							href="/login"
+							href={resolve('/(auth)/login')}
 							onclick={closeMenu}
 							class="flex w-full items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
 						>
 							Log in
 						</a>
 						<a
-							href="/register"
+							href={resolve('/(auth)/register')}
 							onclick={closeMenu}
 							class="flex w-full items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 						>

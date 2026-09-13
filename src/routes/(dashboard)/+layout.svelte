@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Costbase — Dashboard</title>
+	<title>Costbase — Portfolios</title>
 </svelte:head>
 
 <div class="flex min-h-screen flex-col bg-background">

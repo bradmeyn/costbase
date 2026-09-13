@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { logoutUser } from '#lib/remotes/auth.remote.js';
 	import { calculators } from '#lib/constants/calculators.js';
@@ -12,7 +13,7 @@
 <header class="border-b bg-card">
 	<div class="container flex items-center justify-between py-3">
 		<div class="flex items-center gap-8">
-			<a href="/" class="text-xl font-medium tracking-tight">
+			<a href={resolve('/(calculators)')} class="text-xl font-medium tracking-tight">
 				Cost<span class="text-primary">base</span>
 			</a>
 

@@ -1,3 +1,4 @@
+import { resolve } from '$app/paths';
 import { form, getRequestEvent, query } from '$app/server';
 import { registerSchema, loginSchema } from '#lib/schemas/auth.js';
 import { redirect } from '@sveltejs/kit';
@@ -20,7 +21,7 @@ export const registerUser = form(
 			};
 		}
 
-		redirect(302, '/dashboard/portfolios');
+		redirect(302, resolve('/(dashboard)/portfolios'));
 	}
 );
 
@@ -39,7 +40,7 @@ export const loginUser = form(loginSchema, async ({ email, password }) => {
 		};
 	}
 
-	redirect(302, '/dashboard/portfolios');
+	redirect(302, resolve('/(dashboard)/portfolios'));
 });
 
 export const logoutUser = form(async () => {
@@ -49,7 +50,7 @@ export const logoutUser = form(async () => {
 		headers: event.request.headers
 	});
 
-	redirect(302, '/');
+	redirect(302, resolve('/(calculators)'));
 });
 
 export const getCurrentUser = query(async () => {

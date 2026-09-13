@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import Button from '$ui/button/button.svelte';
@@ -57,8 +58,10 @@
 							<Button
 								variant="ghost"
 								size="sm"
-								href="/dashboard/portfolios/{portfolioId}/{holdingId}/tax-statement/{fy}"
-								>Edit</Button
+								href={resolve(
+									'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
+									{ portfolioId, holdingId, financialYear: String(fy) }
+								)}>Edit</Button
 							>
 						</Table.Cell>
 					{:else}
@@ -67,8 +70,10 @@
 							<Button
 								variant="ghost"
 								size="sm"
-								href="/dashboard/portfolios/{portfolioId}/{holdingId}/tax-statement/{fy}"
-								>Add</Button
+								href={resolve(
+									'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
+									{ portfolioId, holdingId, financialYear: String(fy) }
+								)}>Add</Button
 							>
 						</Table.Cell>
 					{/if}

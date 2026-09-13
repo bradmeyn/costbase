@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import Button from '#lib/components/ui/button/button.svelte';
 	import * as Field from '#lib/components/ui/field/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
@@ -53,6 +54,8 @@
 
 	<p class="mt-4 text-center text-sm text-muted-foreground">
 		No account?
-		<a href="/register" class="font-medium text-primary hover:underline">Sign up</a>
+		<a href={resolve('/(auth)/register')} class="font-medium text-primary hover:underline"
+			>Sign up</a
+		>
 	</p>
 </div>

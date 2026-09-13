@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
@@ -184,12 +185,13 @@
 </script>
 
 <div class="mb-4 flex items-center gap-3">
-	<a href="/dashboard/portfolios" class="text-sm text-muted-foreground hover:text-foreground"
-		>← Portfolios</a
+	<a
+		href={resolve('/(dashboard)/portfolios')}
+		class="text-sm text-muted-foreground hover:text-foreground">← Portfolios</a
 	>
 	<span class="text-muted-foreground">/</span>
 	<a
-		href="/dashboard/portfolios/{portfolioId}"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
 		class="text-sm text-muted-foreground hover:text-foreground">Holdings</a
 	>
 </div>
@@ -197,21 +199,23 @@
 <div class="mb-6 flex items-center justify-between">
 	<div class="mr-4 flex flex-1 gap-1 border-b">
 		<a
-			href="/dashboard/portfolios/{portfolioId}"
+			href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
 			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 			>Holdings</a
 		>
 		<a
-			href="/dashboard/portfolios/{portfolioId}/reports/unrealised-gains"
+			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/unrealised-gains', {
+				portfolioId
+			})}
 			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 			>Unrealised Gains</a
 		>
 		<a
-			href="/dashboard/portfolios/{portfolioId}/reports/cgt"
+			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/cgt', { portfolioId })}
 			class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary">CGT Report</a
 		>
 		<a
-			href="/dashboard/portfolios/{portfolioId}/reports/tax"
+			href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/tax', { portfolioId })}
 			class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 			>Capital Gains</a
 		>

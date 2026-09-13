@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import AddPortfolioDialog from '#lib/components/portfolio/add-portfolio-dialog.svelte';
 	import EditPortfolioDialog from '#lib/components/portfolio/edit-portfolio-dialog.svelte';
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';
@@ -27,7 +28,7 @@
 			class="card relative mb-3 flex items-center justify-between transition-all hover:border-primary hover:shadow-sm"
 		>
 			<a
-				href="/dashboard/portfolios/{portfolio.id}"
+				href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId: portfolio.id })}
 				class="flex flex-1 items-center justify-between focus:outline-none"
 			>
 				<span class="absolute inset-0" aria-hidden="true"></span>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import Button from '$ui/button/button.svelte';
@@ -46,7 +47,10 @@
 
 <div class="mb-4">
 	<a
-		href="/dashboard/portfolios/{portfolioId}/{holdingId}/tax-statements"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/[holdingId]/(tabs)/tax-statements', {
+			portfolioId,
+			holdingId
+		})}
 		class="flex items-center gap-1 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
 	>
 		<ArrowLeft class="size-4" /> Back to tax statements
@@ -67,7 +71,12 @@
 	{...saveAmitStatement.enhance(async ({ submit }) => {
 		await submit();
 		if (saveAmitStatement.result?.success) {
-			await goto(`/dashboard/portfolios/${portfolioId}/${holdingId}/tax-statements`);
+			await goto(
+				resolve('/(dashboard)/portfolios/[portfolioId]/[holdingId]/(tabs)/tax-statements', {
+					portfolioId,
+					holdingId
+				})
+			);
 		}
 	})}
 	class="space-y-5 pb-10"
@@ -141,8 +150,12 @@
 	</section>
 
 	<div class="flex items-center justify-end gap-2">
-		<Button variant="ghost" href="/dashboard/portfolios/{portfolioId}/{holdingId}/tax-statements"
-			>Cancel</Button
+		<Button
+			variant="ghost"
+			href={resolve('/(dashboard)/portfolios/[portfolioId]/[holdingId]/(tabs)/tax-statements', {
+				portfolioId,
+				holdingId
+			})}>Cancel</Button
 		>
 		<Button type="submit" disabled={!!saveAmitStatement.pending}>
 			{saveAmitStatement.pending ? 'Saving…' : existing ? 'Update statement' : 'Save statement'}

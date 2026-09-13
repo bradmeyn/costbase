@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { calculators } from '#lib/constants/calculators.js';
 	import * as DropdownMenu from '$ui/dropdown-menu';
@@ -31,20 +32,20 @@
 	<div class="ml-2 flex items-center gap-2">
 		{#if user}
 			<a
-				href="/dashboard"
+				href={resolve('/(dashboard)/portfolios')}
 				class="rounded-md bg-primary-solid px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 			>
-				Dashboard
+				Portfolios
 			</a>
 		{:else}
 			<a
-				href="/login"
+				href={resolve('/(auth)/login')}
 				class="text-sm text-muted-foreground transition-colors hover:text-foreground"
 			>
 				Log in
 			</a>
 			<a
-				href="/register"
+				href={resolve('/(auth)/register')}
 				class="rounded-md bg-primary-solid px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 			>
 				Sign up

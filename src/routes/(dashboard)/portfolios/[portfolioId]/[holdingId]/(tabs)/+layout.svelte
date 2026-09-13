@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getHolding } from '#lib/remotes/holding.remote.js';
 	import SummaryCard from '#lib/components/summary-card.svelte';
@@ -11,7 +12,7 @@
 	const portfolioId = $derived(page.params.portfolioId!);
 	const holding = $derived(await getHolding(holdingId));
 
-	const base = $derived(`/dashboard/portfolios/${portfolioId}/${holdingId}`);
+	const base = $derived(`/portfolios/${portfolioId}/${holdingId}`);
 	const tabs = $derived([
 		{ href: base, label: 'Transactions' },
 		{ href: `${base}/distributions`, label: 'Distributions' },
@@ -22,7 +23,7 @@
 
 <div>
 	<a
-		href="/dashboard/portfolios/{portfolioId}"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
 		class="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
 	>
 		<ArrowLeft class="size-4" />

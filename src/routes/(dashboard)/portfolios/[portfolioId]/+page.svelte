@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { getPortfolio, deletePortfolio } from '#lib/remotes/portfolio.remote.js';
 	import { deleteHolding } from '#lib/remotes/holding.remote.js';
 	import { page } from '$app/state';
@@ -34,8 +35,9 @@
 
 <div class="mb-4 flex items-center justify-between">
 	<div>
-		<a href="/dashboard/portfolios" class="pb-4 text-sm text-muted-foreground hover:text-foreground"
-			>← Portfolios</a
+		<a
+			href={resolve('/(dashboard)/portfolios')}
+			class="pb-4 text-sm text-muted-foreground hover:text-foreground">← Portfolios</a
 		>
 		<h1 class="heading-primary">{portfolio.name}</h1>
 	</div>
@@ -73,21 +75,23 @@
 
 <div class="mb-6 flex gap-1 border-b">
 	<a
-		href="/dashboard/portfolios/{portfolioId}"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]', { portfolioId })}
 		class="border-b-2 border-primary px-3 py-2 text-sm font-medium text-primary">Holdings</a
 	>
 	<a
-		href="/dashboard/portfolios/{portfolioId}/reports/unrealised-gains"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/unrealised-gains', {
+			portfolioId
+		})}
 		class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 		>Unrealised Gains</a
 	>
 	<a
-		href="/dashboard/portfolios/{portfolioId}/reports/cgt"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/cgt', { portfolioId })}
 		class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 		>CGT Report</a
 	>
 	<a
-		href="/dashboard/portfolios/{portfolioId}/reports/tax"
+		href={resolve('/(dashboard)/portfolios/[portfolioId]/reports/tax', { portfolioId })}
 		class="border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
 		>Capital Gains</a
 	>
@@ -140,7 +144,10 @@
 						<Table.Cell class="text-right">
 							<div class="flex items-center justify-end gap-1">
 								<Button
-									href="/dashboard/portfolios/{portfolioId}/{holding.id}"
+									href={resolve('/(dashboard)/portfolios/[portfolioId]/[holdingId]/(tabs)', {
+										portfolioId,
+										holdingId: holding.id
+									})}
 									variant="ghost"
 									size="sm">View</Button
 								>
@@ -205,6 +212,6 @@
 	onDelete={async () => {
 		await deletePortfolio({ id: portfolioId });
 		dialog = null;
-		await goto('/dashboard/portfolios');
+		await goto(resolve('/(dashboard)/portfolios'));
 	}}
 />
