@@ -13,20 +13,27 @@ export interface CGTCalculation {
 	cgtDiscount: number;
 	longTermTaxable: number;
 	totalTaxableGain: number;
+	/** Losses left over once gains are exhausted; carried forward to a later year. */
+	lossesCarriedForward: number;
 }
 
 /**
- * Calculate CGT with loss offsetting and discount
- * Losses are applied to short-term gains first, then long-term gains
- * Long-term gains receive a 50% discount
+ * Net a year's capital gains against its losses and apply the 50% discount.
+ *
+ * All amounts are in cents. `capitalLosses` is taken as a magnitude, so it may be
+ * passed either signed or unsigned.
+ *
+ * Losses go against short-term gains before long-term ones. That order is the
+ * taxpayer's choice under the ATO rules and always the better one: a dollar of loss
+ * cancels a full dollar of an undiscounted gain, but only fifty cents of a
+ * discounted one.
  */
 export function calculateCGT(
 	shortTermGains: number,
 	longTermGains: number,
 	capitalLosses: number
 ): CGTCalculation {
-	const totalLosses = Math.abs(capitalLosses);
-	let remainingLosses = totalLosses;
+	let remainingLosses = Math.abs(capitalLosses);
 
 	// Apply losses to short-term gains first
 	const lossesAppliedToShortTerm = Math.min(remainingLosses, shortTermGains);
@@ -35,10 +42,12 @@ export function calculateCGT(
 
 	// Apply remaining losses to long-term gains
 	const lossesAppliedToLongTerm = Math.min(remainingLosses, longTermGains);
+	remainingLosses -= lossesAppliedToLongTerm;
 	const longTermAfterLosses = longTermGains - lossesAppliedToLongTerm;
 
-	// Apply 50% CGT discount to long-term gains
-	const cgtDiscount = longTermAfterLosses > 0 ? longTermAfterLosses * 0.5 : 0;
+	// Apply 50% CGT discount to long-term gains. Rounded, because an odd number of
+	// cents would otherwise leave half a cent in every downstream total.
+	const cgtDiscount = longTermAfterLosses > 0 ? Math.round(longTermAfterLosses / 2) : 0;
 	const longTermTaxable = longTermAfterLosses - cgtDiscount;
 
 	const totalTaxableGain = shortTermAfterLosses + longTermTaxable;
@@ -52,7 +61,8 @@ export function calculateCGT(
 		longTermAfterLosses,
 		cgtDiscount,
 		longTermTaxable,
-		totalTaxableGain
+		totalTaxableGain,
+		lossesCarriedForward: remainingLosses
 	};
 }
 

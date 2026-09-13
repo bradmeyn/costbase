@@ -9,6 +9,7 @@ import type { InferSelectModel } from 'drizzle-orm';
 import type { transactionTable } from '$db/schemas/portfolio';
 import { getStockPrices } from '#lib/server/prices.js';
 import { apportionCostBaseAdjustment, financialYearEnd } from '$utils/amit-calculations';
+import { calculateCGT, type CGTCalculation } from '$utils/cgt-calculations';
 
 type Transaction = InferSelectModel<typeof transactionTable>;
 
@@ -277,17 +278,7 @@ export interface TaxSummary {
 		totalLongTermProceeds: number;
 		totalCapitalLossProceeds: number;
 	};
-	cgtCalculation: {
-		shortTermGains: number;
-		lossesAppliedToShortTerm: number;
-		shortTermAfterLosses: number;
-		longTermGains: number;
-		lossesAppliedToLongTerm: number;
-		longTermAfterLosses: number;
-		cgtDiscount: number;
-		longTermTaxable: number;
-		totalTaxableGain: number;
-	};
+	cgtCalculation: CGTCalculation;
 	/**
 	 * Capital gains arising where an AMIT cost base excess exceeded a parcel's
 	 * remaining cost base (CGT event E10), keyed by holding code.
@@ -573,24 +564,11 @@ export const getPortfolioTaxSummary = query(
 		const fyTotalLongTermProceeds = fyLongTermGains.reduce((sum, g) => sum + g.proceeds, 0);
 		const fyTotalCapitalLossProceeds = fyCapitalLosses.reduce((sum, g) => sum + g.proceeds, 0);
 
-		// CGT Calculation: Apply losses (offset short-term first, then long-term)
-		const totalLosses = Math.abs(fyTotalCapitalLosses);
-		let remainingLosses = totalLosses;
-
-		// Apply losses to short-term gains first
-		const lossesAppliedToShortTerm = Math.min(remainingLosses, fyTotalShortTermGains);
-		remainingLosses -= lossesAppliedToShortTerm;
-		const shortTermAfterLosses = fyTotalShortTermGains - lossesAppliedToShortTerm;
-
-		// Apply remaining losses to long-term gains
-		const lossesAppliedToLongTerm = Math.min(remainingLosses, fyTotalLongTermGains);
-		const longTermAfterLosses = fyTotalLongTermGains - lossesAppliedToLongTerm;
-
-		// Apply 50% CGT discount to long-term gains
-		const cgtDiscount = longTermAfterLosses > 0 ? longTermAfterLosses * 0.5 : 0;
-		const longTermTaxable = longTermAfterLosses - cgtDiscount;
-
-		const totalTaxableGain = shortTermAfterLosses + longTermTaxable;
+		const cgtCalculation = calculateCGT(
+			fyTotalShortTermGains,
+			fyTotalLongTermGains,
+			fyTotalCapitalLosses
+		);
 
 		return {
 			realisedGains: {
@@ -619,17 +597,7 @@ export const getPortfolioTaxSummary = query(
 				totalLongTermProceeds: fyTotalLongTermProceeds,
 				totalCapitalLossProceeds: fyTotalCapitalLossProceeds
 			},
-			cgtCalculation: {
-				shortTermGains: fyTotalShortTermGains,
-				lossesAppliedToShortTerm,
-				shortTermAfterLosses,
-				longTermGains: fyTotalLongTermGains,
-				lossesAppliedToLongTerm,
-				longTermAfterLosses,
-				cgtDiscount,
-				longTermTaxable,
-				totalTaxableGain
-			},
+			cgtCalculation,
 			amitExcessGains: amitExcessGainsByHolding,
 			unrealisedLots,
 			holdings: holdingsSummary

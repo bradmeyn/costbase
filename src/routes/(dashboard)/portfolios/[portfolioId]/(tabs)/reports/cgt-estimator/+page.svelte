@@ -3,611 +3,440 @@
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
-	import * as NativeSelect from '$ui/native-select';
+	import * as Select from '$ui/select';
 	import Input from '$ui/input/input.svelte';
 	import Button from '$ui/button/button.svelte';
+	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { calculateCGT } from '#lib/utils/cgt-calculations.js';
+	import { simulateSale } from '#lib/utils/sale-simulation.js';
 
 	const portfolioId = page.params.portfolioId!;
+	/* Always the current year: the question is what selling today would add. */
 	const taxSummary = $derived(await getPortfolioTaxSummary({ id: portfolioId }));
 
-	// Tax rate options (Australian marginal rates)
-	const taxRates = [
-		{ label: '0% (Tax-free threshold)', value: 0 },
-		{ label: '19% ($18,201 - $45,000)', value: 19 },
-		{ label: '32.5% ($45,001 - $120,000)', value: 32.5 },
-		{ label: '37% ($120,001 - $180,000)', value: 37 },
-		{ label: '45% ($180,001+)', value: 45 }
+	/*
+	  Resident marginal rates for 2025-26, each with the 2% Medicare levy already
+	  added — the levy applies to a capital gain like any other income, so quoting
+	  the bare rate would understate the bill.
+	*/
+	const MARGINAL_RATES = [
+		{ value: 0, band: 'Up to $18,200' },
+		{ value: 18, band: '$18,201 to $45,000' },
+		{ value: 32, band: '$45,001 to $135,000' },
+		{ value: 39, band: '$135,001 to $190,000' },
+		{ value: 47, band: 'Over $190,000' }
 	];
+	let marginalRate = $state(32);
+	const rateBand = $derived(MARGINAL_RATES.find((r) => r.value === marginalRate)?.band ?? '');
+	const taxOn = (assessable: number) => Math.round(assessable * (marginalRate / 100));
 
-	let selectedTaxRate = $state(32.5);
-
-	// Estimated tax based on selected rate
-	const estimatedTax = $derived(
-		taxSummary.cgtCalculation.totalTaxableGain > 0
-			? taxSummary.cgtCalculation.totalTaxableGain * (selectedTaxRate / 100)
-			: 0
+	/* What the year has realised already. */
+	const realised = $derived(taxSummary.cgtCalculation);
+	const realisedTax = $derived(taxOn(realised.totalTaxableGain));
+	const realisedDisposals = $derived(
+		taxSummary.currentFY.shortTermGains.length +
+			taxSummary.currentFY.longTermGains.length +
+			taxSummary.currentFY.capitalLosses.length
 	);
 
-	// Mock sale simulator state - track units to sell per holding
-	let unitsToSellByHolding = $state<Record<string, number>>({});
+	/* The hypothetical sale, in units per holding. */
+	let unitsToSell = $state<Record<string, number>>({});
 
-	// Calculate mock sale for a single holding using FIFO
-	function calculateMockSale(holdingId: string, unitsToSell: number) {
-		if (unitsToSell <= 0) return null;
+	const modelledByHolding = $derived(
+		taxSummary.holdings.map((holding) => {
+			const units = unitsToSell[holding.id] ?? 0;
+			const lots = taxSummary.unrealisedLots.filter((lot) => lot.holdingId === holding.id);
+			return { holding, units, sale: simulateSale(lots, units) };
+		})
+	);
 
-		const holdingLots = taxSummary.unrealisedLots
-			.filter((lot) => lot.holdingId === holdingId)
-			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-		let remainingToSell = unitsToSell;
-		let shortTermGain = 0;
-		let longTermGain = 0;
-		let totalProceeds = 0;
-		let totalCostBase = 0;
-
-		for (const lot of holdingLots) {
-			if (remainingToSell <= 0) break;
-
-			const quantityFromLot = Math.min(lot.quantity, remainingToSell);
-			const proceeds = quantityFromLot * lot.currentPrice;
-			const costBase = quantityFromLot * lot.costPerUnit;
-			const gain = proceeds - costBase;
-
-			totalProceeds += proceeds;
-			totalCostBase += costBase;
-
-			if (lot.isLongTerm) {
-				longTermGain += gain;
-			} else {
-				shortTermGain += gain;
+	const modelled = $derived(
+		modelledByHolding.reduce(
+			(total, { sale }) => ({
+				units: total.units + sale.units,
+				proceeds: total.proceeds + sale.proceeds,
+				costBase: total.costBase + sale.costBase,
+				shortTermGains: total.shortTermGains + sale.shortTermGains,
+				longTermGains: total.longTermGains + sale.longTermGains,
+				capitalLosses: total.capitalLosses + sale.capitalLosses,
+				netGain: total.netGain + sale.netGain
+			}),
+			{
+				units: 0,
+				proceeds: 0,
+				costBase: 0,
+				shortTermGains: 0,
+				longTermGains: 0,
+				capitalLosses: 0,
+				netGain: 0
 			}
+		)
+	);
 
-			remainingToSell -= quantityFromLot;
-		}
+	const anythingModelled = $derived(modelled.units > 0);
 
-		const totalGain = shortTermGain + longTermGain;
-		const taxableShortTerm = shortTermGain;
-		const taxableLongTerm = longTermGain > 0 ? longTermGain * 0.5 : longTermGain;
-		const totalTaxableGain = taxableShortTerm + taxableLongTerm;
-		const estimatedTax = totalTaxableGain > 0 ? totalTaxableGain * (selectedTaxRate / 100) : 0;
+	/*
+	  Net the whole year at once rather than taxing the sale on its own. A loss already
+	  realised absorbs the new gain before the discount is applied, so a sale costed in
+	  isolation can be wrong in both directions.
+	*/
+	const combined = $derived(
+		calculateCGT(
+			realised.shortTermGains + modelled.shortTermGains,
+			realised.longTermGains + modelled.longTermGains,
+			Math.abs(taxSummary.currentFY.totalCapitalLosses) + modelled.capitalLosses
+		)
+	);
+	const combinedTax = $derived(taxOn(combined.totalTaxableGain));
 
-		return {
-			unitsToSell: unitsToSell - remainingToSell,
-			shortTermGain,
-			longTermGain,
-			totalGain,
-			totalProceeds,
-			totalCostBase,
-			taxableShortTerm,
-			taxableLongTerm,
-			totalTaxableGain,
-			estimatedTax
-		};
+	const addedAssessable = $derived(combined.totalTaxableGain - realised.totalTaxableGain);
+	const addedTax = $derived(combinedTax - realisedTax);
+
+	function clear() {
+		unitsToSell = {};
 	}
 
-	// Combined mock sale results across all holdings
-	const combinedMockSale = $derived.by(() => {
-		let totalShortTermGain = 0;
-		let totalLongTermGain = 0;
-		let totalProceeds = 0;
-		let totalCostBase = 0;
-		let totalUnits = 0;
+	function setUnits(holdingId: string, value: number, max: number) {
+		unitsToSell = { ...unitsToSell, [holdingId]: Math.max(0, Math.min(value, max)) };
+	}
 
-		for (const holding of taxSummary.holdings) {
-			const units = unitsToSellByHolding[holding.id] || 0;
-			if (units > 0) {
-				const result = calculateMockSale(holding.id, units);
-				if (result) {
-					totalShortTermGain += result.shortTermGain;
-					totalLongTermGain += result.longTermGain;
-					totalProceeds += result.totalProceeds;
-					totalCostBase += result.totalCostBase;
-					totalUnits += result.unitsToSell;
-				}
+	/* Negating a zero would otherwise print as -$0.00 down the deduction rows. */
+	const money = (cents: number) => formatCurrency(cents === 0 ? 0 : cents);
+
+	const dollars = (cents: number) => (cents / 100).toFixed(2);
+
+	function generateEstimate() {
+		let csv = `CGT estimate - ${taxSummary.currentFY.label}\n`;
+		csv += `Marginal rate,${marginalRate}%\n\n`;
+
+		if (anythingModelled) {
+			csv += 'Modelled sale\n';
+			csv += 'Holding,Code,Units,Proceeds,Cost base,Gain\n';
+			for (const { holding, units, sale } of modelledByHolding) {
+				if (units <= 0) continue;
+				csv += `${holding.name},${holding.code},${sale.units},${dollars(sale.proceeds)},${dollars(sale.costBase)},${dollars(sale.netGain)}\n`;
 			}
+			csv += `Total,,${modelled.units},${dollars(modelled.proceeds)},${dollars(modelled.costBase)},${dollars(modelled.netGain)}\n\n`;
 		}
 
-		if (totalUnits === 0) return null;
-
-		const totalGain = totalShortTermGain + totalLongTermGain;
-		const taxableShortTerm = totalShortTermGain;
-		const taxableLongTerm = totalLongTermGain > 0 ? totalLongTermGain * 0.5 : totalLongTermGain;
-		const totalTaxableGain = taxableShortTerm + taxableLongTerm;
-		const estimatedTax = totalTaxableGain > 0 ? totalTaxableGain * (selectedTaxRate / 100) : 0;
-
-		return {
-			totalUnits,
-			shortTermGain: totalShortTermGain,
-			longTermGain: totalLongTermGain,
-			totalGain,
-			totalProceeds,
-			totalCostBase,
-			taxableShortTerm,
-			taxableLongTerm,
-			totalTaxableGain,
-			estimatedTax
+		csv += 'Position,Realised,Added by the sale,Total\n';
+		const row = (label: string, a: number, b: number, c: number) => {
+			csv += `${label},${dollars(a)},${dollars(b)},${dollars(c)}\n`;
 		};
-	});
+		row(
+			'Short-term gains',
+			realised.shortTermGains,
+			modelled.shortTermGains,
+			combined.shortTermGains
+		);
+		row('Long-term gains', realised.longTermGains, modelled.longTermGains, combined.longTermGains);
+		row(
+			'Capital losses',
+			-Math.abs(taxSummary.currentFY.totalCapitalLosses),
+			-modelled.capitalLosses,
+			-(Math.abs(taxSummary.currentFY.totalCapitalLosses) + modelled.capitalLosses)
+		);
+		row(
+			'Losses applied',
+			-(realised.lossesAppliedToShortTerm + realised.lossesAppliedToLongTerm),
+			-(
+				combined.lossesAppliedToShortTerm +
+				combined.lossesAppliedToLongTerm -
+				realised.lossesAppliedToShortTerm -
+				realised.lossesAppliedToLongTerm
+			),
+			-(combined.lossesAppliedToShortTerm + combined.lossesAppliedToLongTerm)
+		);
+		row(
+			'CGT discount',
+			-realised.cgtDiscount,
+			-(combined.cgtDiscount - realised.cgtDiscount),
+			-combined.cgtDiscount
+		);
+		row(
+			'Assessable capital gain',
+			realised.totalTaxableGain,
+			addedAssessable,
+			combined.totalTaxableGain
+		);
+		row(`Estimated tax at ${marginalRate}%`, realisedTax, addedTax, combinedTax);
 
-	const formatDate = (date: Date | string) => {
-		return new Date(date).toLocaleDateString('en-AU', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
-	};
-
-	function generateCGTReport() {
-		// CSV Header
-		let csv = 'CGT Report - ' + taxSummary.currentFY.label + '\n\n';
-
-		// Short-Term Gains
-		csv += 'Short-Term Gains (Held ≤ 12 months)\n';
-		csv += 'Sale Date,Holding,Code,Units,Proceeds,Cost Base,Gain\n';
-		taxSummary.currentFY.shortTermGains.forEach((gain) => {
-			csv += `${formatDate(gain.saleDate)},${gain.holdingName},${gain.holdingCode},${gain.quantity},${(gain.proceeds / 100).toFixed(2)},${(gain.costBase / 100).toFixed(2)},${(gain.gain / 100).toFixed(2)}\n`;
-		});
-		csv += `Total,,,${taxSummary.currentFY.totalShortTermUnits},${(taxSummary.currentFY.totalShortTermProceeds / 100).toFixed(2)},,${(taxSummary.currentFY.totalShortTermGains / 100).toFixed(2)}\n\n`;
-
-		// Long-Term Gains
-		csv += 'Long-Term Gains (Held > 12 months - 50% discount eligible)\n';
-		csv += 'Sale Date,Holding,Code,Units,Proceeds,Cost Base,Gain\n';
-		taxSummary.currentFY.longTermGains.forEach((gain) => {
-			csv += `${formatDate(gain.saleDate)},${gain.holdingName},${gain.holdingCode},${gain.quantity},${(gain.proceeds / 100).toFixed(2)},${(gain.costBase / 100).toFixed(2)},${(gain.gain / 100).toFixed(2)}\n`;
-		});
-		csv += `Total,,,${taxSummary.currentFY.totalLongTermUnits},${(taxSummary.currentFY.totalLongTermProceeds / 100).toFixed(2)},,${(taxSummary.currentFY.totalLongTermGains / 100).toFixed(2)}\n\n`;
-
-		// Capital Losses
-		csv += 'Capital Losses (Offset against gains)\n';
-		csv += 'Sale Date,Holding,Code,Units,Proceeds,Cost Base,Loss\n';
-		taxSummary.currentFY.capitalLosses.forEach((loss) => {
-			csv += `${formatDate(loss.saleDate)},${loss.holdingName},${loss.holdingCode},${loss.quantity},${(loss.proceeds / 100).toFixed(2)},${(loss.costBase / 100).toFixed(2)},${(loss.gain / 100).toFixed(2)}\n`;
-		});
-		csv += `Total,,,${taxSummary.currentFY.totalCapitalLossUnits},${(taxSummary.currentFY.totalCapitalLossProceeds / 100).toFixed(2)},,${(taxSummary.currentFY.totalCapitalLosses / 100).toFixed(2)}\n\n`;
-
-		// CGT Summary
-		csv += 'CGT Calculation Summary\n';
-		csv += 'Description,Amount\n';
-		csv += `Short-Term Gains,${(taxSummary.cgtCalculation.shortTermGains / 100).toFixed(2)}\n`;
-		csv += `Less: Capital Losses Offset,${(-taxSummary.cgtCalculation.lossesAppliedToShortTerm / 100).toFixed(2)}\n`;
-		csv += `Short-Term After Losses,${(taxSummary.cgtCalculation.shortTermAfterLosses / 100).toFixed(2)}\n`;
-		csv += `Long-Term Gains,${(taxSummary.cgtCalculation.longTermGains / 100).toFixed(2)}\n`;
-		csv += `Less: Capital Losses Offset,${(-taxSummary.cgtCalculation.lossesAppliedToLongTerm / 100).toFixed(2)}\n`;
-		csv += `Long-Term After Losses,${(taxSummary.cgtCalculation.longTermAfterLosses / 100).toFixed(2)}\n`;
-		csv += `Less: CGT Discount (50%),${(-taxSummary.cgtCalculation.cgtDiscount / 100).toFixed(2)}\n`;
-		csv += `Long-Term Taxable,${(taxSummary.cgtCalculation.longTermTaxable / 100).toFixed(2)}\n`;
-		csv += `Total Taxable Capital Gain,${(taxSummary.cgtCalculation.totalTaxableGain / 100).toFixed(2)}\n`;
-
-		downloadCSV(csv, `CGT-Report-${taxSummary.currentFY.label}`);
+		downloadCSV(csv, `CGT-estimate-${taxSummary.currentFY.label}`);
 	}
 
 	registerReport(() => ({
 		title: 'CGT estimator',
-		subtitle: `${taxSummary.currentFY.label} · what you have realised so far, and what selling more would add`,
-		csv: generateCGTReport
+		subtitle: `${taxSummary.currentFY.label} · what you have realised, and what selling more would add`,
+		csv: generateEstimate
 	}));
 </script>
 
-<!-- Short-Term Gains Table -->
-<div class="mb-8">
-	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-base font-semibold">Short-Term Gains</h2>
-		<div class="text-right">
-			<p class="text-xl font-bold">
-				{formatCurrency(taxSummary.currentFY.totalShortTermGains)}
+<section class="mb-8">
+	<h2 class="mb-3 text-base font-semibold">This year so far</h2>
+	<div class="grid gap-4 md:grid-cols-4">
+		<SummaryCard label="Assessable capital gain" value={formatCurrency(realised.totalTaxableGain)}>
+			<p class="mt-1 text-xs text-muted-foreground">After losses and the 50% discount</p>
+		</SummaryCard>
+		<SummaryCard label="Estimated tax" value={formatCurrency(realisedTax)}>
+			<p class="mt-1 text-xs text-muted-foreground">At {marginalRate}% · {rateBand}</p>
+		</SummaryCard>
+		<SummaryCard label="Disposals" value={String(realisedDisposals)}>
+			<p class="mt-1 text-xs text-muted-foreground">
+				Sales settled in {taxSummary.currentFY.label}
 			</p>
-			<p class="text-xs text-muted-foreground">Held ≤ 12 months</p>
+		</SummaryCard>
+		<div class="rounded-md border border-border bg-card px-3.5 py-3 print:hidden">
+			<p class="text-[11px] font-medium text-muted-foreground">Marginal tax rate</p>
+			<Select.Root
+				type="single"
+				value={String(marginalRate)}
+				onValueChange={(v) => v && (marginalRate = Number(v))}
+			>
+				<Select.Trigger class="mt-1.5 w-full" aria-label="Marginal tax rate">
+					{marginalRate}% including Medicare levy
+				</Select.Trigger>
+				<Select.Content>
+					{#each MARGINAL_RATES as rate (rate.value)}
+						<Select.Item value={String(rate.value)}>{rate.value}% · {rate.band}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 	</div>
+</section>
 
-	{#if taxSummary.currentFY.shortTermGains.length > 0}
-		<div class="card">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>Sale Date</Table.Head>
-						<Table.Head>Holding</Table.Head>
-						<Table.Head class="text-right">Units</Table.Head>
-						<Table.Head class="text-right">Proceeds</Table.Head>
-						<Table.Head class="text-right">Cost Base</Table.Head>
-						<Table.Head class="text-right">Gain</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each taxSummary.currentFY.shortTermGains as gain, i (i)}
-						<Table.Row>
-							<Table.Cell>{formatDate(gain.saleDate)}</Table.Cell>
-							<Table.Cell class="font-medium">{gain.holdingName} ({gain.holdingCode})</Table.Cell>
-							<Table.Cell class="text-right">{gain.quantity}</Table.Cell>
-							<Table.Cell class="text-right">{formatCurrency(gain.proceeds)}</Table.Cell>
-							<Table.Cell class="text-right">{formatCurrency(gain.costBase)}</Table.Cell>
-							<Table.Cell class="text-right ">
-								{formatCurrency(gain.gain)}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-				<Table.Footer>
-					<Table.Row>
-						<Table.Cell colspan={2} class="font-medium">Total</Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{taxSummary.currentFY.totalShortTermUnits}
-						</Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{formatCurrency(taxSummary.currentFY.totalShortTermProceeds)}
-						</Table.Cell>
-						<Table.Cell></Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{formatCurrency(taxSummary.currentFY.totalShortTermGains)}
-						</Table.Cell>
-					</Table.Row>
-				</Table.Footer>
-			</Table.Root>
+<section class="mb-8">
+	<div class="mb-2 flex items-baseline justify-between gap-3">
+		<div class="flex items-baseline gap-2">
+			<h2 class="text-base font-semibold">Model a sale</h2>
+			<span class="text-[11px] text-muted-foreground">
+				Oldest parcels go first · nothing here is saved
+			</span>
+		</div>
+		{#if anythingModelled}
+			<Button variant="ghost" size="sm" onclick={clear} class="print:hidden">Clear all</Button>
+		{/if}
+	</div>
+
+	{#if taxSummary.holdings.length === 0}
+		<div class="card py-8 text-center text-[13px] text-muted-foreground">
+			No holdings to sell. Add a holding to estimate a disposal.
 		</div>
 	{:else}
-		<div class="card py-8 text-center text-muted-foreground">
-			No short-term gains in {taxSummary.currentFY.label}.
-		</div>
-	{/if}
-</div>
-
-<!-- Long-Term Gains Table -->
-<div class="mb-8">
-	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-base font-semibold">Long-Term Gains</h2>
-		<div class="text-right">
-			<p class="text-xl font-bold">
-				{formatCurrency(taxSummary.currentFY.totalLongTermGains)}
-			</p>
-			<p class="text-xs text-muted-foreground">Held &gt; 12 months (50% discount eligible)</p>
-		</div>
-	</div>
-
-	{#if taxSummary.currentFY.longTermGains.length > 0}
 		<div class="card">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>Sale Date</Table.Head>
-						<Table.Head>Holding</Table.Head>
-						<Table.Head class="text-right">Units</Table.Head>
-						<Table.Head class="text-right">Proceeds</Table.Head>
-						<Table.Head class="text-right">Cost Base</Table.Head>
-						<Table.Head class="text-right">Gain</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each taxSummary.currentFY.longTermGains as gain, i (i)}
-						<Table.Row>
-							<Table.Cell>{formatDate(gain.saleDate)}</Table.Cell>
-							<Table.Cell class="font-medium">{gain.holdingName} ({gain.holdingCode})</Table.Cell>
-							<Table.Cell class="text-right">{gain.quantity}</Table.Cell>
-							<Table.Cell class="text-right">{formatCurrency(gain.proceeds)}</Table.Cell>
-							<Table.Cell class="text-right">{formatCurrency(gain.costBase)}</Table.Cell>
-							<Table.Cell class="text-right ">
-								{formatCurrency(gain.gain)}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-				<Table.Footer>
-					<Table.Row>
-						<Table.Cell colspan={2} class="font-medium">Total</Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{taxSummary.currentFY.totalLongTermUnits}
-						</Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{formatCurrency(taxSummary.currentFY.totalLongTermProceeds)}
-						</Table.Cell>
-						<Table.Cell></Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{formatCurrency(taxSummary.currentFY.totalLongTermGains)}
-						</Table.Cell>
-					</Table.Row>
-				</Table.Footer>
-			</Table.Root>
-		</div>
-	{:else}
-		<div class="card py-8 text-center text-muted-foreground">
-			No long-term gains in {taxSummary.currentFY.label}.
-		</div>
-	{/if}
-</div>
-
-<!-- Capital Losses Table -->
-<div class="mb-8">
-	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-base font-semibold">Capital Losses</h2>
-		<div class="text-right">
-			<p class="text-xl font-bold text-loss">
-				{formatCurrency(taxSummary.currentFY.totalCapitalLosses)}
-			</p>
-			<p class="text-xs text-muted-foreground">Offset against gains</p>
-		</div>
-	</div>
-
-	{#if taxSummary.currentFY.capitalLosses.length > 0}
-		<div class="card">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>Sale Date</Table.Head>
-						<Table.Head>Holding</Table.Head>
-						<Table.Head class="text-right">Units</Table.Head>
-						<Table.Head class="text-right">Proceeds</Table.Head>
-						<Table.Head class="text-right">Cost Base</Table.Head>
-						<Table.Head class="text-right">Loss</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each taxSummary.currentFY.capitalLosses as loss, i (i)}
-						<Table.Row>
-							<Table.Cell>{formatDate(loss.saleDate)}</Table.Cell>
-							<Table.Cell class="font-medium">{loss.holdingName} ({loss.holdingCode})</Table.Cell>
-							<Table.Cell class="text-right">{loss.quantity}</Table.Cell>
-							<Table.Cell class="text-right">{formatCurrency(loss.proceeds)}</Table.Cell>
-							<Table.Cell class="text-right">{formatCurrency(loss.costBase)}</Table.Cell>
-							<Table.Cell class="text-right text-loss">
-								{formatCurrency(loss.gain)}
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-				<Table.Footer>
-					<Table.Row>
-						<Table.Cell colspan={2} class="font-medium">Total</Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{taxSummary.currentFY.totalCapitalLossUnits}
-						</Table.Cell>
-						<Table.Cell class="text-right font-bold">
-							{formatCurrency(taxSummary.currentFY.totalCapitalLossProceeds)}
-						</Table.Cell>
-						<Table.Cell></Table.Cell>
-						<Table.Cell class="text-right font-bold text-loss">
-							{formatCurrency(taxSummary.currentFY.totalCapitalLosses)}
-						</Table.Cell>
-					</Table.Row>
-				</Table.Footer>
-			</Table.Root>
-		</div>
-	{:else}
-		<div class="card py-8 text-center text-muted-foreground">
-			No capital losses in {taxSummary.currentFY.label}.
-		</div>
-	{/if}
-</div>
-
-<!-- CGT Summary -->
-<div class="mb-8">
-	<h2 class="mb-3 text-base font-semibold">Summary</h2>
-	<p class="mb-4 text-sm text-muted-foreground">
-		Capital losses are first offset against short-term gains, then long-term gains. Long-term gains
-		receive a 50% CGT discount.
-	</p>
-
-	<div class="card">
-		<!-- Short-Term Section -->
-		<div class="mb-6">
-			<h3 class="mb-3 font-semibold">
-				Capital Gains on shares applicable for 'Other' method (short-term gains)
-			</h3>
-			<div class="space-y-2 text-sm">
-				<div class="flex justify-between">
-					<span>Short Term Gains</span>
-					<span>{formatCurrency(taxSummary.cgtCalculation.shortTermGains)}</span>
-				</div>
-				<div class="flex justify-between border-b pb-2">
-					<span class="italic">less Capital losses available to offset</span>
-					<span class="text-loss"
-						>{formatCurrency(-taxSummary.cgtCalculation.lossesAppliedToShortTerm)}</span
-					>
-				</div>
-				<div class="flex justify-between font-medium">
-					<span></span>
-					<span>{formatCurrency(taxSummary.cgtCalculation.shortTermAfterLosses)}</span>
-				</div>
-			</div>
-		</div>
-
-		<!-- Long-Term Section -->
-		<div class="mb-6">
-			<h3 class="mb-3 font-semibold">
-				Capital Gains on shares applicable for 'Discount' method (long-term gains)
-			</h3>
-			<div class="space-y-2 text-sm">
-				<div class="flex justify-between">
-					<span>Long Term Gains</span>
-					<span>{formatCurrency(taxSummary.cgtCalculation.longTermGains)}</span>
-				</div>
-				<div class="flex justify-between border-b pb-2">
-					<span class="italic">less Capital losses available to offset</span>
-					<span class="text-loss"
-						>{formatCurrency(-taxSummary.cgtCalculation.lossesAppliedToLongTerm)}</span
-					>
-				</div>
-				<div class="flex justify-between">
-					<span></span>
-					<span>{formatCurrency(taxSummary.cgtCalculation.longTermAfterLosses)}</span>
-				</div>
-				<div class="flex justify-between border-b pb-2">
-					<span class="italic">less CGT Concession Amount @ 50%</span>
-					<span class="text-loss">{formatCurrency(-taxSummary.cgtCalculation.cgtDiscount)}</span>
-				</div>
-			</div>
-		</div>
-
-		<!-- Total -->
-		<div class="border-t-2 border-foreground pt-4">
-			<div class="flex justify-between text-lg font-bold">
-				<span>Capital Gain</span>
-				<span>{formatCurrency(taxSummary.cgtCalculation.totalTaxableGain)}</span>
-			</div>
-			<div class="mt-2 flex items-center justify-between text-lg">
-				<span class="flex items-center gap-2">
-					Estimated Tax @
-					<NativeSelect.Root class="w-40" bind:value={selectedTaxRate}>
-						{#each taxRates as rate (rate.value)}
-							<NativeSelect.Option value={rate.value}>{rate.value}%</NativeSelect.Option>
-						{/each}
-					</NativeSelect.Root>
-				</span>
-				<span class="font-bold">{formatCurrency(estimatedTax)}</span>
-			</div>
-		</div>
-	</div>
-</div>
-
-<!-- Sale Simulator -->
-<div class="mb-8">
-	<h2 class="mb-3 text-base font-semibold">Sale Simulator</h2>
-	<p class="mb-4 text-muted-foreground">
-		Estimate the tax impact of selling units using FIFO (First In, First Out) method.
-	</p>
-
-	{#if taxSummary.holdings.length > 0}
-		<div class="card mb-4">
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>Holding</Table.Head>
 						<Table.Head class="text-right">Price</Table.Head>
-						<Table.Head class="text-right">Available</Table.Head>
-						<Table.Head class="text-right">Units to Sell</Table.Head>
+						<Table.Head class="text-right">Units held</Table.Head>
+						<Table.Head class="text-right">Units to sell</Table.Head>
 						<Table.Head class="text-right">Proceeds</Table.Head>
-						<Table.Head class="text-right">Gain/Loss</Table.Head>
-						<Table.Head class="text-right">Est. Tax</Table.Head>
-						<Table.Head></Table.Head>
+						<Table.Head class="text-right">Cost base</Table.Head>
+						<Table.Head class="text-right">Gain</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each taxSummary.holdings as holding (holding.id)}
-						{@const unitsToSell = unitsToSellByHolding[holding.id] || 0}
-						{@const mockResult = calculateMockSale(holding.id, unitsToSell)}
+					{#each modelledByHolding as { holding, units, sale } (holding.id)}
 						<Table.Row>
 							<Table.Cell>
-								<p class="font-medium">{holding.name}</p>
-								<p class="text-sm text-muted-foreground">{holding.code}</p>
+								<p class="font-medium">{holding.code}</p>
+								<p class="text-[11px] text-muted-foreground">{holding.name}</p>
 							</Table.Cell>
 							<Table.Cell class="text-right">{formatCurrency(holding.currentPrice)}</Table.Cell>
 							<Table.Cell class="text-right">{holding.units}</Table.Cell>
 							<Table.Cell class="text-right">
-								<Input
-									type="number"
-									value={unitsToSell}
-									oninput={(e) => {
-										const value = parseInt(e.currentTarget.value) || 0;
-										unitsToSellByHolding = {
-											...unitsToSellByHolding,
-											[holding.id]: Math.min(value, holding.units)
-										};
-									}}
-									min="0"
-									max={holding.units}
-									placeholder="0"
-									class="w-24 text-right"
-								/>
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								{mockResult ? formatCurrency(mockResult.totalProceeds) : '-'}
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								{#if mockResult}
-									<span class={mockResult.totalGain >= 0 ? '' : 'text-loss'}>
-										{formatCurrency(mockResult.totalGain)}
-									</span>
-								{:else}
-									-
-								{/if}
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								{#if mockResult}
-									<span class="">{formatCurrency(mockResult.estimatedTax)}</span>
-								{:else}
-									-
-								{/if}
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								<div class="flex justify-end gap-1">
-									<Button
-										variant="outline"
-										size="sm"
-										onclick={() =>
-											(unitsToSellByHolding = {
-												...unitsToSellByHolding,
-												[holding.id]: holding.units
-											})}
-									>
-										All
-									</Button>
+								<div class="flex items-center justify-end gap-1.5">
+									<Input
+										type="number"
+										min="0"
+										max={holding.units}
+										placeholder="0"
+										value={units || ''}
+										oninput={(e) =>
+											setUnits(holding.id, parseInt(e.currentTarget.value) || 0, holding.units)}
+										class="h-8 w-24 text-right"
+										aria-label="Units of {holding.code} to sell"
+									/>
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() =>
-											(unitsToSellByHolding = { ...unitsToSellByHolding, [holding.id]: 0 })}
+										class="print:hidden"
+										onclick={() => setUnits(holding.id, holding.units, holding.units)}
 									>
-										Clear
+										All
 									</Button>
 								</div>
+							</Table.Cell>
+							<Table.Cell class="text-right">
+								{units > 0 ? formatCurrency(sale.proceeds) : '—'}
+							</Table.Cell>
+							<Table.Cell class="text-right">
+								{units > 0 ? formatCurrency(sale.costBase) : '—'}
+							</Table.Cell>
+							<Table.Cell class="text-right {sale.netGain < 0 ? 'text-loss' : ''}">
+								{units > 0 ? formatCurrency(sale.netGain) : '—'}
 							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>
+				{#if anythingModelled}
+					<Table.Footer>
+						<Table.Row>
+							<Table.Cell colspan={3} class="font-medium">Total</Table.Cell>
+							<Table.Cell class="text-right font-semibold">{modelled.units}</Table.Cell>
+							<Table.Cell class="text-right font-semibold">
+								{formatCurrency(modelled.proceeds)}
+							</Table.Cell>
+							<Table.Cell class="text-right font-semibold">
+								{formatCurrency(modelled.costBase)}
+							</Table.Cell>
+							<Table.Cell
+								class="text-right font-semibold {modelled.netGain < 0 ? 'text-loss' : ''}"
+							>
+								{formatCurrency(modelled.netGain)}
+							</Table.Cell>
+						</Table.Row>
+					</Table.Footer>
+				{/if}
 			</Table.Root>
 		</div>
-
-		{#if combinedMockSale}
-			<div class="card border-2 border-primary">
-				<h3 class="mb-4 text-lg font-semibold">Combined Sale Summary</h3>
-				<div class="grid gap-4 md:grid-cols-4">
-					<div>
-						<p class="text-sm text-muted-foreground">Total Proceeds</p>
-						<p class="text-base font-semibold">{formatCurrency(combinedMockSale.totalProceeds)}</p>
-						<p class="text-xs text-muted-foreground">{combinedMockSale.totalUnits} units</p>
-					</div>
-					<div>
-						<p class="text-sm text-muted-foreground">Cost Base</p>
-						<p class="text-base font-semibold">{formatCurrency(combinedMockSale.totalCostBase)}</p>
-					</div>
-					<div>
-						<p class="text-sm text-muted-foreground">Total Gain</p>
-						<p
-							class="text-xl font-semibold tabular-nums {combinedMockSale.totalGain >= 0
-								? ''
-								: 'text-loss'}"
-						>
-							{formatCurrency(combinedMockSale.totalGain)}
-						</p>
-						<p class="text-xs text-muted-foreground">
-							Short: {formatCurrency(combinedMockSale.shortTermGain)} | Long: {formatCurrency(
-								combinedMockSale.longTermGain
-							)}
-						</p>
-					</div>
-					<div>
-						<p class="text-sm text-muted-foreground">Estimated Tax</p>
-						<p class="text-xl font-semibold tabular-nums">
-							{formatCurrency(combinedMockSale.estimatedTax)}
-						</p>
-						<p class="text-xs text-muted-foreground">
-							Taxable: {formatCurrency(combinedMockSale.totalTaxableGain)} at {selectedTaxRate}%
-						</p>
-					</div>
-				</div>
-
-				{#if combinedMockSale.longTermGain > 0}
-					<div class="mt-4 rounded-md border border-gain/30 bg-gain/10 p-3">
-						<p class="text-sm text-gain dark:text-gain">
-							<strong>CGT Discount Applied:</strong> Long-term gains of {formatCurrency(
-								combinedMockSale.longTermGain
-							)}
-							reduced to {formatCurrency(combinedMockSale.taxableLongTerm)} (50% discount).
-						</p>
-					</div>
-				{/if}
-			</div>
-		{/if}
-	{:else}
-		<div class="card py-8 text-center text-muted-foreground">No holdings to simulate sales.</div>
 	{/if}
-</div>
+</section>
+
+<!--
+	One row of the ledger: what the year has realised, what the modelled sale adds,
+	and where the two land together.
+-->
+{#snippet ledgerRow(
+	label: string,
+	realisedAmount: number,
+	added: number,
+	total: number,
+	hint?: string
+)}
+	<Table.Row>
+		<Table.Cell>
+			{label}
+			{#if hint}
+				<span class="ml-1.5 text-[11px] text-muted-foreground">{hint}</span>
+			{/if}
+		</Table.Cell>
+		<Table.Cell class="text-right">{money(realisedAmount)}</Table.Cell>
+		<Table.Cell class="text-right {added === 0 ? 'text-muted-foreground' : ''}">
+			{added === 0 ? '—' : money(added)}
+		</Table.Cell>
+		<Table.Cell class="text-right">{money(total)}</Table.Cell>
+	</Table.Row>
+{/snippet}
+
+<section class="mb-8">
+	<div class="mb-2 flex items-baseline gap-2">
+		<h2 class="text-base font-semibold">Where that leaves you</h2>
+		<span class="text-[11px] text-muted-foreground">
+			The whole year netted together, not the sale on its own
+		</span>
+	</div>
+
+	<div class="card">
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head></Table.Head>
+					<Table.Head class="text-right">Realised</Table.Head>
+					<Table.Head class="text-right">Added by the sale</Table.Head>
+					<Table.Head class="text-right">Total</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{@render ledgerRow(
+					'Short-term gains',
+					realised.shortTermGains,
+					modelled.shortTermGains,
+					combined.shortTermGains,
+					'held 12 months or less'
+				)}
+				{@render ledgerRow(
+					'Long-term gains',
+					realised.longTermGains,
+					modelled.longTermGains,
+					combined.longTermGains,
+					'discount eligible'
+				)}
+				{@render ledgerRow(
+					'Capital losses',
+					-Math.abs(taxSummary.currentFY.totalCapitalLosses),
+					-modelled.capitalLosses,
+					-(Math.abs(taxSummary.currentFY.totalCapitalLosses) + modelled.capitalLosses)
+				)}
+				{@render ledgerRow(
+					'Losses applied',
+					-(realised.lossesAppliedToShortTerm + realised.lossesAppliedToLongTerm),
+					-(
+						combined.lossesAppliedToShortTerm +
+						combined.lossesAppliedToLongTerm -
+						realised.lossesAppliedToShortTerm -
+						realised.lossesAppliedToLongTerm
+					),
+					-(combined.lossesAppliedToShortTerm + combined.lossesAppliedToLongTerm),
+					'short-term first'
+				)}
+				{@render ledgerRow(
+					'CGT discount',
+					-realised.cgtDiscount,
+					-(combined.cgtDiscount - realised.cgtDiscount),
+					-combined.cgtDiscount,
+					'50% on long-term gains'
+				)}
+			</Table.Body>
+			<Table.Footer>
+				<Table.Row>
+					<Table.Cell class="font-medium">Assessable capital gain</Table.Cell>
+					<Table.Cell class="text-right font-semibold">
+						{money(realised.totalTaxableGain)}
+					</Table.Cell>
+					<Table.Cell class="text-right font-semibold">
+						{addedAssessable === 0 ? '—' : money(addedAssessable)}
+					</Table.Cell>
+					<Table.Cell class="text-right font-semibold">
+						{money(combined.totalTaxableGain)}
+					</Table.Cell>
+				</Table.Row>
+				<Table.Row>
+					<Table.Cell class="font-medium">Estimated tax at {marginalRate}%</Table.Cell>
+					<Table.Cell class="text-right font-semibold">{money(realisedTax)}</Table.Cell>
+					<Table.Cell class="text-right font-semibold">
+						{addedTax === 0 ? '—' : money(addedTax)}
+					</Table.Cell>
+					<Table.Cell class="text-right font-semibold">{money(combinedTax)}</Table.Cell>
+				</Table.Row>
+			</Table.Footer>
+		</Table.Root>
+	</div>
+
+	{#if anythingModelled}
+		<p class="mt-3 rounded-md border border-primary/30 bg-primary/10 px-3.5 py-3 text-[13px]">
+			Selling {modelled.units} units adds
+			<strong>{money(addedAssessable)}</strong> to your assessable income — about
+			<strong>{money(addedTax)}</strong> in tax at {marginalRate}%, leaving
+			{money(modelled.proceeds - addedTax)} of the {money(modelled.proceeds)} proceeds.
+		</p>
+	{:else}
+		<p class="mt-3 text-[13px] text-muted-foreground">
+			Enter units above to see what a sale would add.
+		</p>
+	{/if}
+
+	{#if combined.lossesCarriedForward > 0}
+		<p class="mt-2 text-[13px] text-muted-foreground">
+			{money(combined.lossesCarriedForward)} of capital losses would be left over and carried forward
+			to a later year.
+		</p>
+	{/if}
+</section>
+
+<p class="text-[11px] text-muted-foreground">
+	An estimate on this portfolio alone, at a marginal rate you choose. It does not know about gains
+	elsewhere, losses carried in from earlier years, or your other income.
+</p>
