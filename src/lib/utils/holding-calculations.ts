@@ -27,21 +27,29 @@ export interface UnrealisedMetrics extends HoldingMetrics {
  */
 export function calculateHoldingMetrics(transactions: Transaction[]): HoldingMetrics {
 	let totalUnits = 0;
+	// Cost base in cents, tracked exactly. Deriving it from a rounded average price
+	// (units * round(cost / units)) drifts by up to half a cent per unit.
 	let totalCost = 0;
 
 	for (const transaction of transactions) {
 		if (transaction.type === 'buy' || transaction.type === 'reinvestment') {
 			totalUnits += transaction.quantity;
-			totalCost += transaction.quantity * transaction.pricePerUnit;
+			// Brokerage on acquisition forms part of the cost base.
+			totalCost += transaction.quantity * transaction.pricePerUnit + transaction.brokerage;
 		} else if (transaction.type === 'sell') {
+			// Average cost: the disposed units take their proportional share of the cost.
+			if (totalUnits > 0) {
+				totalCost = Math.max(totalCost - (totalCost * transaction.quantity) / totalUnits, 0);
+			}
 			totalUnits -= transaction.quantity;
 		}
 	}
 
-	const averagePrice = totalUnits > 0 ? Math.round(totalCost / totalUnits) : 0;
-	const costBase = totalUnits > 0 ? totalUnits * averagePrice : 0;
+	const units = Math.max(totalUnits, 0);
+	const costBase = units > 0 ? Math.round(totalCost) : 0;
+	const averagePrice = units > 0 ? Math.round(costBase / units) : 0;
 
-	return { units: totalUnits, averagePrice, costBase };
+	return { units, averagePrice, costBase };
 }
 
 /**

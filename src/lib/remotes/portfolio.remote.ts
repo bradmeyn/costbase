@@ -215,6 +215,11 @@ interface TaxLot {
 	holdingName: string;
 	holdingCode: string;
 	/**
+	 * Brokerage paid to acquire the units still in this lot, in cents. Part of the cost
+	 * base; apportioned out as units are disposed of.
+	 */
+	acquisitionCosts: number;
+	/**
 	 * Cumulative AMIT cost base adjustment for the units still in this lot, in cents.
 	 * Negative reduces cost base. Held separately from costPerUnit so partial disposals
 	 * apportion it exactly rather than losing cents to per-unit rounding.
@@ -369,7 +374,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 						id: String(i),
 						date: lot.date,
 						quantity: lot.quantity,
-						costBase: lot.quantity * lot.costPerUnit + lot.costBaseAdjustment
+						costBase: lot.quantity * lot.costPerUnit + lot.acquisitionCosts + lot.costBaseAdjustment
 					}))
 				);
 				for (const p of result.perParcel) {
@@ -390,6 +395,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 					holdingId: holding.id,
 					holdingName: holding.investment.name,
 					holdingCode: holding.investment.code,
+					acquisitionCosts: tx.brokerage,
 					costBaseAdjustment: 0
 				});
 			} else if (tx.type === 'sell') {
@@ -403,13 +409,20 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 					const quantityFromLot = Math.min(lot.quantity, remainingToSell);
 
 					// Calculate gain for this portion
-					const proceeds = quantityFromLot * salePrice;
-					// The disposed units take their proportional share of the lot's AMIT adjustment.
-					const adjustmentShare =
-						lot.quantity > 0
-							? Math.round((lot.costBaseAdjustment * quantityFromLot) / lot.quantity)
-							: 0;
-					const costBase = Math.max(quantityFromLot * lot.costPerUnit + adjustmentShare, 0);
+					// The disposed units take their proportional share of the lot's acquisition
+					// brokerage and AMIT adjustment; the sale's own brokerage reduces proceeds.
+					const share = (total: number) =>
+						lot.quantity > 0 ? Math.round((total * quantityFromLot) / lot.quantity) : 0;
+					const adjustmentShare = share(lot.costBaseAdjustment);
+					const acquisitionShare = share(lot.acquisitionCosts);
+					const disposalCosts =
+						tx.quantity > 0 ? Math.round((tx.brokerage * quantityFromLot) / tx.quantity) : 0;
+
+					const proceeds = quantityFromLot * salePrice - disposalCosts;
+					const costBase = Math.max(
+						quantityFromLot * lot.costPerUnit + acquisitionShare + adjustmentShare,
+						0
+					);
 					const gain = proceeds - costBase;
 
 					// Check if held > 12 months
@@ -435,6 +448,7 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 
 					// Update lot
 					lot.costBaseAdjustment -= adjustmentShare;
+					lot.acquisitionCosts -= acquisitionShare;
 					lot.quantity -= quantityFromLot;
 					remainingToSell -= quantityFromLot;
 
@@ -461,7 +475,10 @@ export const getPortfolioTaxSummary = query(z.string(), async (id: string): Prom
 		for (const lot of taxLots) {
 			const holdingPeriodMs = Date.now() - lot.date.getTime();
 			const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
-			const lotCostBase = Math.max(lot.quantity * lot.costPerUnit + lot.costBaseAdjustment, 0);
+			const lotCostBase = Math.max(
+				lot.quantity * lot.costPerUnit + lot.acquisitionCosts + lot.costBaseAdjustment,
+				0
+			);
 			const unrealisedGain = lot.quantity * currentPrice - lotCostBase;
 
 			unrealisedLots.push({
@@ -666,7 +683,8 @@ export const getPortfolioUnrealisedGains = query(
 							id: String(i),
 							date: lot.date,
 							quantity: lot.quantity,
-							costBase: lot.quantity * lot.costPerUnit + lot.costBaseAdjustment
+							costBase:
+								lot.quantity * lot.costPerUnit + lot.acquisitionCosts + lot.costBaseAdjustment
 						}))
 					);
 					for (const p of result.perParcel) {
@@ -686,6 +704,7 @@ export const getPortfolioUnrealisedGains = query(
 						holdingId: holding.id,
 						holdingName: holding.investment.name,
 						holdingCode: holding.investment.code,
+						acquisitionCosts: tx.brokerage,
 						costBaseAdjustment: 0
 					});
 				} else if (tx.type === 'sell') {
@@ -697,11 +716,10 @@ export const getPortfolioUnrealisedGains = query(
 						const quantityFromLot = Math.min(lot.quantity, remainingToSell);
 
 						// Update lot, carrying its share of the AMIT adjustment out with the units
-						const adjustmentShare =
-							lot.quantity > 0
-								? Math.round((lot.costBaseAdjustment * quantityFromLot) / lot.quantity)
-								: 0;
-						lot.costBaseAdjustment -= adjustmentShare;
+						const share = (total: number) =>
+							lot.quantity > 0 ? Math.round((total * quantityFromLot) / lot.quantity) : 0;
+						lot.costBaseAdjustment -= share(lot.costBaseAdjustment);
+						lot.acquisitionCosts -= share(lot.acquisitionCosts);
 						lot.quantity -= quantityFromLot;
 						remainingToSell -= quantityFromLot;
 
@@ -720,7 +738,10 @@ export const getPortfolioUnrealisedGains = query(
 			for (const lot of taxLots) {
 				const holdingPeriodMs = Date.now() - lot.date.getTime();
 				const isLongTerm = holdingPeriodMs > 365 * 24 * 60 * 60 * 1000;
-				const lotCostBase = Math.max(lot.quantity * lot.costPerUnit + lot.costBaseAdjustment, 0);
+				const lotCostBase = Math.max(
+					lot.quantity * lot.costPerUnit + lot.acquisitionCosts + lot.costBaseAdjustment,
+					0
+				);
 				const unrealisedGain = lot.quantity * currentPrice - lotCostBase;
 
 				unrealisedLots.push({
