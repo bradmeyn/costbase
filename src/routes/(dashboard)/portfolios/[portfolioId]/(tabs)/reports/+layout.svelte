@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import Button from '$ui/button/button.svelte';
-	import { Printer } from '@lucide/svelte';
+	import * as DropdownMenu from '$ui/dropdown-menu';
+	import * as NativeSelect from '$ui/native-select';
+	import { Download, ChevronDown } from '@lucide/svelte';
+	import { setReportExport } from '#lib/report-export.svelte.js';
+
+	const exporter = setReportExport();
 	import { getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
 
 	let { children } = $props();
@@ -44,8 +50,6 @@
 	*/
 	const years = $derived(await getPortfolioFinancialYears(portfolioId));
 	const selectedFy = $derived(Number(page.url.searchParams.get('fy')) || years[0] || null);
-
-	const yearHref = (year: number) => `${page.url.pathname}?fy=${year}`;
 </script>
 
 <div class="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -63,27 +67,38 @@
 		{/each}
 	</div>
 
-	<div class="flex items-center gap-3">
+	<div class="flex items-center gap-2">
 		{#if active?.byYear && years.length > 0}
-			<div class="flex gap-1">
+			<NativeSelect.Root
+				value={String(selectedFy)}
+				onchange={(e) => goto(`${page.url.pathname}?fy=${e.currentTarget.value}`)}
+				class="w-32"
+				aria-label="Financial year"
+			>
 				{#each years as year (year)}
-					<a
-						href={yearHref(year)}
-						class="rounded-md border px-2.5 py-1 text-[13px] tabular-nums transition-colors {year ===
-						selectedFy
-							? 'border-primary/30 bg-primary/15 text-foreground'
-							: 'border-transparent text-muted-foreground hover:text-foreground'}"
-					>
-						FY{year}
-					</a>
+					<NativeSelect.Option value={String(year)}>FY{year}</NativeSelect.Option>
 				{/each}
-			</div>
+			</NativeSelect.Root>
 		{/if}
+
 		{#if active}
-			<Button variant="ghost" onclick={() => window.print()}>
-				<Printer class="size-4" />
-				Export PDF
-			</Button>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Button {...props} variant="ghost">
+							<Download class="size-4" />
+							Export
+							<ChevronDown class="size-3.5" />
+						</Button>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Item onSelect={() => window.print()}>PDF</DropdownMenu.Item>
+					{#if exporter.csv}
+						<DropdownMenu.Item onSelect={() => exporter.csv?.()}>CSV</DropdownMenu.Item>
+					{/if}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 		{/if}
 	</div>
 </div>

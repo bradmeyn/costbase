@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { registerCsv } from '#lib/report-export.svelte.js';
 	import { getPortfolioUnrealisedGains } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import SummaryCard from '#lib/components/summary-card.svelte';
-	import { Check, Download, Minus } from '@lucide/svelte';
+	import { Check, Minus } from '@lucide/svelte';
 
 	const portfolioId = page.params.portfolioId!;
 	const data = $derived(await getPortfolioUnrealisedGains(portfolioId));
@@ -54,14 +54,9 @@
 
 		downloadCSV(csv, 'Unrealised-Gains-Report');
 	}
-</script>
 
-<div class="mb-6 flex items-center justify-between">
-	<Button onclick={generateUnrealisedGainsReport}>
-		<Download class="size-4" />
-		<span>Download</span>
-	</Button>
-</div>
+	registerCsv(generateUnrealisedGainsReport, 'unrealised-gains');
+</script>
 
 <!-- Summary Cards -->
 <div class="mb-8 grid gap-4 md:grid-cols-3">

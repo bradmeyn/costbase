@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { registerCsv } from '#lib/report-export.svelte.js';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
@@ -6,7 +7,6 @@
 	import Input from '$ui/input/input.svelte';
 	import Button from '$ui/button/button.svelte';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
-	import { Download } from '@lucide/svelte';
 
 	const portfolioId = page.params.portfolioId!;
 	const taxSummary = $derived(await getPortfolioTaxSummary({ id: portfolioId }));
@@ -181,14 +181,9 @@
 
 		downloadCSV(csv, `CGT-Report-${taxSummary.currentFY.label}`);
 	}
-</script>
 
-<div class="mb-6 flex items-center justify-between">
-	<Button onclick={generateCGTReport}>
-		<Download class="size-4" />
-		<span>Download</span>
-	</Button>
-</div>
+	registerCsv(generateCGTReport, 'cgt-estimator');
+</script>
 
 <!-- Short-Term Gains Table -->
 <div class="mb-8">
