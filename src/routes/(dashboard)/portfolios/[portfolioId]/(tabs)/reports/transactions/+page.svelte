@@ -8,12 +8,36 @@
 	} from '#lib/remotes/portfolio.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
+	import { readList, TRANSACTION_TYPES } from '#lib/report-query.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const period = $derived(readWindow(page.url));
 	const years = $derived(await getPortfolioFinancialYears(portfolioId));
 
-	const transactions = $derived(await getPortfolioTransactions({ id: portfolioId, ...period }));
+	const allInPeriod = $derived(await getPortfolioTransactions({ id: portfolioId, ...period }));
+
+	/*
+	  Holding and type are applied here rather than in the query: the period has
+	  already cut the rows down, and the totals below have to be recomputed from
+	  whatever is left anyway.
+	*/
+	const holdings = $derived(readList(page.url, 'holding'));
+	const types = $derived(readList(page.url, 'type'));
+	const transactions = $derived(
+		allInPeriod
+			.filter((t) => holdings.length === 0 || holdings.includes(t.code))
+			.filter((t) => types.length === 0 || types.includes(t.type))
+	);
+
+	/** Says what the filters cut the report down to, when they cut anything. */
+	const narrowing = $derived(
+		[
+			holdings.join(', '),
+			types.map((t) => TRANSACTION_TYPES.find((o) => o.value === t)?.label ?? t).join(', ')
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
 
 	const formatDate = (d: Date | string) =>
 		new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -35,12 +59,12 @@
 		for (const t of transactions) {
 			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)}\n`;
 		}
-		downloadCSV(csv, `transactions-${windowTag(period, years)}`);
+		downloadCSV(csv, `transactions-${[windowTag(period, years), ...holdings, ...types].join('-')}`);
 	}
 
 	registerReport(() => ({
 		title: 'Transactions',
-		subtitle: `${describeWindow(period)} · every buy, sell and reinvestment`,
+		subtitle: `${describeWindow(period)} · ${narrowing || 'every buy, sell and reinvestment'}`,
 		csv: generateCsv
 	}));
 </script>
@@ -62,7 +86,11 @@
 
 {#if transactions.length === 0}
 	<div class="card py-8 text-center text-[13px] text-muted-foreground">
-		No transactions {period.from || period.to ? 'in this period' : 'recorded yet'}.
+		{#if allInPeriod.length > 0}
+			No transactions match these filters.
+		{:else}
+			No transactions {period.from || period.to ? 'in this period' : 'recorded yet'}.
+		{/if}
 	</div>
 {:else}
 	<div class="card">

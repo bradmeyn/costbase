@@ -5,9 +5,18 @@
 	import * as Table from '$ui/table';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import SummaryCard from '#lib/components/summary-card.svelte';
+	import { readList } from '#lib/report-query.js';
 
 	const portfolioId = page.params.portfolioId!;
-	const data = $derived(await getPortfolioUnrealisedGains(portfolioId));
+	const all = $derived(await getPortfolioUnrealisedGains(portfolioId));
+
+	/* Narrowed here, not in the query: every total below is recomputed from the rows. */
+	const chosen = $derived(readList(page.url, 'holding'));
+	const keep = (code: string) => chosen.length === 0 || chosen.includes(code);
+	const data = $derived({
+		holdings: all.holdings.filter((h) => keep(h.code)),
+		unrealisedLots: all.unrealisedLots.filter((lot) => keep(lot.holdingCode))
+	});
 
 	const formatDate = (date: Date | string) => {
 		return new Date(date).toLocaleDateString('en-AU', {
@@ -61,7 +70,7 @@
 
 	registerReport(() => ({
 		title: 'Unrealised gains',
-		subtitle: 'Open tax lots at today’s prices · first in, first out',
+		subtitle: `Open tax lots at today’s prices · first in, first out${chosen.length > 0 ? ` · ${chosen.join(', ')}` : ''}`,
 		csv: generateUnrealisedGainsReport
 	}));
 </script>

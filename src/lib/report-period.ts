@@ -21,6 +21,32 @@ export function currentFinancialYear(now = new Date()): number {
 	return now.getMonth() >= 6 ? now.getFullYear() + 1 : now.getFullYear();
 }
 
+/**
+ * "FY2026-27" for the year ending 30 June 2027.
+ *
+ * Spelt out across both calendar years because the single-year form is ambiguous
+ * out loud: in September 2026 the current year is the one ending in 2027, and
+ * "FY2027" reads like next year to anyone who is not thinking about end dates.
+ */
+export function financialYearLabel(financialYear: number): string {
+	return `FY${financialYear - 1}-${String(financialYear % 100).padStart(2, '0')}`;
+}
+
+/**
+ * The financial year a report is showing: the one in the URL, else the newest year
+ * with activity. At tax time you want the year that just ended, not the empty one
+ * you are in — and the picker and the page have to agree on that, or the heading
+ * contradicts the control above it.
+ */
+export function readFinancialYear(
+	url: { searchParams: { get(name: string): string | null } },
+	years: number[]
+): number {
+	const chosen = Number(url.searchParams.get('fy'));
+	if (Number.isInteger(chosen) && chosen > 1900) return chosen;
+	return years[0] ?? currentFinancialYear();
+}
+
 export function financialYearWindow(financialYear: number): Required<ReportWindow> {
 	return {
 		from: isoDay(financialYearStart(financialYear)),
@@ -67,7 +93,7 @@ export function describeWindow(window: ReportWindow): string {
 /** A filename-safe tag for the window, for CSV exports. */
 export function windowTag(window: ReportWindow, years: number[]): string {
 	const fy = matchedFinancialYear(window, years);
-	if (fy) return `FY${fy}`;
+	if (fy) return financialYearLabel(fy);
 	if (!window.from && !window.to) return 'all-time';
 	return `${window.from ?? 'start'}-to-${window.to ?? 'today'}`;
 }

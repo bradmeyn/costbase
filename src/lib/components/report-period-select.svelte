@@ -9,8 +9,10 @@
 		describeWindow,
 		financialYearWindow,
 		matchedFinancialYear,
-		readWindow
+		readWindow,
+		financialYearLabel
 	} from '#lib/report-period.js';
+	import { queryWith } from '#lib/report-query.js';
 
 	/*
 	  Picks the span a report covers. Reports that are a record of activity default to
@@ -33,15 +35,7 @@
 	const customOpen = $derived(showCustom || value === 'custom');
 
 	function go(next: { from?: string; to?: string }) {
-		// Built as pairs rather than through URLSearchParams: nothing here is reactive
-		// state, and any other query the page carries should survive the change.
-		const params = [...page.url.searchParams].filter(([key]) => key !== 'from' && key !== 'to');
-		if (next.from) params.push(['from', next.from]);
-		if (next.to) params.push(['to', next.to]);
-
-		const query = params
-			.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-			.join('&');
+		const query = queryWith(page.url, { from: next.from, to: next.to });
 		goto(query ? `${page.url.pathname}?${query}` : page.url.pathname);
 	}
 
@@ -58,7 +52,7 @@
 	}
 
 	const label = $derived(
-		isAll ? 'All time' : matchedFy ? `FY${matchedFy}` : describeWindow(period)
+		isAll ? 'All time' : matchedFy ? financialYearLabel(matchedFy) : describeWindow(period)
 	);
 </script>
 
@@ -95,10 +89,14 @@
 			</Select.Trigger>
 			<Select.Content>
 				<Select.Item value="all">All time</Select.Item>
-				<Select.Item value="fy:{thisFy}">This financial year · FY{thisFy}</Select.Item>
-				<Select.Item value="fy:{thisFy - 1}">Last financial year · FY{thisFy - 1}</Select.Item>
+				<Select.Item value="fy:{thisFy}"
+					>This financial year · {financialYearLabel(thisFy)}</Select.Item
+				>
+				<Select.Item value="fy:{thisFy - 1}"
+					>Last financial year · {financialYearLabel(thisFy - 1)}</Select.Item
+				>
 				{#each offered.filter((y) => y < thisFy - 1) as year (year)}
-					<Select.Item value="fy:{year}">FY{year}</Select.Item>
+					<Select.Item value="fy:{year}">{financialYearLabel(year)}</Select.Item>
 				{/each}
 				<Select.Item value="custom">Custom dates…</Select.Item>
 			</Select.Content>

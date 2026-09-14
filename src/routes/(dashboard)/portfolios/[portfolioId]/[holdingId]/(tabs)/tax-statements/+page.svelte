@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { financialYearLabel } from '#lib/report-period.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
@@ -41,7 +42,7 @@
 			{#each offerableYears as fy (fy)}
 				{@const stmt = amitStatements.find((s) => s.financialYear === fy)}
 				<Table.Row>
-					<Table.Cell class="font-medium">FY{fy}</Table.Cell>
+					<Table.Cell class="font-medium">{financialYearLabel(fy)}</Table.Cell>
 					{#if stmt}
 						{@const adj = netCostBaseAmount(stmt)}
 						<Table.Cell class="text-right tabular-nums"

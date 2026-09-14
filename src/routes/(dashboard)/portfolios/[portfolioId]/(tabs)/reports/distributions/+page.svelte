@@ -8,12 +8,21 @@
 	} from '#lib/remotes/portfolio.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
+	import { readList } from '#lib/report-query.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const period = $derived(readWindow(page.url));
 	const years = $derived(await getPortfolioFinancialYears(portfolioId));
 
-	const distributions = $derived(await getPortfolioDistributions({ id: portfolioId, ...period }));
+	const allInPeriod = $derived(await getPortfolioDistributions({ id: portfolioId, ...period }));
+
+	const holdings = $derived(readList(page.url, 'holding'));
+	const distributions = $derived(
+		allInPeriod.filter((d) => holdings.length === 0 || holdings.includes(d.code))
+	);
+
+	/** Says what the filter cuts the report down to, when it cuts anything. */
+	const narrowing = $derived(holdings.join(', '));
 
 	const formatDate = (d: Date | string | null) =>
 		d
@@ -31,12 +40,12 @@
 		for (const d of distributions) {
 			csv += `${formatDate(d.datePaid)},${formatDate(d.recordDate)},${d.code},${d.units ?? ''},${(d.grossPayment / 100).toFixed(2)},${(d.taxWithheld / 100).toFixed(2)},${(d.net / 100).toFixed(2)},${d.reinvested ? 'Yes' : 'No'}\n`;
 		}
-		downloadCSV(csv, `distributions-${windowTag(period, years)}`);
+		downloadCSV(csv, `distributions-${[windowTag(period, years), ...holdings].join('-')}`);
 	}
 
 	registerReport(() => ({
 		title: 'Distributions',
-		subtitle: `${describeWindow(period)} · cash received, per holding`,
+		subtitle: `${describeWindow(period)} · ${narrowing || 'cash received, per holding'}`,
 		csv: generateCsv
 	}));
 </script>
@@ -59,7 +68,11 @@
 {#if distributions.length === 0}
 	<div class="card py-8 text-center">
 		<p class="text-[13px] text-muted-foreground">
-			No distributions {period.from || period.to ? 'in this period' : 'recorded yet'}.
+			{#if allInPeriod.length > 0}
+				No distributions match these filters.
+			{:else}
+				No distributions {period.from || period.to ? 'in this period' : 'recorded yet'}.
+			{/if}
 		</p>
 		<p class="mt-1 text-[11px] text-muted-foreground">
 			Add them from a holding, or import a distribution statement.

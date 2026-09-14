@@ -12,6 +12,7 @@
 		financialYearEnd
 	} from '#lib/utils/amit-calculations.js';
 	import { calculateCGT } from '#lib/utils/cgt-calculations.js';
+	import { financialYearLabel, readFinancialYear } from '#lib/report-period.js';
 	import { AMIT_PART_A } from '#lib/schemas/amit.js';
 	import { getPortfolio, getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
 
@@ -21,7 +22,7 @@
 	/* Driven by ?fy= so the report is linkable and the server does the filtering.
 	   With no year given, fall back to the most recent one that has activity. */
 	const financialYears = $derived(await getPortfolioFinancialYears(portfolioId));
-	const reportFy = $derived(Number(page.url.searchParams.get('fy')) || financialYears[0]);
+	const reportFy = $derived(readFinancialYear(page.url, financialYears));
 
 	const [taxSummary, statements] = $derived(
 		await Promise.all([
@@ -44,7 +45,7 @@
 
 	const fyStart = $derived(financialYearStart(reportFy));
 	const fyEnd = $derived(financialYearEnd(reportFy));
-	const fyLabel = $derived(`FY${reportFy - 1}-${reportFy}`);
+	const fyLabel = $derived(financialYearLabel(reportFy));
 
 	const yearGains = $derived(allGains.filter((g) => fyOf(g.saleDate) === reportFy));
 	const shortTermGains = $derived(yearGains.filter((g) => !g.isLongTerm && g.gain > 0));
@@ -251,7 +252,7 @@
 	</p>
 	{#if fyStatements.length === 0}
 		<p class="text-[13px] text-muted-foreground">
-			No AMMA statements entered for FY{reportFy}. Add them from each holding.
+			No AMMA statements entered for {fyLabel}. Add them from each holding.
 		</p>
 	{:else}
 		<Table.Root>

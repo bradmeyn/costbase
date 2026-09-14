@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { financialYearLabel, readFinancialYear } from '#lib/report-period.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
+	import { getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
 	import { netCostBaseAmount } from '#lib/utils/amit-calculations.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import {
@@ -14,12 +16,9 @@
 	} from '#lib/schemas/amit.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
-	const reportFy = $derived(
-		Number(page.url.searchParams.get('fy')) ||
-			(new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear())
-	);
-
 	const all = $derived(await getPortfolioAmitStatements(portfolioId));
+	const financialYears = $derived(await getPortfolioFinancialYears(portfolioId));
+	const reportFy = $derived(readFinancialYear(page.url, financialYears));
 	const statements = $derived(all.filter((s) => s.financialYear === reportFy));
 
 	const cents = (s: (typeof statements)[number], field: string) =>
@@ -37,7 +36,7 @@
 	] as const);
 
 	function generateCsv() {
-		let csv = `AMMA statements FY${reportFy}\n\nLabel,Item,${statements.map((s) => s.holdingCode).join(',')},Total\n`;
+		let csv = `AMMA statements ${financialYearLabel(reportFy)}\n\nLabel,Item,${statements.map((s) => s.holdingCode).join(',')},Total\n`;
 		for (const [field, code, label] of AMIT_PART_A) {
 			csv += `${code},"${label}",${statements.map((s) => (cents(s, field) / 100).toFixed(2)).join(',')},${(total(field) / 100).toFixed(2)}\n`;
 		}
@@ -47,7 +46,7 @@
 				csv += `,"${label}",${statements.map((s) => (cents(s, field) / 100).toFixed(2)).join(',')},${(total(field) / 100).toFixed(2)}\n`;
 			}
 		}
-		downloadCSV(csv, `amma-FY${reportFy}`);
+		downloadCSV(csv, `amma-${financialYearLabel(reportFy)}`);
 	}
 
 	registerReport(() => ({
@@ -59,7 +58,9 @@
 
 {#if statements.length === 0}
 	<div class="card py-8 text-center">
-		<p class="text-[13px] text-muted-foreground">No AMMA statements entered for FY{reportFy}.</p>
+		<p class="text-[13px] text-muted-foreground">
+			No AMMA statements entered for {financialYearLabel(reportFy)}.
+		</p>
 		<p class="mt-1 text-[11px] text-muted-foreground">
 			Add them from each holding’s tax statements tab.
 		</p>

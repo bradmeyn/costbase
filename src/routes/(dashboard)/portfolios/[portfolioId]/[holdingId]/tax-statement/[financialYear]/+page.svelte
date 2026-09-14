@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { financialYearLabel } from '#lib/report-period.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -42,7 +43,7 @@
 </script>
 
 <svelte:head>
-	<title>AMMA statement FY{financialYear} | Costbase</title>
+	<title>AMMA statement {financialYearLabel(Number(financialYear))} | Costbase</title>
 </svelte:head>
 
 <div class="mb-4">
@@ -58,7 +59,9 @@
 </div>
 
 <div class="mb-5">
-	<h1 class="text-2xl font-semibold tracking-tight">AMMA statement — FY{financialYear}</h1>
+	<h1 class="text-2xl font-semibold tracking-tight">
+		AMMA statement — {financialYearLabel(Number(financialYear))}
+	</h1>
 	<p class="mt-1 text-[13px] text-muted-foreground">
 		{holding.investment.name} ({holding.investment.code}) · year ended 30 June {financialYear}
 		{#if existing}

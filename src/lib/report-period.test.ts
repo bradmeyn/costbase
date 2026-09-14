@@ -6,7 +6,9 @@ import {
 	isoDay,
 	matchedFinancialYear,
 	readWindow,
-	windowTag
+	windowTag,
+	financialYearLabel,
+	readFinancialYear
 } from './report-period';
 
 const url = (search: string) => new URL(`https://example.test/r${search}`);
@@ -22,6 +24,18 @@ describe('currentFinancialYear', () => {
 	it('turns over on 1 July', () => {
 		expect(currentFinancialYear(new Date(2026, 5, 30))).toBe(2026);
 		expect(currentFinancialYear(new Date(2026, 6, 1))).toBe(2027);
+	});
+});
+
+describe('financialYearLabel', () => {
+	it('spans both calendar years, so the current one is not mistaken for the next', () => {
+		expect(financialYearLabel(2027)).toBe('FY2026-27');
+		expect(financialYearLabel(2026)).toBe('FY2025-26');
+	});
+
+	it('pads a year that ends in a single digit', () => {
+		expect(financialYearLabel(2030)).toBe('FY2029-30');
+		expect(financialYearLabel(2009)).toBe('FY2008-09');
 	});
 });
 
@@ -87,8 +101,8 @@ describe('describeWindow', () => {
 });
 
 describe('windowTag', () => {
-	it('names a financial year by its year', () => {
-		expect(windowTag(financialYearWindow(2026), [2026])).toBe('FY2026');
+	it('names a financial year across both calendar years', () => {
+		expect(windowTag(financialYearWindow(2026), [2026])).toBe('FY2025-26');
 	});
 
 	it('names an unbounded window', () => {
@@ -99,5 +113,26 @@ describe('windowTag', () => {
 		expect(windowTag({ from: '2025-07-01', to: '2025-12-31' }, [2026])).toBe(
 			'2025-07-01-to-2025-12-31'
 		);
+	});
+});
+
+describe('readFinancialYear', () => {
+	const url = (search: string) => new URL(`https://example.test/r${search}`);
+
+	it('takes the year from the URL', () => {
+		expect(readFinancialYear(url('?fy=2024'), [2026, 2025])).toBe(2024);
+	});
+
+	it('falls back to the newest year with activity, not the one we are in', () => {
+		// At tax time the year that just ended is the one you are filing for.
+		expect(readFinancialYear(url(''), [2026, 2025])).toBe(2026);
+	});
+
+	it('falls back to the current year when nothing has happened yet', () => {
+		expect(readFinancialYear(url(''), [])).toBe(currentFinancialYear());
+	});
+
+	it('ignores a year that is not one', () => {
+		expect(readFinancialYear(url('?fy=soon'), [2026])).toBe(2026);
 	});
 });
