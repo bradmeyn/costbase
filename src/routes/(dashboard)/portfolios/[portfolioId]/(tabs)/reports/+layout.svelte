@@ -21,6 +21,14 @@
 
 	const reports = $derived([
 		{
+			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/tax-return', {
+				portfolioId
+			}),
+			label: 'Tax return',
+			period: 'financial-year',
+			filters: {}
+		},
+		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/capital-gains', {
 				portfolioId
 			}),

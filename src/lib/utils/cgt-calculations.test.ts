@@ -54,3 +54,41 @@ describe('getCurrentFinancialYear', () => {
 		expect(getCurrentFinancialYear(new Date(2026, 5, 30)).label).toBe('FY2025-2026');
 	});
 });
+
+describe('calculateCGT with losses carried forward', () => {
+	it('spends a prior year loss the same way as this year’s', () => {
+		const r = calculateCGT(100_00, 0, 0, 40_00);
+		expect(r.lossesAppliedToShortTerm).toBe(40_00);
+		expect(r.totalTaxableGain).toBe(60_00);
+		expect(r.priorYearLosses).toBe(40_00);
+	});
+
+	it('pools both kinds of loss', () => {
+		// 30 this year + 30 brought in, against 100 of short-term gains.
+		const r = calculateCGT(100_00, 0, 30_00, 30_00);
+		expect(r.lossesAppliedToShortTerm).toBe(60_00);
+		expect(r.totalTaxableGain).toBe(40_00);
+	});
+
+	it('carries the unused remainder on', () => {
+		const r = calculateCGT(10_00, 0, 0, 50_00);
+		expect(r.totalTaxableGain).toBe(0);
+		expect(r.lossesCarriedForward).toBe(40_00);
+	});
+
+	it('still favours undiscounted gains when the losses are brought in', () => {
+		// Spending the loss on the long-term gain would waste half of it.
+		const r = calculateCGT(50_00, 100_00, 0, 50_00);
+		expect(r.lossesAppliedToShortTerm).toBe(50_00);
+		expect(r.lossesAppliedToLongTerm).toBe(0);
+		expect(r.totalTaxableGain).toBe(50_00);
+	});
+
+	it('is indifferent to the sign it is given', () => {
+		expect(calculateCGT(100_00, 0, 0, -40_00)).toEqual(calculateCGT(100_00, 0, 0, 40_00));
+	});
+
+	it('defaults to none, leaving existing behaviour unchanged', () => {
+		expect(calculateCGT(100_00, 0, 20_00).totalTaxableGain).toBe(80_00);
+	});
+});

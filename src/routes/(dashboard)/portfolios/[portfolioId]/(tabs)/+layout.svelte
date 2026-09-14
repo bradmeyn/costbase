@@ -4,7 +4,15 @@
 	import { goto } from '$app/navigation';
 	import * as Select from '$ui/select';
 	import { getPortfolio, getPortfolios } from '#lib/remotes/portfolio.remote.js';
-	import { LayoutGrid, FileText, TrendingUp, Receipt, Coins, Calculator } from '@lucide/svelte';
+	import {
+		LayoutGrid,
+		FileText,
+		TrendingUp,
+		Receipt,
+		Coins,
+		Calculator,
+		ClipboardList
+	} from '@lucide/svelte';
 
 	let { children } = $props();
 
@@ -27,6 +35,14 @@
 		{
 			heading: 'Reports',
 			items: [
+				{
+					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/tax-return', {
+						portfolioId
+					}),
+					label: 'Tax return',
+					icon: ClipboardList,
+					ready: true
+				},
 				{
 					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/capital-gains', {
 						portfolioId

@@ -96,6 +96,29 @@ export const distributionTable = pgTable('distribution', {
 });
 
 /*
+  Net capital losses carried into a financial year from earlier ones.
+
+  Held per year rather than as a single running balance because the app rarely has
+  every year that produced them: the figure comes off last year's return, which is
+  the only place it is authoritative.
+*/
+export const capitalLossCarryforwardTable = pgTable(
+	'capital_loss_carryforward',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		portfolioId: uuid('portfolio_id')
+			.notNull()
+			.references(() => portfolioTable.id, { onDelete: 'cascade' }),
+		/** The year the losses are carried *into*: 2026 = 1 Jul 2025 - 30 Jun 2026. */
+		financialYear: integer('financial_year').notNull(),
+		/** Cents. Held as a positive magnitude. */
+		amount: integer('amount').notNull().default(0),
+		...timesStamps
+	},
+	(table) => [unique().on(table.portfolioId, table.financialYear)]
+);
+
+/*
   AMIT Member Annual Statement (AMMA) — one per holding per financial year.
   Mirrors the Vanguard/Computershare statement layout so the entry form can be
   filled straight down the page. All amounts in cents, matching the rest of the
@@ -281,3 +304,4 @@ export type Distribution = typeof distributionTable.$inferSelect;
 export type Holding = typeof holdingTable.$inferSelect;
 export type AmitStatement = typeof amitStatementTable.$inferSelect;
 export type Document = typeof documentTable.$inferSelect;
+export type CapitalLossCarryforward = typeof capitalLossCarryforwardTable.$inferSelect;

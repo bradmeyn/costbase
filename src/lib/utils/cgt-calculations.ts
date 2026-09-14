@@ -13,6 +13,8 @@ export interface CGTCalculation {
 	cgtDiscount: number;
 	longTermTaxable: number;
 	totalTaxableGain: number;
+	/** Losses brought in from earlier years that were available this year. */
+	priorYearLosses: number;
 	/** Losses left over once gains are exhausted; carried forward to a later year. */
 	lossesCarriedForward: number;
 }
@@ -20,20 +22,26 @@ export interface CGTCalculation {
 /**
  * Net a year's capital gains against its losses and apply the 50% discount.
  *
- * All amounts are in cents. `capitalLosses` is taken as a magnitude, so it may be
- * passed either signed or unsigned.
+ * All amounts are in cents. `capitalLosses` and `priorYearLosses` are taken as
+ * magnitudes, so either may be passed signed or unsigned.
  *
  * Losses go against short-term gains before long-term ones. That order is the
  * taxpayer's choice under the ATO rules and always the better one: a dollar of loss
  * cancels a full dollar of an undiscounted gain, but only fifty cents of a
  * discounted one.
+ *
+ * This year's losses and those carried in from earlier years form one pool. Which
+ * is spent first cannot change the outcome — whatever is left over carries forward
+ * either way — so they are applied together and only reported apart.
  */
 export function calculateCGT(
 	shortTermGains: number,
 	longTermGains: number,
-	capitalLosses: number
+	capitalLosses: number,
+	priorYearLosses: number = 0
 ): CGTCalculation {
-	let remainingLosses = Math.abs(capitalLosses);
+	const brought = Math.abs(priorYearLosses);
+	let remainingLosses = Math.abs(capitalLosses) + brought;
 
 	// Apply losses to short-term gains first
 	const lossesAppliedToShortTerm = Math.min(remainingLosses, shortTermGains);
@@ -62,6 +70,7 @@ export function calculateCGT(
 		cgtDiscount,
 		longTermTaxable,
 		totalTaxableGain,
+		priorYearLosses: brought,
 		lossesCarriedForward: remainingLosses
 	};
 }
