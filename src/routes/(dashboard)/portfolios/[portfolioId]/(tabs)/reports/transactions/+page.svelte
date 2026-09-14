@@ -8,7 +8,7 @@
 	} from '#lib/remotes/portfolio.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
-	import { readList, TRANSACTION_TYPES } from '#lib/report-query.js';
+	import { readList, TRANSACTION_TYPES, UNSET } from '#lib/report-query.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const period = $derived(readWindow(page.url));
@@ -23,17 +23,20 @@
 	*/
 	const holdings = $derived(readList(page.url, 'holding'));
 	const types = $derived(readList(page.url, 'type'));
+	const platforms = $derived(readList(page.url, 'platform'));
 	const transactions = $derived(
 		allInPeriod
 			.filter((t) => holdings.length === 0 || holdings.includes(t.code))
 			.filter((t) => types.length === 0 || types.includes(t.type))
+			.filter((t) => platforms.length === 0 || platforms.includes(t.platform ?? UNSET))
 	);
 
 	/** Says what the filters cut the report down to, when they cut anything. */
 	const narrowing = $derived(
 		[
 			holdings.join(', '),
-			types.map((t) => TRANSACTION_TYPES.find((o) => o.value === t)?.label ?? t).join(', ')
+			types.map((t) => TRANSACTION_TYPES.find((o) => o.value === t)?.label ?? t).join(', '),
+			platforms.map((p) => (p === UNSET ? 'No platform' : p)).join(', ')
 		]
 			.filter(Boolean)
 			.join(' · ')
@@ -55,11 +58,14 @@
 	};
 
 	function generateCsv() {
-		let csv = 'Date,Code,Type,Quantity,Price per unit,Brokerage,Total\n';
+		let csv = 'Date,Code,Type,Platform,Quantity,Price per unit,Brokerage,Total\n';
 		for (const t of transactions) {
-			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)}\n`;
+			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.platform ?? ''},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)}\n`;
 		}
-		downloadCSV(csv, `transactions-${[windowTag(period, years), ...holdings, ...types].join('-')}`);
+		downloadCSV(
+			csv,
+			`transactions-${[windowTag(period, years), ...holdings, ...types, ...platforms].join('-')}`
+		);
 	}
 
 	registerReport(() => ({
@@ -100,6 +106,7 @@
 					<Table.Head>Date</Table.Head>
 					<Table.Head>Holding</Table.Head>
 					<Table.Head>Type</Table.Head>
+					<Table.Head>Platform</Table.Head>
 					<Table.Head class="text-right">Quantity</Table.Head>
 					<Table.Head class="text-right">Price/unit</Table.Head>
 					<Table.Head class="text-right">Brokerage</Table.Head>
@@ -118,6 +125,7 @@
 								{type.label}
 							</span>
 						</Table.Cell>
+						<Table.Cell class="text-muted-foreground">{t.platform ?? '—'}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{t.quantity}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{formatCurrency(t.pricePerUnit)}</Table.Cell
 						>

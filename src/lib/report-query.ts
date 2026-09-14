@@ -48,3 +48,6 @@ export const TRANSACTION_TYPES = [
 	{ value: 'sell', label: 'Sells' },
 	{ value: 'reinvestment', label: 'Reinvestments' }
 ];
+
+/** Stands for rows where the field was never filled in, so they stay selectable. */
+export const UNSET = '—';

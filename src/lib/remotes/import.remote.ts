@@ -34,6 +34,23 @@ async function ownedPortfolio(portfolioId: string) {
 
 type OwnedPortfolio = Awaited<ReturnType<typeof ownedPortfolio>>;
 
+/*
+  Codes are stored bare — VGS, not VGS.ASX — but a broker writes the exchange suffix
+  and nothing stops a catalogue entry carrying one, so both sides are stripped before
+  they are compared.
+*/
+const bareCode = (code: string) => code.trim().toUpperCase().split('.')[0];
+
+/** Local calendar day as an ISO date, to compare against a note's execution date. */
+function toIsoDay(date: Date | string): string {
+	const d = new Date(date);
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function findHolding(portfolio: OwnedPortfolio, ticker: string) {
+	return portfolio.holdings.find((h) => bareCode(h.investment.code) === bareCode(ticker));
+}
+
 /**
  * Read an uploaded PDF and report what it contains. Writes nothing: the caller
  * confirms the figures first.
@@ -92,6 +109,26 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 		}
 	}
 
+	/*
+	  The confirmation number only catches a note imported through here. A trade typed
+	  in by hand carries none, so the same trade is matched again on what identifies it
+	  to a person: same holding, same day, same side, same quantity.
+	*/
+	if (!duplicate && holding && parsed.executionDate && parsed.quantity && parsed.side) {
+		const sameTrade = holding.transactions.find(
+			(t) =>
+				t.type === parsed.side &&
+				t.quantity === parsed.quantity &&
+				toIsoDay(t.transactionDate) === parsed.executionDate
+		);
+		if (sameTrade) {
+			duplicate = true;
+			warnings.push(
+				`A ${parsed.side} of ${parsed.quantity} ${parsed.ticker} on ${parsed.executionDate} is already recorded. It was entered without a confirmation number, so this looks like the same trade.`
+			);
+		}
+	}
+
 	return {
 		parsed: { ...parsed, warnings },
 		duplicate,
@@ -113,6 +150,7 @@ export const importContractNote = command(
 		brokerage: z.number().int().nonnegative(),
 		transactionDate: z.string().min(1, 'Date is required'),
 		confirmationNumber: z.string().optional(),
+		platform: z.string().optional(),
 		file: z.instanceof(File)
 	}),
 	async (data) => {
@@ -140,7 +178,8 @@ export const importContractNote = command(
 				value: data.value,
 				brokerage: data.brokerage,
 				transactionDate: new Date(data.transactionDate),
-				confirmationNumber: data.confirmationNumber || null
+				confirmationNumber: data.confirmationNumber || null,
+				platform: data.platform || null
 			})
 			.returning();
 
@@ -148,6 +187,88 @@ export const importContractNote = command(
 		await getHolding(holding.id).refresh();
 
 		return { success: true, transactionId: created.id };
+	}
+);
+
+/**
+ * Create several transactions in one go, each with its own contract note attached.
+ *
+ * Dropping a folder of notes is the fast path into a year of trading, so the whole
+ * batch is checked before anything is written: one bad row fails the lot rather
+ * than leaving half a year imported.
+ */
+export const importContractNotes = command(
+	z.object({
+		portfolioId: z.string().min(1),
+		notes: z
+			.array(
+				z.object({
+					file: z.instanceof(File),
+					holdingId: z.string().min(1, 'Choose a holding'),
+					type: z.enum(['buy', 'sell', 'reinvestment']),
+					quantity: z.number().int().positive(),
+					/** Cents. */
+					pricePerUnit: z.number().int().nonnegative(),
+					value: z.number().int().nonnegative(),
+					brokerage: z.number().int().nonnegative(),
+					transactionDate: z.string().min(1),
+					confirmationNumber: z.string().optional(),
+					platform: z.string().optional()
+				})
+			)
+			.min(1, 'Choose at least one document to import')
+	}),
+	async ({ portfolioId, notes }) => {
+		const portfolio = await ownedPortfolio(portfolioId);
+
+		const seen = new Set<string>();
+		for (const note of notes) {
+			if (!portfolio.holdings.some((h) => h.id === note.holdingId)) {
+				error(404, 'Holding not found in this portfolio');
+			}
+			if (!note.confirmationNumber) continue;
+
+			// Two files for the same trade, or one already imported: either would double it.
+			if (seen.has(note.confirmationNumber)) {
+				error(409, `Confirmation ${note.confirmationNumber} appears twice in this batch.`);
+			}
+			seen.add(note.confirmationNumber);
+
+			const existing = await db.query.transactionTable.findFirst({
+				where: eq(transactionTable.confirmationNumber, note.confirmationNumber)
+			});
+			if (existing) error(409, `Confirmation ${note.confirmationNumber} is already imported.`);
+		}
+
+		// Files first: a failed write must not leave transactions with no document.
+		const stored = await Promise.all(notes.map((note) => storeDocument(note.file)));
+
+		const created = await db
+			.insert(transactionTable)
+			.values(
+				notes.map((note) => ({
+					holdingId: note.holdingId,
+					type: note.type,
+					quantity: note.quantity,
+					pricePerUnit: note.pricePerUnit,
+					value: note.value,
+					brokerage: note.brokerage,
+					transactionDate: new Date(note.transactionDate),
+					confirmationNumber: note.confirmationNumber || null,
+					platform: note.platform || null
+				}))
+			)
+			.returning();
+
+		await db
+			.insert(documentTable)
+			.values(created.map((t, i) => ({ transactionId: t.id, ...stored[i] })));
+
+		await Promise.all(
+			[...new Set(notes.map((n) => n.holdingId))].map((id) => getHolding(id).refresh())
+		);
+
+		return { success: true, created: created.length };
 	}
 );
 
@@ -163,7 +284,7 @@ async function distributionPreview(portfolio: OwnedPortfolio, sourceRows: string
 
 	const rows = await Promise.all(
 		parsed.rows.map(async (row) => {
-			const holding = portfolio.holdings.find((h) => h.investment.code === row.ticker);
+			const holding = findHolding(portfolio, row.ticker);
 			const notes: string[] = [];
 
 			if (!holding) {

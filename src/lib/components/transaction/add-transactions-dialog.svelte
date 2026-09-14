@@ -19,6 +19,11 @@
 	} = $props();
 
 	let transactions = $state([{ id: 0 }]);
+	/*
+	  One platform for the batch rather than a column per row: a sitting of manual
+	  entry is a sitting with one broker's statement in front of you.
+	*/
+	let platform = $state('');
 	let fileInput: HTMLInputElement;
 	let isDragging = $state(false);
 
@@ -144,6 +149,7 @@
 	}
 
 	function resetForm() {
+		platform = '';
 		transactions = [{ id: 0 }];
 	}
 
@@ -211,6 +217,9 @@
 		<form
 			{...addTransactions.enhance(async (form) => {
 				try {
+					for (let i = 0; i < transactions.length; i++) {
+						addTransactions.fields.transactions[i].platform.set(platform.trim() || undefined);
+					}
 					await form.submit();
 					if (form.result?.success) {
 						form.element.reset();
@@ -223,6 +232,20 @@
 			})}
 			class="space-y-3"
 		>
+			<Field.Field>
+				<Field.Label for="platform">Platform</Field.Label>
+				<Input
+					id="platform"
+					bind:value={platform}
+					placeholder="Stake, CommSec, …"
+					disabled={!!addTransactions.pending}
+					class="text-sm"
+				/>
+				<p class="text-[11px] text-muted-foreground">
+					Optional. Which broker these went through — applied to every row below.
+				</p>
+			</Field.Field>
+
 			<div class="mb-2 rounded-lg bg-muted/30 p-3">
 				<div class="flex items-center gap-3">
 					<div class="flex-1 text-sm font-medium text-muted-foreground">Type</div>

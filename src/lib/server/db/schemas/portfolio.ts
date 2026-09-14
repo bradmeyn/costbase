@@ -52,6 +52,12 @@ export const transactionTable = pgTable('transaction', {
 	 * the same note cannot be imported twice.
 	 */
 	confirmationNumber: text('confirmation_number').unique(),
+	/**
+	 * Broker or platform the trade was placed through, e.g. "Stake". Set from the
+	 * contract note on import. Carries no tax meaning — it is there so a parcel can be
+	 * traced back to the account and the paperwork it came from.
+	 */
+	platform: text('platform'),
 	transactionDate: timestamp('transaction_date').notNull(),
 	type: text('type').notNull(), // 'buy', 'sell', or 'reinvestment'
 	...timesStamps

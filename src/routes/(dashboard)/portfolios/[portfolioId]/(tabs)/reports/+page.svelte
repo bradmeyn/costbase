@@ -41,8 +41,8 @@
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', {
 				portfolioId
 			}),
-			label: 'AMMA statements',
-			body: 'Attribution components and cost base adjustments as entered from each annual statement.',
+			label: 'Tax statements',
+			body: 'AMMA attribution components and cost base adjustments, as entered from each annual statement.',
 			byYear: true,
 			ready: true
 		},

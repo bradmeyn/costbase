@@ -78,7 +78,8 @@ export const addTransactions = form(
 			pricePerUnit: Math.round(t.pricePerUnit * 100),
 			brokerage: Math.round((t.brokerage || 0) * 100),
 			transactionDate: new Date(t.transactionDate),
-			type: t.type
+			type: t.type,
+			platform: t.platform || null
 		}));
 
 		const newTransactions = await db
@@ -102,9 +103,10 @@ export const addTransaction = form(
 		transactionDate: z.string(),
 		type: z.enum(['buy', 'sell', 'reinvestment'], {
 			message: 'Type must be buy, sell, or reinvestment'
-		})
+		}),
+		platform: z.string().optional()
 	}),
-	async ({ holdingId, quantity, pricePerUnit, brokerage, transactionDate, type }) => {
+	async ({ holdingId, quantity, pricePerUnit, brokerage, transactionDate, type, platform }) => {
 		const user = await getCurrentUser();
 		if (!user) error(401, 'Unauthorized');
 
@@ -131,7 +133,8 @@ export const addTransaction = form(
 				pricePerUnit: priceInCents,
 				brokerage: brokerageInCents,
 				transactionDate: new Date(transactionDate),
-				type
+				type,
+				platform: platform || null
 			})
 			.returning();
 
@@ -144,7 +147,7 @@ export const addTransaction = form(
 
 export const updateTransaction = form(
 	updateTransactionSchema,
-	async ({ id, quantity, pricePerUnit, brokerage, transactionDate, type }) => {
+	async ({ id, quantity, pricePerUnit, brokerage, transactionDate, type, platform }) => {
 		const user = await getCurrentUser();
 		if (!user) error(401, 'Unauthorized');
 
@@ -173,7 +176,8 @@ export const updateTransaction = form(
 				pricePerUnit: priceInCents,
 				brokerage: brokerageInCents,
 				transactionDate: new Date(transactionDate),
-				type
+				type,
+				platform: platform || null
 			})
 			.where(eq(transactionTable.id, id))
 			.returning();

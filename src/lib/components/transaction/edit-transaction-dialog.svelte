@@ -18,6 +18,7 @@
 			quantity: number;
 			pricePerUnit: number;
 			brokerage?: number;
+			platform?: string | null;
 			transactionDate: Date | string;
 		};
 		open?: boolean;
@@ -93,6 +94,16 @@
 					value={transaction.brokerage || 0}
 					min="0"
 					step="0.01"
+				/>
+				<Field.Error />
+			</Field.Field>
+
+			<Field.Field>
+				<Field.Label for="platform">Platform</Field.Label>
+				<Input
+					id="platform"
+					{...fields.platform.as('text', transaction.platform ?? '')}
+					placeholder="Stake, CommSec, …"
 				/>
 				<Field.Error />
 			</Field.Field>

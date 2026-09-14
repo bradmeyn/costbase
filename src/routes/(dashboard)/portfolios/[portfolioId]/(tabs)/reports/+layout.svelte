@@ -9,7 +9,7 @@
 	import { setReportChrome } from '#lib/report-chrome.svelte.js';
 	import ReportPeriodSelect from '#lib/components/report-period-select.svelte';
 	import ReportFilterMenu from '#lib/components/report-filter-menu.svelte';
-	import { TRANSACTION_TYPES } from '#lib/report-query.js';
+	import { TRANSACTION_TYPES, UNSET } from '#lib/report-query.js';
 	import { financialYearLabel, readFinancialYear } from '#lib/report-period.js';
 
 	const chrome = setReportChrome();
@@ -37,7 +37,7 @@
 			label: 'Transactions',
 			// A record of activity, not a return: all of it by default, narrowed on demand.
 			period: 'range',
-			filters: { holdings: true, types: true }
+			filters: { holdings: true, types: true, platforms: true }
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/distributions', {
@@ -49,7 +49,7 @@
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', { portfolioId }),
-			label: 'AMMA statements',
+			label: 'Tax statements',
 			period: 'financial-year',
 			filters: {}
 		},
@@ -90,6 +90,14 @@
 			.map((h) => ({ value: h.investment.code, label: h.investment.code }))
 			.sort((a, b) => a.label.localeCompare(b.label))
 	);
+
+	/* Only the platforms actually recorded, plus a way to find the rows with none. */
+	const platformOptions = $derived.by(() => {
+		const all = portfolio.holdings.flatMap((h) => h.transactions.map((t) => t.platform));
+		const named = [...new Set(all.filter((p): p is string => !!p))].sort();
+		const options = named.map((name) => ({ value: name, label: name }));
+		return all.some((p) => !p) ? [...options, { value: UNSET, label: 'No platform' }] : options;
+	});
 </script>
 
 <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -126,6 +134,15 @@
 					options={holdingOptions}
 					allLabel="All holdings"
 					noun="holdings"
+				/>
+			{/if}
+
+			{#if active?.filters?.platforms && platformOptions.length > 1}
+				<ReportFilterMenu
+					param="platform"
+					options={platformOptions}
+					allLabel="All platforms"
+					noun="platforms"
 				/>
 			{/if}
 

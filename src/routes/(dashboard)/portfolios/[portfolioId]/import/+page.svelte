@@ -8,11 +8,12 @@
 	import Checkbox from '$ui/checkbox/checkbox.svelte';
 	import * as Table from '$ui/table';
 	import * as NativeSelect from '$ui/native-select';
-	import { ArrowLeft, TriangleAlert, FileText, Coins } from '@lucide/svelte';
+	import { ArrowLeft, TriangleAlert, FileText, Coins, Upload } from '@lucide/svelte';
 	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 	import {
 		previewImport,
 		importContractNote,
+		importContractNotes,
 		importDistributionStatement
 	} from '#lib/remotes/import.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
@@ -20,14 +21,37 @@
 	const portfolioId = $derived(page.params.portfolioId!);
 	const portfolio = $derived(await getPortfolio(portfolioId));
 
-	/** Held client-side so the confirmed step can re-send the same file. */
-	let file = $state<File | null>(null);
-	let preview = $state<Awaited<ReturnType<typeof previewImport>> | null>(null);
-	let reading = $state(false);
+	type Preview = Awaited<ReturnType<typeof previewImport>>;
+	/** Files are held client-side so the confirmed step can re-send the same bytes. */
+	type Read = { file: File; preview: Preview; include: boolean };
+
+	let reads = $state<Read[]>([]);
+	let reading = $state(0);
 	let saveError = $state('');
 
-	const note = $derived(preview?.kind === 'contract-note' ? preview : null);
-	const statement = $derived(preview?.kind === 'distribution-statement' ? preview : null);
+	const notes = $derived(reads.filter((r) => r.preview.kind === 'contract-note'));
+	const statements = $derived(reads.filter((r) => r.preview.kind === 'distribution-statement'));
+	const unreadable = $derived(reads.filter((r) => r.preview.kind === 'unknown'));
+
+	/*
+	  One note gets the full form, because a one-off is usually one you want to look
+	  over. A batch gets a list: the point of dropping twelve notes is not to fill in
+	  twelve forms, and anything that needs a correction can be edited after.
+	*/
+	const single = $derived(notes.length === 1 && statements.length === 0 ? notes[0] : null);
+	const note = $derived(single && single.preview.kind === 'contract-note' ? single.preview : null);
+	const statement = $derived(
+		statements.length === 1 && statements[0].preview.kind === 'distribution-statement'
+			? statements[0].preview
+			: null
+	);
+	const file = $derived(single?.file ?? statements[0]?.file ?? null);
+
+	const chosenNotes = $derived(notes.filter((r) => r.include));
+	/** Notes whose ticker is not a holding here — nothing can be written for these. */
+	const unmatched = $derived(
+		notes.filter((r) => r.preview.kind === 'contract-note' && !r.preview.holdingId)
+	);
 
 	/* The confirmed trade, edited in dollars and only written on submit. */
 	type NoteEdit = {
@@ -99,19 +123,83 @@
 		chosenRows.reduce((sum, row) => sum + toCents(rowEdits[row.ticker]?.gross ?? '0'), 0)
 	);
 
-	async function onFile(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const picked = input.files?.[0] ?? null;
-		file = picked;
-		preview = null;
-		saveError = '';
-		if (!picked) return;
+	async function accept(picked: File[]) {
+		const pdfs = picked.filter((f) => f.type === 'application/pdf');
+		if (pdfs.length === 0) return;
 
-		reading = true;
+		saveError = '';
+		reading += pdfs.length;
+		await Promise.all(
+			pdfs.map(async (f) => {
+				try {
+					const preview = await previewImport({ portfolioId, file: f });
+					const duplicate = preview.kind === 'contract-note' && preview.duplicate;
+					reads = [...reads, { file: f, preview, include: !duplicate }];
+				} catch (e) {
+					saveError = e instanceof Error ? e.message : `${f.name} could not be read.`;
+				} finally {
+					reading -= 1;
+				}
+			})
+		);
+	}
+
+	function onFile(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		accept([...(input.files ?? [])]);
+		// Cleared so choosing the same file twice still fires a change event.
+		input.value = '';
+	}
+
+	let dragging = $state(false);
+
+	function onDrop(event: DragEvent) {
+		event.preventDefault();
+		dragging = false;
+		accept([...(event.dataTransfer?.files ?? [])]);
+	}
+
+	function removeRead(read: Read) {
+		reads = reads.filter((r) => r !== read);
+	}
+
+	function clearAll() {
+		reads = [];
+		saveError = '';
+	}
+
+	async function saveBatch() {
+		if (chosenNotes.length === 0) return;
+		saveError = '';
+		saving = true;
 		try {
-			preview = await previewImport({ portfolioId, file: picked });
+			await importContractNotes({
+				portfolioId,
+				notes: chosenNotes.map((r) => {
+					const p = r.preview as Extract<Preview, { kind: 'contract-note' }>;
+					return {
+						file: r.file,
+						holdingId: p.holdingId ?? '',
+						type: (p.parsed.side ?? 'buy') as 'buy' | 'sell' | 'reinvestment',
+						quantity: p.parsed.quantity ?? 0,
+						pricePerUnit: p.parsed.pricePerUnit ?? 0,
+						value: p.parsed.value ?? 0,
+						brokerage: p.parsed.brokerage ?? 0,
+						transactionDate: p.parsed.executionDate ?? '',
+						confirmationNumber: p.parsed.confirmationNumber ?? undefined,
+						platform: p.parsed.platform ?? undefined
+					};
+				})
+			});
+			await goto(
+				resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/transactions', {
+					portfolioId
+				})
+			);
+		} catch (e) {
+			saveError = e instanceof Error ? e.message : 'Those trades could not be saved.';
 		} finally {
-			reading = false;
+			saving = false;
 		}
 	}
 
@@ -130,7 +218,8 @@
 				value: toCents(noteEdit.value),
 				brokerage: toCents(noteEdit.brokerage),
 				transactionDate: noteEdit.transactionDate,
-				confirmationNumber: note?.parsed.confirmationNumber ?? undefined
+				confirmationNumber: note?.parsed.confirmationNumber ?? undefined,
+				platform: note?.parsed.platform ?? undefined
 			});
 			await goto(
 				resolve('/(dashboard)/portfolios/[portfolioId]/[holdingId]/(tabs)', {
@@ -189,23 +278,151 @@
 	</p>
 </div>
 
-<div class="card mb-5">
-	<Label for="document">PDF</Label>
+<!--
+	One drop target for every kind of document. The heading inside the PDF says what
+	it is, so asking which sort you have before you drop it would be asking you to do
+	work the parser already does.
+-->
+<label
+	for="document"
+	ondragover={(e) => {
+		e.preventDefault();
+		dragging = true;
+	}}
+	ondragleave={() => (dragging = false)}
+	ondrop={onDrop}
+	class="mb-5 flex cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center transition-colors {dragging
+		? 'border-primary bg-primary/10'
+		: 'border-border bg-card hover:border-primary/50'}"
+>
+	<Upload class="size-5 text-muted-foreground" />
+	<p class="mt-2 text-sm font-medium">Drop contract notes and statements here</p>
+	<p class="mt-1 text-[13px] text-muted-foreground">
+		Or click to choose. Several at once is fine — PDFs only.
+	</p>
 	<input
 		id="document"
 		type="file"
 		accept="application/pdf"
+		multiple
 		onchange={onFile}
-		class="block w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-[13px] file:text-foreground hover:file:bg-accent"
+		class="sr-only"
 	/>
-	{#if reading && file}
-		<p class="mt-3 text-[13px] text-muted-foreground">Reading {file.name}…</p>
-	{/if}
-</div>
+</label>
 
-{#if preview?.kind === 'unknown'}
-	<div class="card py-8 text-center text-[13px] text-muted-foreground">
-		This does not look like a contract note or a distribution statement. Enter it by hand instead.
+{#if reading > 0}
+	<p class="mb-5 text-[13px] text-muted-foreground">
+		Reading {reading}
+		{reading === 1 ? 'document' : 'documents'}…
+	</p>
+{/if}
+
+{#if unreadable.length > 0}
+	<div class="mb-5 rounded-md border border-border bg-card p-4">
+		<p class="text-[13px] font-medium">Not recognised</p>
+		<ul class="mt-2 space-y-1">
+			{#each unreadable as read (read.file.name)}
+				<li class="flex items-center justify-between gap-3 text-[13px] text-muted-foreground">
+					<span class="truncate">{read.file.name}</span>
+					<Button variant="ghost" size="sm" onclick={() => removeRead(read)}>Remove</Button>
+				</li>
+			{/each}
+		</ul>
+		<p class="mt-2 text-[11px] text-muted-foreground">
+			Neither a contract note nor a distribution statement. Enter these by hand.
+		</p>
+	</div>
+{/if}
+
+{#if notes.length > 1 || (notes.length > 0 && statements.length > 0)}
+	<div class="card mb-5 space-y-4">
+		<div class="flex items-center gap-2 border-b border-border pb-3">
+			<FileText class="size-4 text-muted-foreground" />
+			<p class="text-sm font-semibold">Trades</p>
+			<span class="ml-auto text-[11px] text-muted-foreground">
+				{chosenNotes.length} of {notes.length} to import
+			</span>
+		</div>
+
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head class="w-10"></Table.Head>
+					<Table.Head>Document</Table.Head>
+					<Table.Head>Trade</Table.Head>
+					<Table.Head class="text-right">Brokerage</Table.Head>
+					<Table.Head class="text-right">Value</Table.Head>
+					<Table.Head class="w-10"></Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each notes as read (read.file.name)}
+					{@const p = read.preview as Extract<Preview, { kind: 'contract-note' }>}
+					<Table.Row>
+						<Table.Cell>
+							<Checkbox
+								checked={read.include}
+								disabled={!p.holdingId || p.duplicate}
+								onCheckedChange={(v) => (read.include = v === true)}
+								aria-label="Import {read.file.name}"
+							/>
+						</Table.Cell>
+						<Table.Cell>
+							<p class="max-w-64 truncate text-[13px]">{read.file.name}</p>
+							{#if p.parsed.confirmationNumber}
+								<p class="text-[11px] text-muted-foreground tabular-nums">
+									Confirmation {p.parsed.confirmationNumber}
+								</p>
+							{/if}
+						</Table.Cell>
+						<Table.Cell>
+							<p class="text-[13px]">
+								{p.parsed.side === 'sell' ? 'Sell' : 'Buy'}
+								{p.parsed.quantity}
+								{p.holdingName?.split(' ')[0] ?? p.parsed.ticker} at
+								{formatCurrency(p.parsed.pricePerUnit ?? 0)}
+							</p>
+							<p class="text-[11px] text-muted-foreground">
+								{p.parsed.executionDate}
+							</p>
+							{#each p.parsed.warnings as warning, i (i)}
+								<p class="text-[11px] text-brand-2">{warning}</p>
+							{/each}
+						</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">
+							{formatCurrency(p.parsed.brokerage ?? 0)}
+						</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">
+							{formatCurrency(p.parsed.value ?? 0)}
+						</Table.Cell>
+						<Table.Cell class="text-right">
+							<Button variant="ghost" size="sm" onclick={() => removeRead(read)}>Remove</Button>
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+
+		{#if unmatched.length > 0}
+			<p class="text-[13px] text-brand-2">
+				{unmatched.length}
+				{unmatched.length === 1 ? 'note is' : 'notes are'} for a holding this portfolio does not have.
+				Add the holding first, then drop them again.
+			</p>
+		{/if}
+
+		{#if saveError}
+			<p class="text-[13px] text-destructive">{saveError}</p>
+		{/if}
+
+		<div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+			<Button variant="ghost" onclick={clearAll}>Clear</Button>
+			<Button onclick={saveBatch} disabled={saving || chosenNotes.length === 0}>
+				{saving
+					? 'Saving…'
+					: `Import ${chosenNotes.length} ${chosenNotes.length === 1 ? 'trade' : 'trades'}`}
+			</Button>
+		</div>
 	</div>
 {/if}
 
@@ -222,7 +439,7 @@
 	</div>
 {/snippet}
 
-{#if note && noteEdit}
+{#if single && note && noteEdit}
 	{#if note.parsed.warnings.length > 0}
 		{@render warningPanel(note.parsed.warnings)}
 	{/if}

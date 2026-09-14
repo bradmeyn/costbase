@@ -36,7 +36,7 @@
 	] as const);
 
 	function generateCsv() {
-		let csv = `AMMA statements ${financialYearLabel(reportFy)}\n\nLabel,Item,${statements.map((s) => s.holdingCode).join(',')},Total\n`;
+		let csv = `Tax statements ${financialYearLabel(reportFy)}\n\nLabel,Item,${statements.map((s) => s.holdingCode).join(',')},Total\n`;
 		for (const [field, code, label] of AMIT_PART_A) {
 			csv += `${code},"${label}",${statements.map((s) => (cents(s, field) / 100).toFixed(2)).join(',')},${(total(field) / 100).toFixed(2)}\n`;
 		}
@@ -50,8 +50,8 @@
 	}
 
 	registerReport(() => ({
-		title: 'AMMA statements',
-		subtitle: `Year ended 30 June ${reportFy} · attribution as entered from each annual statement`,
+		title: 'Tax statements',
+		subtitle: `Year ended 30 June ${reportFy} · AMIT Member Annual Statement (AMMA), as entered`,
 		csv: statements.length > 0 ? generateCsv : undefined
 	}));
 </script>
@@ -59,7 +59,7 @@
 {#if statements.length === 0}
 	<div class="card py-8 text-center">
 		<p class="text-[13px] text-muted-foreground">
-			No AMMA statements entered for {financialYearLabel(reportFy)}.
+			No tax statements entered for {financialYearLabel(reportFy)}.
 		</p>
 		<p class="mt-1 text-[11px] text-muted-foreground">
 			Add them from each holding’s tax statements tab.

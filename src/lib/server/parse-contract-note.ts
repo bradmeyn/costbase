@@ -27,9 +27,29 @@ export interface ParsedContractNote {
 	executionDate: string | null;
 	settlementDate: string | null;
 	confirmationNumber: string | null;
+	/** The broker that issued the note, where the name is one we recognise. */
+	platform: string | null;
 	/** Anything that did not parse, or arithmetic that did not reconcile. */
 	warnings: string[];
 }
+
+/*
+  Brokers whose name appears on their own confirmations. Matched on the flattened
+  text rather than a fixed position: the branding sits in a different place on each
+  one, and getting it wrong costs a label, not a figure.
+*/
+const BROKERS = [
+	'Stake',
+	'CommSec',
+	'SelfWealth',
+	'Pearler',
+	'Superhero',
+	'nabtrade',
+	'CMC Markets',
+	'Bell Direct',
+	'Westpac Share Trading',
+	'ANZ Share Investing'
+];
 
 /** The cell following a label within the same row. */
 function valueAfter(rows: string[][], label: string): string | null {
@@ -110,6 +130,7 @@ export function fieldsFromRows(rows: string[][]): ParsedContractNote {
 		executionDate: toIsoDate(valueAfter(rows, 'EXECUTION DATE')),
 		settlementDate: toIsoDate(valueAfter(rows, 'SETTLEMENT DATE')),
 		confirmationNumber: valueAfter(rows, 'CONFIRMATION NUMBER'),
+		platform: BROKERS.find((b) => flat.includes(b.toUpperCase())) ?? null,
 		warnings
 	};
 }

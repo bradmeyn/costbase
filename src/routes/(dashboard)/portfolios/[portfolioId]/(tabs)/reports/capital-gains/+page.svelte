@@ -247,12 +247,12 @@
 <section class="card mb-10">
 	<h2 class="mb-1 text-base font-semibold">Trust distributions — {fyLabel}</h2>
 	<p class="mb-3 text-[11px] text-muted-foreground">
-		From the AMMA statements. Totals across all holdings are what you enter on the supplementary
+		From the tax statements. Totals across all holdings are what you enter on the supplementary
 		section.
 	</p>
 	{#if fyStatements.length === 0}
 		<p class="text-[13px] text-muted-foreground">
-			No AMMA statements entered for {fyLabel}. Add them from each holding.
+			No tax statements entered for {fyLabel}. Add them from each holding.
 		</p>
 	{:else}
 		<Table.Root>

@@ -63,7 +63,7 @@
 					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', {
 						portfolioId
 					}),
-					label: 'AMMA statements',
+					label: 'Tax statements',
 					icon: FileText,
 					ready: true
 				}

@@ -31,7 +31,9 @@ export const transactionSchema = z.object({
 	transactionDate: z.string(),
 	type: z.enum(['buy', 'sell', 'reinvestment'], {
 		message: 'Type must be buy, sell, or reinvestment'
-	})
+	}),
+	/** Broker the trade was placed through. Optional — older rows predate it. */
+	platform: z.string().optional()
 });
 
 export const updateTransactionSchema = transactionSchema.extend({
