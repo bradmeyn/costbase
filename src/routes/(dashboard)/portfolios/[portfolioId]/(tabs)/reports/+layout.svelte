@@ -7,6 +7,7 @@
 	import * as Select from '$ui/select';
 	import { Download, ChevronDown } from '@lucide/svelte';
 	import { setReportChrome } from '#lib/report-chrome.svelte.js';
+	import ReportPeriodSelect from '#lib/components/report-period-select.svelte';
 
 	const chrome = setReportChrome();
 	import { getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
@@ -21,33 +22,35 @@
 				portfolioId
 			}),
 			label: 'Capital gains',
-			byYear: true
+			// A tax return is filed for a financial year, so this one has no other span.
+			period: 'financial-year'
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/transactions', {
 				portfolioId
 			}),
 			label: 'Transactions',
-			byYear: true
+			// A record of activity, not a return: all of it by default, narrowed on demand.
+			period: 'range'
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/distributions', {
 				portfolioId
 			}),
 			label: 'Distributions',
-			byYear: true
+			period: 'range'
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/amma', { portfolioId }),
 			label: 'AMMA statements',
-			byYear: true
+			period: 'financial-year'
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/unrealised-gains', {
 				portfolioId
 			}),
 			label: 'Unrealised gains',
-			byYear: false
+			period: 'none'
 		},
 		{
 			href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/cgt-estimator', {
@@ -56,7 +59,7 @@
 			label: 'CGT estimator',
 			// Always the current year: it asks what selling more would add to what you
 			// have already realised, so a past year has nothing to estimate.
-			byYear: false
+			period: 'none'
 		}
 	]);
 
@@ -80,7 +83,7 @@
 	</div>
 	<div class="print:hidden">
 		<div class="flex items-center gap-2">
-			{#if active?.byYear && years.length > 0}
+			{#if active?.period === 'financial-year' && years.length > 0}
 				<Select.Root
 					type="single"
 					value={String(selectedFy)}
@@ -95,6 +98,8 @@
 						{/each}
 					</Select.Content>
 				</Select.Root>
+			{:else if active?.period === 'range'}
+				<ReportPeriodSelect {years} />
 			{/if}
 
 			{#if active}

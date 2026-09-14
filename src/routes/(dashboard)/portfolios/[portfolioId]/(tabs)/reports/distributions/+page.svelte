@@ -2,19 +2,18 @@
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
-	import { getPortfolioDistributions } from '#lib/remotes/portfolio.remote.js';
+	import {
+		getPortfolioDistributions,
+		getPortfolioFinancialYears
+	} from '#lib/remotes/portfolio.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
-	import { financialYearStart, financialYearEnd } from '#lib/utils/amit-calculations.js';
+	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
-	const reportFy = $derived(
-		Number(page.url.searchParams.get('fy')) ||
-			(new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear())
-	);
+	const period = $derived(readWindow(page.url));
+	const years = $derived(await getPortfolioFinancialYears(portfolioId));
 
-	const distributions = $derived(
-		await getPortfolioDistributions({ id: portfolioId, financialYear: reportFy })
-	);
+	const distributions = $derived(await getPortfolioDistributions({ id: portfolioId, ...period }));
 
 	const formatDate = (d: Date | string | null) =>
 		d
@@ -32,12 +31,12 @@
 		for (const d of distributions) {
 			csv += `${formatDate(d.datePaid)},${formatDate(d.recordDate)},${d.code},${d.units ?? ''},${(d.grossPayment / 100).toFixed(2)},${(d.taxWithheld / 100).toFixed(2)},${(d.net / 100).toFixed(2)},${d.reinvested ? 'Yes' : 'No'}\n`;
 		}
-		downloadCSV(csv, `distributions-FY${reportFy}`);
+		downloadCSV(csv, `distributions-${windowTag(period, years)}`);
 	}
 
 	registerReport(() => ({
 		title: 'Distributions',
-		subtitle: `${formatDate(financialYearStart(reportFy))} to ${formatDate(financialYearEnd(reportFy))} · cash received, per holding`,
+		subtitle: `${describeWindow(period)} · cash received, per holding`,
 		csv: generateCsv
 	}));
 </script>
@@ -59,7 +58,9 @@
 
 {#if distributions.length === 0}
 	<div class="card py-8 text-center">
-		<p class="text-[13px] text-muted-foreground">No distributions recorded in FY{reportFy}.</p>
+		<p class="text-[13px] text-muted-foreground">
+			No distributions {period.from || period.to ? 'in this period' : 'recorded yet'}.
+		</p>
 		<p class="mt-1 text-[11px] text-muted-foreground">
 			Add them from a holding, or import a distribution statement.
 		</p>

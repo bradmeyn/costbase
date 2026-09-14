@@ -101,9 +101,6 @@
 		unitsToSell = { ...unitsToSell, [holdingId]: Math.max(0, Math.min(value, max)) };
 	}
 
-	/* Negating a zero would otherwise print as -$0.00 down the deduction rows. */
-	const money = (cents: number) => formatCurrency(cents === 0 ? 0 : cents);
-
 	const dollars = (cents: number) => (cents / 100).toFixed(2);
 
 	function generateEstimate() {
@@ -323,11 +320,11 @@
 				<span class="ml-1.5 text-[11px] text-muted-foreground">{hint}</span>
 			{/if}
 		</Table.Cell>
-		<Table.Cell class="text-right">{money(realisedAmount)}</Table.Cell>
+		<Table.Cell class="text-right">{formatCurrency(realisedAmount)}</Table.Cell>
 		<Table.Cell class="text-right {added === 0 ? 'text-muted-foreground' : ''}">
-			{added === 0 ? '—' : money(added)}
+			{added === 0 ? '—' : formatCurrency(added)}
 		</Table.Cell>
-		<Table.Cell class="text-right">{money(total)}</Table.Cell>
+		<Table.Cell class="text-right">{formatCurrency(total)}</Table.Cell>
 	</Table.Row>
 {/snippet}
 
@@ -394,22 +391,22 @@
 				<Table.Row>
 					<Table.Cell class="font-medium">Assessable capital gain</Table.Cell>
 					<Table.Cell class="text-right font-semibold">
-						{money(realised.totalTaxableGain)}
+						{formatCurrency(realised.totalTaxableGain)}
 					</Table.Cell>
 					<Table.Cell class="text-right font-semibold">
-						{addedAssessable === 0 ? '—' : money(addedAssessable)}
+						{addedAssessable === 0 ? '—' : formatCurrency(addedAssessable)}
 					</Table.Cell>
 					<Table.Cell class="text-right font-semibold">
-						{money(combined.totalTaxableGain)}
+						{formatCurrency(combined.totalTaxableGain)}
 					</Table.Cell>
 				</Table.Row>
 				<Table.Row>
 					<Table.Cell class="font-medium">Estimated tax at {marginalRate}%</Table.Cell>
-					<Table.Cell class="text-right font-semibold">{money(realisedTax)}</Table.Cell>
+					<Table.Cell class="text-right font-semibold">{formatCurrency(realisedTax)}</Table.Cell>
 					<Table.Cell class="text-right font-semibold">
-						{addedTax === 0 ? '—' : money(addedTax)}
+						{addedTax === 0 ? '—' : formatCurrency(addedTax)}
 					</Table.Cell>
-					<Table.Cell class="text-right font-semibold">{money(combinedTax)}</Table.Cell>
+					<Table.Cell class="text-right font-semibold">{formatCurrency(combinedTax)}</Table.Cell>
 				</Table.Row>
 			</Table.Footer>
 		</Table.Root>
@@ -418,9 +415,9 @@
 	{#if anythingModelled}
 		<p class="mt-3 rounded-md border border-primary/30 bg-primary/10 px-3.5 py-3 text-[13px]">
 			Selling {modelled.units} units adds
-			<strong>{money(addedAssessable)}</strong> to your assessable income — about
-			<strong>{money(addedTax)}</strong> in tax at {marginalRate}%, leaving
-			{money(modelled.proceeds - addedTax)} of the {money(modelled.proceeds)} proceeds.
+			<strong>{formatCurrency(addedAssessable)}</strong> to your assessable income — about
+			<strong>{formatCurrency(addedTax)}</strong> in tax at {marginalRate}%, leaving
+			{formatCurrency(modelled.proceeds - addedTax)} of the {formatCurrency(modelled.proceeds)} proceeds.
 		</p>
 	{:else}
 		<p class="mt-3 text-[13px] text-muted-foreground">
@@ -430,8 +427,8 @@
 
 	{#if combined.lossesCarriedForward > 0}
 		<p class="mt-2 text-[13px] text-muted-foreground">
-			{money(combined.lossesCarriedForward)} of capital losses would be left over and carried forward
-			to a later year.
+			{formatCurrency(combined.lossesCarriedForward)} of capital losses would be left over and carried
+			forward to a later year.
 		</p>
 	{/if}
 </section>

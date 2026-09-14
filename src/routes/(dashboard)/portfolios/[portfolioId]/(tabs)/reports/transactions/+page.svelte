@@ -2,19 +2,18 @@
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
-	import { getPortfolioTransactions } from '#lib/remotes/portfolio.remote.js';
+	import {
+		getPortfolioTransactions,
+		getPortfolioFinancialYears
+	} from '#lib/remotes/portfolio.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
-	import { financialYearStart, financialYearEnd } from '#lib/utils/amit-calculations.js';
+	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
-	const reportFy = $derived(
-		Number(page.url.searchParams.get('fy')) ||
-			(new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear())
-	);
+	const period = $derived(readWindow(page.url));
+	const years = $derived(await getPortfolioFinancialYears(portfolioId));
 
-	const transactions = $derived(
-		await getPortfolioTransactions({ id: portfolioId, financialYear: reportFy })
-	);
+	const transactions = $derived(await getPortfolioTransactions({ id: portfolioId, ...period }));
 
 	const formatDate = (d: Date | string) =>
 		new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -36,12 +35,12 @@
 		for (const t of transactions) {
 			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)}\n`;
 		}
-		downloadCSV(csv, `transactions-FY${reportFy}`);
+		downloadCSV(csv, `transactions-${windowTag(period, years)}`);
 	}
 
 	registerReport(() => ({
 		title: 'Transactions',
-		subtitle: `${formatDate(financialYearStart(reportFy))} to ${formatDate(financialYearEnd(reportFy))} · every buy, sell and reinvestment`,
+		subtitle: `${describeWindow(period)} · every buy, sell and reinvestment`,
 		csv: generateCsv
 	}));
 </script>
@@ -63,7 +62,7 @@
 
 {#if transactions.length === 0}
 	<div class="card py-8 text-center text-[13px] text-muted-foreground">
-		No transactions in FY{reportFy}.
+		No transactions {period.from || period.to ? 'in this period' : 'recorded yet'}.
 	</div>
 {:else}
 	<div class="card">

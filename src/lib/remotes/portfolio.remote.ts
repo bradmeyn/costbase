@@ -789,80 +789,96 @@ export const getPortfolioFinancialYears = query(z.string(), async (id: string) =
 	return [...years].sort((a, b) => b - a);
 });
 
-/** 1 July to 30 June of the financial year named by the year it ends in. */
-function fyRange(financialYear: number) {
+/**
+ * An optional reporting window, as two ISO dates. Either end may be left out, which
+ * is what "all time" sends: an absent bound simply does not filter.
+ *
+ * Parsed at local midnight rather than through `new Date(iso)`, which would read the
+ * string as UTC and drop a whole day off the near side of the range in Australia.
+ */
+const isoDate = z
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/)
+	.optional();
+
+/*
+  Strict, so a stray property is rejected rather than quietly ignored. Every field
+  here is optional, which makes the shape structurally satisfiable by almost any
+  object — a spread of the wrong variable type-checks clean and only fails later.
+*/
+const windowArgs = z.strictObject({ id: z.string(), from: isoDate, to: isoDate });
+
+function windowBounds({ from, to }: { from?: string; to?: string }) {
+	const day = (iso: string, endOfDay: boolean) => {
+		const [y, m, d] = iso.split('-').map(Number);
+		return endOfDay ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d);
+	};
 	return {
-		start: new Date(financialYear - 1, 6, 1),
-		end: new Date(financialYear, 5, 30, 23, 59, 59, 999)
+		start: from ? day(from, false) : null,
+		end: to ? day(to, true) : null
 	};
 }
 
-/** Every transaction in a financial year, newest first, flattened across holdings. */
-export const getPortfolioTransactions = query(
-	z.object({ id: z.string(), financialYear: z.number().int() }),
-	async ({ id, financialYear }) => {
-		const user = await getCurrentUser();
-		if (!user) error(401, 'Unauthorized');
+function within(date: Date | string, start: Date | null, end: Date | null) {
+	const d = new Date(date);
+	return (!start || d >= start) && (!end || d <= end);
+}
 
-		const portfolio = await db.query.portfolioTable.findFirst({
-			where: eq(portfolioTable.id, id),
-			with: { holdings: { with: { investment: true, transactions: true } } }
-		});
-		if (!portfolio) error(404, 'Portfolio not found');
-		if (portfolio.userId !== user.id) error(403, 'Forbidden');
+/**
+ * Every transaction in a window, newest first, flattened across holdings.
+ * An empty window means every transaction ever recorded.
+ */
+export const getPortfolioTransactions = query(windowArgs, async ({ id, ...period }) => {
+	const user = await getCurrentUser();
+	if (!user) error(401, 'Unauthorized');
 
-		const { start, end } = fyRange(financialYear);
+	const portfolio = await db.query.portfolioTable.findFirst({
+		where: eq(portfolioTable.id, id),
+		with: { holdings: { with: { investment: true, transactions: true } } }
+	});
+	if (!portfolio) error(404, 'Portfolio not found');
+	if (portfolio.userId !== user.id) error(403, 'Forbidden');
 
-		return portfolio.holdings
-			.flatMap((h) =>
-				h.transactions.map((t) => ({
-					...t,
-					holdingId: h.id,
-					code: h.investment.code,
-					name: h.investment.name,
-					/** Consideration as stated on the note where known. */
-					total: t.value ?? t.quantity * t.pricePerUnit
-				}))
-			)
-			.filter((t) => {
-				const d = new Date(t.transactionDate);
-				return d >= start && d <= end;
-			})
-			.sort(
-				(a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
-			);
-	}
-);
+	const { start, end } = windowBounds(period);
 
-/** Every distribution paid in a financial year, newest first. */
-export const getPortfolioDistributions = query(
-	z.object({ id: z.string(), financialYear: z.number().int() }),
-	async ({ id, financialYear }) => {
-		const user = await getCurrentUser();
-		if (!user) error(401, 'Unauthorized');
+	return portfolio.holdings
+		.flatMap((h) =>
+			h.transactions.map((t) => ({
+				...t,
+				holdingId: h.id,
+				code: h.investment.code,
+				name: h.investment.name,
+				/** Consideration as stated on the note where known. */
+				total: t.value ?? t.quantity * t.pricePerUnit
+			}))
+		)
+		.filter((t) => within(t.transactionDate, start, end))
+		.sort((a, b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime());
+});
 
-		const portfolio = await db.query.portfolioTable.findFirst({
-			where: eq(portfolioTable.id, id),
-			with: { holdings: { with: { investment: true, distributions: true } } }
-		});
-		if (!portfolio) error(404, 'Portfolio not found');
-		if (portfolio.userId !== user.id) error(403, 'Forbidden');
+/** Every distribution paid in a window, newest first. An empty window means all. */
+export const getPortfolioDistributions = query(windowArgs, async ({ id, ...period }) => {
+	const user = await getCurrentUser();
+	if (!user) error(401, 'Unauthorized');
 
-		const { start, end } = fyRange(financialYear);
+	const portfolio = await db.query.portfolioTable.findFirst({
+		where: eq(portfolioTable.id, id),
+		with: { holdings: { with: { investment: true, distributions: true } } }
+	});
+	if (!portfolio) error(404, 'Portfolio not found');
+	if (portfolio.userId !== user.id) error(403, 'Forbidden');
 
-		return portfolio.holdings
-			.flatMap((h) =>
-				h.distributions.map((d) => ({
-					...d,
-					code: h.investment.code,
-					name: h.investment.name,
-					net: d.grossPayment - d.taxWithheld
-				}))
-			)
-			.filter((d) => {
-				const paid = new Date(d.datePaid);
-				return paid >= start && paid <= end;
-			})
-			.sort((a, b) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime());
-	}
-);
+	const { start, end } = windowBounds(period);
+
+	return portfolio.holdings
+		.flatMap((h) =>
+			h.distributions.map((d) => ({
+				...d,
+				code: h.investment.code,
+				name: h.investment.name,
+				net: d.grossPayment - d.taxWithheld
+			}))
+		)
+		.filter((d) => within(d.datePaid, start, end))
+		.sort((a, b) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime());
+});
