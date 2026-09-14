@@ -2,6 +2,18 @@ import type { getDocumentProxy } from 'unpdf';
 
 type PDFDocument = Awaited<ReturnType<typeof getDocumentProxy>>;
 
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+/** "8 Mar 2022" or "2 July 2026" -> "2022-03-08". Month names, not numbers. */
+export function isoFromLongDate(raw: string | null | undefined): string | null {
+	if (!raw) return null;
+	const m = raw.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+	if (!m) return null;
+	const month = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase());
+	if (month === -1) return null;
+	return `${m[3]}-${String(month + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
 /*
   Broker and registry PDFs are absolutely positioned, so reading the extracted text
   in stream order interleaves labels and values ("SELLBROKERAGE & GST"). Regrouping

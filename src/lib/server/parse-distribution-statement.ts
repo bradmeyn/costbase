@@ -12,6 +12,11 @@ import { extractRows } from './pdf-rows.js';
 export interface ParsedDistributionRow {
 	ticker: string;
 	fundName: string;
+	/**
+	 * Set when the distribution was reinvested rather than paid out. The units are
+	 * allotted at the DRP price, which is a separate acquisition with its own cost base.
+	 */
+	reinvestment: { unitsAllotted: number; drpPrice: number; cashCarriedForward: number } | null;
 	/** Cash per security in millionths of a cent — the rate carries eight decimals. */
 	centsPerUnit: number | null;
 	/** Units held at the record date, as stated. */
@@ -23,6 +28,8 @@ export interface ParsedDistributionRow {
 }
 
 export interface ParsedDistributionStatement {
+	/** A reinvestment statement allots units; a payment statement pays cash. */
+	kind: 'payment' | 'reinvestment';
 	/** ISO dates. */
 	recordDate: string | null;
 	paymentDate: string | null;
@@ -94,6 +101,14 @@ function valueAfter(rows: string[][], label: string): string | null {
 	return null;
 }
 
+/** Whether these rows are a registry distribution or reinvestment statement. */
+export function looksLikeDistributionStatement(rows: string[][]): boolean {
+	const squashed = rows.flat().join('').toUpperCase().replace(/\s+/g, '');
+	return (
+		squashed.includes('DISTRIBUTIONPAYMENT') || squashed.includes('DISTRIBUTIONREINVESTMENTPLAN')
+	);
+}
+
 /** Exported separately so the field mapping can be tested without a PDF fixture. */
 export function distributionFromRows(rows: string[][]): ParsedDistributionStatement {
 	const warnings: string[] = [];
@@ -103,12 +118,18 @@ export function distributionFromRows(rows: string[][]): ParsedDistributionStatem
 	if (!recordDate) warnings.push('Could not read the record date.');
 	if (!paymentDate) warnings.push('Could not read the payment date.');
 
+	const isReinvestment = rows.flat().some((cell) => /distribution reinvestment plan/i.test(cell));
+
 	const periodEnd =
 		rows
 			.flat()
 			.find((c) => /period ended/i.test(c))
 			?.match(/period ended\s+(.+)$/i)?.[1]
 			?.trim() ?? null;
+
+	if (isReinvestment) {
+		return reinvestmentFromRows(rows, recordDate, paymentDate, periodEnd, warnings);
+	}
 
 	/*
 	  A holding row is the only place a ticker, a rate, a unit count and three money
@@ -117,14 +138,20 @@ export function distributionFromRows(rows: string[][]): ParsedDistributionStatem
 	*/
 	const parsedRows: ParsedDistributionRow[] = [];
 	for (const row of rows) {
-		if (row.length < 7) continue;
-		if (!/^[A-Z]{3}$/.test(row[0])) continue;
+		if (row.length < 6) continue;
+		if (!/^[A-Z]{3,4}$/.test(row[0])) continue;
 
-		const centsPerUnit = toRate(row[2]);
-		const units = toUnits(row[3]);
-		const grossPayment = toCents(row[4]);
-		const taxWithheld = toCents(row[5]);
-		const netPayment = toCents(row[6]);
+		/*
+		  Read from the right. A long fund name wraps onto its own line and drops out of
+		  the row entirely — "Vanguard MSCI International Small Companies Index ETF" leaves
+		  VISM with one cell fewer than its neighbours — so a fixed column would lose it.
+		*/
+		const tail = row.slice(-5);
+		const centsPerUnit = toRate(tail[0]);
+		const units = toUnits(tail[1]);
+		const grossPayment = toCents(tail[2]);
+		const taxWithheld = toCents(tail[3]);
+		const netPayment = toCents(tail[4]);
 		if (centsPerUnit === null || units === null || grossPayment === null) continue;
 
 		const rowWarnings: string[] = [];
@@ -143,7 +170,8 @@ export function distributionFromRows(rows: string[][]): ParsedDistributionStatem
 
 		parsedRows.push({
 			ticker: row[0],
-			fundName: row[1],
+			fundName: row.length > 6 ? row[1] : '',
+			reinvestment: null,
 			centsPerUnit,
 			units,
 			grossPayment,
@@ -171,5 +199,91 @@ export function distributionFromRows(rows: string[][]): ParsedDistributionStatem
 		}
 	}
 
-	return { recordDate, paymentDate, periodEnd, rows: parsedRows, totals, warnings };
+	return {
+		kind: 'payment',
+		recordDate,
+		paymentDate,
+		periodEnd,
+		rows: parsedRows,
+		totals,
+		warnings
+	};
+}
+
+/*
+  A reinvestment statement is a different document: no cash is paid, so instead of a
+  net amount it reports the price the units were bought at, how many were allotted,
+  and the odd cents carried forward to next time.
+
+  Columns, once the wrapped headings are ignored:
+    ASX | (fund name) | DRP price | units held | cash per security |
+    tax withheld | net cash reinvested | balance brought forward |
+    units allotted | cash carried forward
+*/
+function reinvestmentFromRows(
+	rows: string[][],
+	recordDate: string | null,
+	paymentDate: string | null,
+	periodEnd: string | null,
+	warnings: string[]
+): ParsedDistributionStatement {
+	const parsedRows: ParsedDistributionRow[] = [];
+
+	for (const row of rows) {
+		if (row.length < 9) continue;
+		if (!/^[A-Z]{3,4}$/.test(row[0])) continue;
+
+		const tail = row.slice(-8);
+		const drpPrice = toCents(tail[0]);
+		const units = toUnits(tail[1]);
+		const centsPerUnit = toRate(tail[2]);
+		const taxWithheld = toCents(tail[3]);
+		const netReinvested = toCents(tail[4]);
+		const unitsAllotted = toUnits(tail[6]);
+		const cashCarriedForward = toCents(tail[7]);
+
+		if (drpPrice === null || units === null || centsPerUnit === null || netReinvested === null) {
+			continue;
+		}
+
+		const rowWarnings: string[] = [];
+		const expectedGross = Math.round((units * centsPerUnit) / 1e6);
+		if (Math.abs(expectedGross - netReinvested) > 2) {
+			rowWarnings.push(
+				`${row[0]}: ${units} units at the stated rate comes to $${(expectedGross / 100).toFixed(2)}, but the statement reinvested $${(netReinvested / 100).toFixed(2)}.`
+			);
+		}
+
+		parsedRows.push({
+			ticker: row[0],
+			fundName: row.length > 9 ? row[1] : '',
+			reinvestment: {
+				unitsAllotted: unitsAllotted ?? 0,
+				drpPrice,
+				cashCarriedForward: cashCarriedForward ?? 0
+			},
+			centsPerUnit,
+			units,
+			grossPayment: netReinvested + (taxWithheld ?? 0),
+			taxWithheld: taxWithheld ?? 0,
+			netPayment: netReinvested,
+			warnings: rowWarnings
+		});
+	}
+
+	if (parsedRows.length === 0) warnings.push('Found no reinvestment rows in this statement.');
+
+	return {
+		kind: 'reinvestment',
+		recordDate,
+		paymentDate,
+		periodEnd,
+		rows: parsedRows,
+		totals: {
+			grossPayment: parsedRows.reduce((sum, r) => sum + (r.grossPayment ?? 0), 0),
+			taxWithheld: parsedRows.reduce((sum, r) => sum + r.taxWithheld, 0),
+			netPayment: parsedRows.reduce((sum, r) => sum + (r.netPayment ?? 0), 0)
+		},
+		warnings
+	};
 }

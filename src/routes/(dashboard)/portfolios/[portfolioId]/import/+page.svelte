@@ -8,12 +8,13 @@
 	import Checkbox from '$ui/checkbox/checkbox.svelte';
 	import * as Table from '$ui/table';
 	import * as NativeSelect from '$ui/native-select';
-	import { ArrowLeft, TriangleAlert, FileText, Coins, Upload } from '@lucide/svelte';
+	import { ArrowLeft, TriangleAlert, FileText, Coins, Upload, Paperclip } from '@lucide/svelte';
 	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 	import {
 		previewImport,
 		importContractNote,
 		importContractNotes,
+		attachNotesToTransactions,
 		importDistributionStatement
 	} from '#lib/remotes/import.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
@@ -38,19 +39,36 @@
 	  over. A batch gets a list: the point of dropping twelve notes is not to fill in
 	  twelve forms, and anything that needs a correction can be edited after.
 	*/
-	const single = $derived(notes.length === 1 && statements.length === 0 ? notes[0] : null);
-	const note = $derived(single && single.preview.kind === 'contract-note' ? single.preview : null);
-	const statement = $derived(
-		statements.length === 1 && statements[0].preview.kind === 'distribution-statement'
-			? statements[0].preview
-			: null
-	);
-	const file = $derived(single?.file ?? statements[0]?.file ?? null);
+	type NotePreview = Extract<Preview, { kind: 'contract-note' }>;
+	const asNote = (r: Read) => r.preview as NotePreview;
 
-	const chosenNotes = $derived(notes.filter((r) => r.include));
+	/* A note for a trade already recorded is paperwork to file, not a trade to import. */
+	const newTrades = $derived(notes.filter((r) => !asNote(r).matchedTransactionId));
+	const toFile = $derived(
+		notes.filter((r) => asNote(r).matchedTransactionId && !asNote(r).matchedHasDocument)
+	);
+	const alreadyFiled = $derived(notes.filter((r) => asNote(r).matchedHasDocument));
+
+	const single = $derived(
+		newTrades.length === 1 && notes.length === 1 && statements.length === 0 ? notes[0] : null
+	);
+	const note = $derived(single && single.preview.kind === 'contract-note' ? single.preview : null);
+	/*
+	  Statements are confirmed one at a time even when several are dropped: each is a
+	  different date with its own rows, and there is no useful way to check six at once.
+	  Saving one takes the next off the queue.
+	*/
+	const statementRead = $derived(statements[0] ?? null);
+	const statement = $derived(
+		statementRead?.preview.kind === 'distribution-statement' ? statementRead.preview : null
+	);
+	const file = $derived(single?.file ?? statementRead?.file ?? null);
+
+	const chosenNotes = $derived(newTrades.filter((r) => r.include));
+	const chosenToFile = $derived(toFile.filter((r) => r.include));
 	/** Notes whose ticker is not a holding here — nothing can be written for these. */
 	const unmatched = $derived(
-		notes.filter((r) => r.preview.kind === 'contract-note' && !r.preview.holdingId)
+		newTrades.filter((r) => r.preview.kind === 'contract-note' && !r.preview.holdingId)
 	);
 
 	/* The confirmed trade, edited in dollars and only written on submit. */
@@ -103,7 +121,8 @@
 					units: row.units ?? 0,
 					gross: dollars(row.grossPayment),
 					tax: dollars(row.taxWithheld),
-					reinvested: false
+					// A reinvestment statement says so itself; no need to tick it by hand.
+					reinvested: statement.statement.kind === 'reinvestment'
 				}
 			])
 		);
@@ -133,8 +152,9 @@
 			pdfs.map(async (f) => {
 				try {
 					const preview = await previewImport({ portfolioId, file: f });
-					const duplicate = preview.kind === 'contract-note' && preview.duplicate;
-					reads = [...reads, { file: f, preview, include: !duplicate }];
+					// Filed notes need no decision; everything else is ticked ready to go.
+					const done = preview.kind === 'contract-note' && preview.matchedHasDocument;
+					reads = [...reads, { file: f, preview, include: !done }];
 				} catch (e) {
 					saveError = e instanceof Error ? e.message : `${f.name} could not be read.`;
 				} finally {
@@ -167,6 +187,33 @@
 		reads = [];
 		saveError = '';
 	}
+
+	async function fileMatched() {
+		if (chosenToFile.length === 0) return;
+		saveError = '';
+		saving = true;
+		try {
+			const result = await attachNotesToTransactions({
+				portfolioId,
+				notes: chosenToFile.map((r) => ({
+					file: r.file,
+					transactionId: asNote(r).matchedTransactionId!,
+					platform: asNote(r).parsed.platform ?? undefined
+				}))
+			});
+			// Drop what was filed so the list shows only what is left to decide.
+			const done = new Set(chosenToFile);
+			reads = reads.filter((r) => !done.has(r));
+			filedCount += result.attached;
+		} catch (e) {
+			saveError = e instanceof Error ? e.message : 'Those documents could not be filed.';
+		} finally {
+			saving = false;
+		}
+	}
+
+	let filedCount = $state(0);
+	let savedDistributions = $state(0);
 
 	async function saveBatch() {
 		if (chosenNotes.length === 0) return;
@@ -252,7 +299,16 @@
 					reinvested: rowEdits[row.ticker].reinvested
 				}))
 			});
-			await goto(resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId }));
+			// Off the queue, so the next statement comes up rather than navigating away.
+			savedDistributions += chosenRows.length;
+			if (statementRead) reads = reads.filter((r) => r !== statementRead);
+			if (statements.length === 0 && newTrades.length === 0 && toFile.length === 0) {
+				await goto(
+					resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/reports/distributions', {
+						portfolioId
+					})
+				);
+			}
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : 'Those distributions could not be saved.';
 		}
@@ -334,13 +390,103 @@
 	</div>
 {/if}
 
-{#if notes.length > 1 || (notes.length > 0 && statements.length > 0)}
+{#if filedCount > 0 || savedDistributions > 0}
+	<p class="mb-5 rounded-md border border-primary/30 bg-primary/10 px-3.5 py-3 text-[13px]">
+		{#if filedCount > 0}
+			{filedCount}
+			{filedCount === 1 ? 'document' : 'documents'} filed against trades already recorded.
+		{/if}
+		{#if savedDistributions > 0}
+			{savedDistributions}
+			{savedDistributions === 1 ? 'distribution' : 'distributions'} saved.
+		{/if}
+	</p>
+{/if}
+
+{#if toFile.length > 0}
+	<div class="card mb-5 space-y-4">
+		<div class="flex items-center gap-2 border-b border-border pb-3">
+			<Paperclip class="size-4 text-muted-foreground" />
+			<p class="text-sm font-semibold">Already recorded</p>
+			<span class="ml-auto text-[11px] text-muted-foreground">
+				{chosenToFile.length} of {toFile.length} to file
+			</span>
+		</div>
+
+		<p class="text-[13px] text-muted-foreground">
+			These trades are already in the portfolio. Nothing will be imported — the note is filed
+			against the trade it belongs to, and fills in the platform if the row has none.
+		</p>
+
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head class="w-10"></Table.Head>
+					<Table.Head>Document</Table.Head>
+					<Table.Head>Trade</Table.Head>
+					<Table.Head>Platform</Table.Head>
+					<Table.Head class="w-10"></Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each toFile as read (read.file.name)}
+					{@const p = asNote(read)}
+					<Table.Row>
+						<Table.Cell>
+							<Checkbox
+								checked={read.include}
+								onCheckedChange={(v) => (read.include = v === true)}
+								aria-label="File {read.file.name}"
+							/>
+						</Table.Cell>
+						<Table.Cell class="max-w-72 truncate text-[13px]">{read.file.name}</Table.Cell>
+						<Table.Cell class="text-[13px]">
+							{p.parsed.side === 'sell' ? 'Sell' : 'Buy'}
+							{p.parsed.quantity}
+							{p.parsed.ticker} on {p.parsed.executionDate}
+						</Table.Cell>
+						<Table.Cell class="text-[13px] text-muted-foreground">
+							{p.parsed.platform ?? '—'}
+						</Table.Cell>
+						<Table.Cell class="text-right">
+							<Button variant="ghost" size="sm" onclick={() => removeRead(read)}>Remove</Button>
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+
+		{#if saveError}
+			<p class="text-[13px] text-destructive">{saveError}</p>
+		{/if}
+
+		<div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+			<Button onclick={fileMatched} disabled={saving || chosenToFile.length === 0}>
+				{saving
+					? 'Filing…'
+					: `File ${chosenToFile.length} ${chosenToFile.length === 1 ? 'document' : 'documents'}`}
+			</Button>
+		</div>
+	</div>
+{/if}
+
+{#if alreadyFiled.length > 0}
+	<div class="mb-5 rounded-md border border-border bg-card p-4">
+		<p class="text-[13px] font-medium">Nothing to do</p>
+		<p class="mt-1 text-[11px] text-muted-foreground">
+			{alreadyFiled.length}
+			{alreadyFiled.length === 1 ? 'note is' : 'notes are'} already recorded with a document attached.
+		</p>
+	</div>
+{/if}
+
+{#if newTrades.length > 1 || (newTrades.length > 0 && (statements.length > 0 || toFile.length > 0))}
 	<div class="card mb-5 space-y-4">
 		<div class="flex items-center gap-2 border-b border-border pb-3">
 			<FileText class="size-4 text-muted-foreground" />
 			<p class="text-sm font-semibold">Trades</p>
 			<span class="ml-auto text-[11px] text-muted-foreground">
-				{chosenNotes.length} of {notes.length} to import
+				{chosenNotes.length} of {newTrades.length} to import
 			</span>
 		</div>
 
@@ -356,7 +502,7 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each notes as read (read.file.name)}
+				{#each newTrades as read (read.file.name)}
 					{@const p = read.preview as Extract<Preview, { kind: 'contract-note' }>}
 					<Table.Row>
 						<Table.Cell>
@@ -573,6 +719,9 @@
 			{#if statement.statement.periodEnd}
 				<span class="ml-auto text-[11px] text-muted-foreground">
 					Period ended {statement.statement.periodEnd}
+					{#if statements.length > 1}
+						· {statements.length - 1} more to confirm
+					{/if}
 				</span>
 			{/if}
 		</div>

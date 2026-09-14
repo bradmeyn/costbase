@@ -45,6 +45,18 @@ describe('distributionFromRows', () => {
 		expect(s.periodEnd).toBe('30 June 2026');
 	});
 
+	it('is a payment statement unless it says otherwise', () => {
+		expect(distributionFromRows(statementRows()).kind).toBe('payment');
+	});
+
+	it('reads a row whose fund name wrapped onto its own line', () => {
+		// A long name leaves the row one cell shorter than its neighbours.
+		const rows = statementRows([['VISM', '0.48766942', '2,591', '1,263.55', '0.00', '1,263.55']]);
+		const parsed = distributionFromRows(rows);
+		expect(parsed.rows).toHaveLength(1);
+		expect(parsed.rows[0]).toMatchObject({ ticker: 'VISM', units: 2591, grossPayment: 126_355 });
+	});
+
 	it('reads one row per holding', () => {
 		const s = distributionFromRows(statementRows());
 		expect(s.rows).toHaveLength(2);
@@ -104,5 +116,71 @@ describe('distributionFromRows', () => {
 		const s = distributionFromRows(statementRows(rows));
 		expect(s.rows[0].taxWithheld).toBe(32_510);
 		expect(s.rows[0].warnings).toEqual([]);
+	});
+});
+
+/*
+  A reinvestment statement pays no cash. Columns after the wrapped headings:
+  ASX | DRP price | units held | cash per security | tax withheld | net reinvested |
+  balance brought forward | units allotted | cash carried forward.
+*/
+const drpRows = (holdings: string[][]): string[][] => [
+	['Record Date:', '2 July 2025'],
+	['Payment Date:', '16 July 2025'],
+	['Vanguard Distribution for the Period Ended 30 June 2025'],
+	['Distribution Reinvestment Plan'],
+	['ASX', 'Fund Name', 'DRP Price ($)', 'Units', 'Security ($)', 'Amount ($)'],
+	...holdings
+];
+
+describe('distributionFromRows for a reinvestment', () => {
+	const row = [
+		'VAS',
+		'105.6498',
+		'3,573',
+		'0.65015010',
+		'0.00',
+		'2,322.99',
+		'0.00',
+		'21',
+		'104.34'
+	];
+
+	it('knows it is a reinvestment', () => {
+		expect(distributionFromRows(drpRows([row])).kind).toBe('reinvestment');
+	});
+
+	it('reads the units allotted and the price they were bought at', () => {
+		const parsed = distributionFromRows(drpRows([row]));
+		expect(parsed.rows[0].reinvestment).toEqual({
+			unitsAllotted: 21,
+			drpPrice: 105_65,
+			cashCarriedForward: 104_34
+		});
+	});
+
+	it('treats the reinvested cash as the distribution', () => {
+		const parsed = distributionFromRows(drpRows([row]));
+		expect(parsed.rows[0]).toMatchObject({
+			ticker: 'VAS',
+			units: 3573,
+			centsPerUnit: 65_015_010,
+			grossPayment: 232_299,
+			taxWithheld: 0,
+			netPayment: 232_299
+		});
+		expect(parsed.rows[0].warnings).toEqual([]);
+	});
+
+	it('warns when the units and rate do not produce the reinvested amount', () => {
+		const wrong = [...row];
+		wrong[5] = '9,999.99';
+		const parsed = distributionFromRows(drpRows([wrong]));
+		expect(parsed.rows[0].warnings.join(' ')).toMatch(/but the statement reinvested/);
+	});
+
+	it('reports a reinvestment statement it cannot read rows from', () => {
+		const parsed = distributionFromRows(drpRows([]));
+		expect(parsed.warnings.join(' ')).toMatch(/no reinvestment rows/);
 	});
 });

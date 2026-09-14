@@ -1,5 +1,5 @@
 import { getDocumentProxy } from 'unpdf';
-import { extractRows } from './pdf-rows.js';
+import { extractRows, isoFromLongDate } from './pdf-rows.js';
 
 /*
   Parses a Stake ASX trade confirmation.
@@ -51,6 +51,15 @@ const BROKERS = [
 	'ANZ Share Investing'
 ];
 
+/*
+  The same text with every space removed. PDF extraction splits a word at a ligature
+  — "Buy Confirmation" arrives as "Buy Con", "fi", "rmation" — so a heading cannot be
+  matched by joining the cells with spaces.
+*/
+function squash(rows: string[][]): string {
+	return rows.flat().join('').toUpperCase().replace(/\s+/g, '');
+}
+
 /** The cell following a label within the same row. */
 function valueAfter(rows: string[][], label: string): string | null {
 	for (const row of rows) {
@@ -79,15 +88,133 @@ export async function parseContractNote(bytes: Uint8Array): Promise<ParsedContra
 	return fieldsFromRows(await extractRows(await getDocumentProxy(bytes)));
 }
 
-/** Exported separately so the field mapping can be tested without a PDF fixture. */
+/**
+ * Whether these rows are a broker's trade confirmation.
+ *
+ * Brokers head the document differently — Stake labels a confirmation number,
+ * SelfWealth names itself and says which way the trade went — so several signals are
+ * accepted rather than one house style.
+ */
+export function looksLikeContractNote(rows: string[][]): boolean {
+	const squashed = squash(rows);
+	return (
+		squashed.includes('CONFIRMATIONNUMBER') ||
+		squashed.includes('BUYCONFIRMATION') ||
+		squashed.includes('SELLCONFIRMATION') ||
+		squashed.includes('WEHAVEBOUGHT') ||
+		squashed.includes('WEHAVESOLD')
+	);
+}
+
+/**
+ * Exported separately so the field mapping can be tested without a PDF fixture.
+ *
+ * Brokers agree on nothing but the facts. The layout is identified first and the
+ * right mapping applied, rather than trying to find one set of labels that fits
+ * every note.
+ */
 export function fieldsFromRows(rows: string[][]): ParsedContractNote {
+	if (squash(rows).includes('SELFWEALTH')) return selfWealthFields(rows);
+	return stakeFields(rows);
+}
+
+/**
+ * SelfWealth, cleared by OpenMarkets and later FNZ. The trade sits in one row under
+ * a header, and the net line is named differently on a buy and a sell.
+ */
+function selfWealthFields(rows: string[][]): ParsedContractNote {
+	const warnings: string[] = [];
+	const squashed = squash(rows);
+
+	// "We have sold on your account" is the plainest statement of side on the note.
+	const side =
+		squashed.includes('WEHAVESOLD') || squashed.includes('SELLCONFIRMATION')
+			? 'sell'
+			: squashed.includes('WEHAVEBOUGHT') || squashed.includes('BUYCONFIRMATION')
+				? 'buy'
+				: null;
+	if (!side) warnings.push('Could not determine whether this is a buy or a sell.');
+
+	/*
+	  The trade row is read from its end — currency, consideration, price — because the
+	  security description is free text that can occupy a different number of cells,
+	  and the header above it carries a footnote marker that the row does not.
+	*/
+	const tradeRow = rows.find(
+		(row) =>
+			row.length >= 5 &&
+			/^\d[\d,]*$/.test(row[0]) &&
+			/^[A-Z]{2,5}$/.test(row[1]) &&
+			row[row.length - 1] === 'AUD'
+	);
+
+	let ticker: string | null = null;
+	let quantity: number | null = null;
+	let pricePerUnit: number | null = null;
+	let value: number | null = null;
+
+	if (!tradeRow) {
+		warnings.push('Could not find the trade line on this note.');
+	} else {
+		ticker = tradeRow[1];
+		const parsedQuantity = parseInt(tradeRow[0].replace(/,/g, ''), 10);
+		quantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : null;
+		pricePerUnit = toCents(tradeRow[tradeRow.length - 3]);
+		value = toCents(tradeRow[tradeRow.length - 2]);
+
+		if (!quantity) warnings.push('Could not read the quantity.');
+		if (pricePerUnit === null) warnings.push('Could not read the price.');
+		if (value === null) warnings.push('Could not read the consideration.');
+	}
+
+	/*
+	  Every charge on the note is a cost of the trade, so they are summed rather than
+	  taking brokerage alone. If one is missed the reconciliation below says so.
+	*/
+	const brokerage =
+		(toCents(valueAfter(rows, 'BROKERAGE*')) ?? 0) +
+		(toCents(valueAfter(rows, 'MISC FEES & CHARGES')) ?? 0) +
+		(toCents(valueAfter(rows, 'ADVISER FEE*')) ?? 0);
+
+	const netAmount = toCents(
+		valueAfter(rows, 'NET VALUE') ?? valueAfter(rows, 'TOTAL AMOUNT PAYABLE')
+	);
+
+	if (value !== null && netAmount !== null) {
+		const expected = side === 'buy' ? value + brokerage : value - brokerage;
+		if (Math.abs(expected - netAmount) > 1) {
+			warnings.push(
+				`Consideration and fees do not reconcile with the stated net amount (expected ${expected} cents, note says ${netAmount}).`
+			);
+		}
+	}
+
+	return {
+		side,
+		ticker,
+		quantity,
+		pricePerUnit,
+		value,
+		brokerage,
+		netAmount,
+		executionDate: isoFromLongDate(valueAfter(rows, 'TRADE DATE:')),
+		settlementDate: isoFromLongDate(valueAfter(rows, 'SETTLEMENT DATE:')),
+		confirmationNumber: valueAfter(rows, 'REFERENCE NO:'),
+		platform: 'SelfWealth',
+		warnings
+	};
+}
+
+/** Stake, whose notes are a grid of LABEL/value pairs. */
+function stakeFields(rows: string[][]): ParsedContractNote {
 	const warnings: string[] = [];
 	const flat = rows.flat().join(' ').toUpperCase();
+	const squashed = squash(rows);
 
 	// The heading is the most reliable signal; the SIDE cell can run into its neighbour.
-	const side = flat.includes('SELL CONFIRMATION')
+	const side = squashed.includes('SELLCONFIRMATION')
 		? 'sell'
-		: flat.includes('BUY CONFIRMATION')
+		: squashed.includes('BUYCONFIRMATION')
 			? 'buy'
 			: null;
 	if (!side) warnings.push('Could not determine whether this is a buy or a sell.');

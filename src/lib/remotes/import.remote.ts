@@ -7,11 +7,14 @@ import {
 	portfolioTable,
 	transactionTable
 } from '$db/schemas/portfolio';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
-import { fieldsFromRows } from '#lib/server/parse-contract-note.js';
-import { distributionFromRows } from '#lib/server/parse-distribution-statement.js';
+import { fieldsFromRows, looksLikeContractNote } from '#lib/server/parse-contract-note.js';
+import {
+	distributionFromRows,
+	looksLikeDistributionStatement
+} from '#lib/server/parse-distribution-statement.js';
 import { extractRows } from '#lib/server/pdf-rows.js';
 import { getDocumentProxy } from 'unpdf';
 import { storeDocument } from '#lib/server/documents.js';
@@ -66,12 +69,10 @@ export const previewImport = command(
 		const rows = await extractRows(
 			await getDocumentProxy(new Uint8Array(await file.arrayBuffer()))
 		);
-		const flat = rows.flat().join(' ').toUpperCase();
-
-		if (flat.includes('CONFIRMATION NUMBER')) {
+		if (looksLikeContractNote(rows)) {
 			return { kind: 'contract-note' as const, ...(await contractNotePreview(portfolio, rows)) };
 		}
-		if (flat.includes('DISTRIBUTION PAYMENT')) {
+		if (looksLikeDistributionStatement(rows)) {
 			return {
 				kind: 'distribution-statement' as const,
 				...(await distributionPreview(portfolio, rows))
@@ -95,18 +96,18 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 		);
 	}
 
-	// A note already imported would otherwise silently double the position.
-	let duplicate = false;
+	/*
+	  A note for a trade that is already recorded is not waste: it is the paperwork for
+	  that trade. Finding the row it belongs to turns a refusal into an offer to file it.
+	*/
+	let matched: { id: string; hasDocument: boolean } | null = null;
+
 	if (parsed.confirmationNumber) {
 		const existing = await db.query.transactionTable.findFirst({
-			where: eq(transactionTable.confirmationNumber, parsed.confirmationNumber)
+			where: eq(transactionTable.confirmationNumber, parsed.confirmationNumber),
+			with: { documents: true }
 		});
-		if (existing) {
-			duplicate = true;
-			warnings.push(
-				`Confirmation ${parsed.confirmationNumber} has already been imported. Importing again would duplicate the trade.`
-			);
-		}
+		if (existing) matched = { id: existing.id, hasDocument: existing.documents.length > 0 };
 	}
 
 	/*
@@ -114,7 +115,7 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 	  in by hand carries none, so the same trade is matched again on what identifies it
 	  to a person: same holding, same day, same side, same quantity.
 	*/
-	if (!duplicate && holding && parsed.executionDate && parsed.quantity && parsed.side) {
+	if (!matched && holding && parsed.executionDate && parsed.quantity && parsed.side) {
 		const sameTrade = holding.transactions.find(
 			(t) =>
 				t.type === parsed.side &&
@@ -122,16 +123,26 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 				toIsoDay(t.transactionDate) === parsed.executionDate
 		);
 		if (sameTrade) {
-			duplicate = true;
-			warnings.push(
-				`A ${parsed.side} of ${parsed.quantity} ${parsed.ticker} on ${parsed.executionDate} is already recorded. It was entered without a confirmation number, so this looks like the same trade.`
-			);
+			const documents = await db.query.documentTable.findMany({
+				where: eq(documentTable.transactionId, sameTrade.id)
+			});
+			matched = { id: sameTrade.id, hasDocument: documents.length > 0 };
 		}
+	}
+
+	if (matched) {
+		warnings.push(
+			matched.hasDocument
+				? `This trade is already recorded and already has a document attached.`
+				: `This trade is already recorded. The note can be filed against it instead of importing it again.`
+		);
 	}
 
 	return {
 		parsed: { ...parsed, warnings },
-		duplicate,
+		duplicate: !!matched,
+		matchedTransactionId: matched?.id ?? null,
+		matchedHasDocument: matched?.hasDocument ?? false,
 		holdingId: holding?.id ?? null,
 		holdingName: holding ? `${holding.investment.code} ${holding.investment.name}` : null
 	};
@@ -187,6 +198,68 @@ export const importContractNote = command(
 		await getHolding(holding.id).refresh();
 
 		return { success: true, transactionId: created.id };
+	}
+);
+
+/**
+ * File notes against trades that are already recorded, rather than importing them.
+ *
+ * Also backfills the platform where the row has none: the note knows which broker
+ * placed the trade, and a row entered by hand usually does not.
+ */
+export const attachNotesToTransactions = command(
+	z.object({
+		portfolioId: z.string().min(1),
+		notes: z
+			.array(
+				z.object({
+					file: z.instanceof(File),
+					transactionId: z.string().min(1),
+					platform: z.string().optional()
+				})
+			)
+			.min(1)
+	}),
+	async ({ portfolioId, notes }) => {
+		const portfolio = await ownedPortfolio(portfolioId);
+		const owned = new Set(portfolio.holdings.flatMap((h) => h.transactions.map((t) => t.id)));
+
+		for (const note of notes) {
+			if (!owned.has(note.transactionId)) error(404, 'Transaction not found in this portfolio');
+		}
+
+		let attached = 0;
+		for (const note of notes) {
+			const existing = await db.query.documentTable.findMany({
+				where: eq(documentTable.transactionId, note.transactionId)
+			});
+			// Filing the same note twice would leave two copies against one trade.
+			if (existing.length > 0) continue;
+
+			const stored = await storeDocument(note.file);
+			await db.insert(documentTable).values({ transactionId: note.transactionId, ...stored });
+
+			if (note.platform) {
+				await db
+					.update(transactionTable)
+					.set({ platform: note.platform })
+					.where(
+						and(eq(transactionTable.id, note.transactionId), isNull(transactionTable.platform))
+					);
+			}
+			attached += 1;
+		}
+
+		const holdingIds = [
+			...new Set(
+				portfolio.holdings
+					.filter((h) => h.transactions.some((t) => notes.some((n) => n.transactionId === t.id)))
+					.map((h) => h.id)
+			)
+		];
+		await Promise.all(holdingIds.map((id) => getHolding(id).refresh()));
+
+		return { success: true, attached };
 	}
 );
 
