@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
 	import Button from '$ui/button/button.svelte';
@@ -8,7 +7,6 @@
 	import { getHolding } from '#lib/remotes/holding.remote.js';
 
 	const holdingId = $derived(page.params.holdingId!);
-	const portfolioId = $derived(page.params.portfolioId!);
 	const holding = $derived(await getHolding(holdingId));
 
 	let addTransactionsOpen = $state(false);
@@ -18,15 +16,7 @@
 
 <div class="mb-4 flex items-center justify-between">
 	<h2 class="text-base font-semibold">Transactions</h2>
-	<div class="flex items-center gap-2">
-		<Button
-			variant="ghost"
-			href={resolve('/(dashboard)/portfolios/[portfolioId]/import', { portfolioId })}
-		>
-			Import a document
-		</Button>
-		<Button onclick={() => (addTransactionsOpen = true)}>Add Transactions</Button>
-	</div>
+	<Button onclick={() => (addTransactionsOpen = true)}>Add Transactions</Button>
 </div>
 
 {#if holding.transactions.length > 0}

@@ -13,7 +13,7 @@
 	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-	import { EllipsisVertical, Pencil, Plus, Trash2 } from '@lucide/svelte';
+	import { EllipsisVertical, FileUp, Pencil, Plus, Trash2 } from '@lucide/svelte';
 	import { formatCurrency } from '#lib/utils.js';
 
 	const portfolio = $derived(await getPortfolio(page.params.portfolioId!));
@@ -48,11 +48,18 @@
 		>
 			<EllipsisVertical class="size-4" />
 		</DropdownMenu.Trigger>
-		<DropdownMenu.Content align="end">
+		<DropdownMenu.Content align="end" class="min-w-44">
 			<DropdownMenu.Group>
 				<DropdownMenu.Item onSelect={() => (addHoldingOpen = true)}>
 					<Plus class="size-4" />
 					<span>Add holding</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Item
+					onSelect={() =>
+						goto(resolve('/(dashboard)/portfolios/[portfolioId]/import', { portfolioId }))}
+				>
+					<FileUp class="size-4" />
+					<span>Import a document</span>
 				</DropdownMenu.Item>
 				<DropdownMenu.Item onSelect={() => (dialog = { kind: 'edit-portfolio' })}>
 					<Pencil class="size-4" />
