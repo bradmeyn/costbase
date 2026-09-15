@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '$db';
 import {
 	amitStatementTable,
+	annualStatementTable,
 	distributionTable,
 	documentTable,
 	portfolioTable,
@@ -19,10 +20,12 @@ import {
 } from '#lib/server/parse-distribution-statement.js';
 import { extractRows } from '#lib/server/pdf-rows.js';
 import { amitFromRows, looksLikeAmitStatement } from '#lib/server/parse-amit-statement.js';
+import { annualFromRows, looksLikeAnnualStatement } from '#lib/server/parse-annual-statement.js';
 import { getDocumentProxy } from 'unpdf';
 import { storeDocument } from '#lib/server/documents.js';
 import { getHolding } from '#lib/remotes/holding.remote.js';
 import { getAmitStatements, getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
+import { getAnnualStatements, getPortfolioAnnualStatements } from '#lib/remotes/annual.remote.js';
 
 /** The portfolio's holdings, keyed by ticker, for matching a parsed note. */
 async function ownedPortfolio(portfolioId: string) {
@@ -74,6 +77,10 @@ export const previewImport = command(
 		);
 		if (looksLikeContractNote(rows)) {
 			return { kind: 'contract-note' as const, ...(await contractNotePreview(portfolio, rows)) };
+		}
+		// Checked before the tax statement: both say "annual statement" somewhere.
+		if (looksLikeAnnualStatement(rows)) {
+			return { kind: 'annual-statement' as const, ...(await annualPreview(portfolio, rows)) };
 		}
 		if (looksLikeAmitStatement(rows)) {
 			return { kind: 'tax-statement' as const, ...(await amitPreview(portfolio, rows)) };
@@ -249,6 +256,94 @@ async function amitPreview(portfolio: OwnedPortfolio, rows: string[][]) {
 		holdingName: holding ? `${holding.investment.code} ${holding.investment.name}` : null
 	};
 }
+
+/** Match a registry annual statement to its holding. */
+async function annualPreview(portfolio: OwnedPortfolio, rows: string[][]) {
+	const parsed = annualFromRows(rows);
+	const holding = parsed.ticker ? findHolding(portfolio, parsed.ticker) : undefined;
+
+	const warnings = [...parsed.warnings];
+	if (parsed.ticker && !holding) {
+		warnings.push(
+			`No holding for ${parsed.ticker} in this portfolio. Add the holding first, then import the statement.`
+		);
+	}
+
+	/*
+	  The registry's own unit count is the check this document exists for: if it
+	  disagrees with what the transactions add up to, a trade is missing.
+	*/
+	if (holding && parsed.closingUnits !== null && parsed.periodEnd) {
+		const asAt = new Date(parsed.periodEnd);
+		const held = holding.transactions
+			.filter((t) => new Date(t.transactionDate) <= asAt)
+			.reduce((sum, t) => sum + (t.type === 'sell' ? -t.quantity : t.quantity), 0);
+		if (held !== parsed.closingUnits) {
+			warnings.push(
+				`The registry counted ${parsed.closingUnits} units at ${parsed.periodEnd}; this portfolio has ${held}.`
+			);
+		}
+	}
+
+	return {
+		parsed: { ...parsed, warnings },
+		holdingId: holding?.id ?? null,
+		holdingName: holding ? `${holding.investment.code} ${holding.investment.name}` : null
+	};
+}
+
+/** Save a registry annual statement and attach the PDF. Carries no tax figures. */
+export const importAnnualStatement = command(
+	z.object({
+		portfolioId: z.string().min(1),
+		holdingId: z.string().min(1),
+		financialYear: z.number().int().min(2000).max(2100),
+		holderNumber: z.string().default(''),
+		periodEnd: z.string().min(1),
+		openingUnits: z.number().int(),
+		closingUnits: z.number().int(),
+		closingUnitPrice: z.number().int().nonnegative(),
+		closingValue: z.number().int().nonnegative(),
+		cashDistributionReceived: z.number().int().nonnegative(),
+		totalFees: z.number().int().nonnegative(),
+		file: z.instanceof(File)
+	}),
+	async ({ portfolioId, holdingId, file, periodEnd, ...figures }) => {
+		const portfolio = await ownedPortfolio(portfolioId);
+		if (!portfolio.holdings.some((h) => h.id === holdingId)) {
+			error(404, 'Holding not found in this portfolio');
+		}
+
+		const values = { holdingId, periodEnd: new Date(periodEnd), ...figures };
+		const [saved] = await db
+			.insert(annualStatementTable)
+			.values(values)
+			.onConflictDoUpdate({
+				target: [
+					annualStatementTable.holdingId,
+					annualStatementTable.financialYear,
+					annualStatementTable.holderNumber
+				],
+				set: { ...values, updatedAt: new Date() }
+			})
+			.returning();
+
+		const alreadyFiled = await db.query.documentTable.findMany({
+			where: eq(documentTable.annualStatementId, saved.id)
+		});
+		if (alreadyFiled.length === 0) {
+			const stored = await storeDocument(file);
+			await db.insert(documentTable).values({ annualStatementId: saved.id, ...stored });
+		}
+
+		await Promise.all([
+			getAnnualStatements(holdingId).refresh(),
+			getPortfolioAnnualStatements(portfolioId).refresh()
+		]);
+
+		return { success: true };
+	}
+);
 
 /** Save an annual tax statement from its own figures and attach the PDF. */
 export const importAmitStatement = command(
@@ -578,7 +673,7 @@ export const importDistributionStatement = command(
 /** Attach a PDF to an existing transaction, distribution or AMMA statement. */
 export const attachDocument = command(
 	z.object({
-		owner: z.enum(['transaction', 'distribution', 'amitStatement']),
+		owner: z.enum(['transaction', 'distribution', 'amitStatement', 'annualStatement']),
 		ownerId: z.string().min(1),
 		file: z.instanceof(File)
 	}),
@@ -611,6 +706,7 @@ export const attachDocument = command(
 			transactionId: owner === 'transaction' ? ownerId : null,
 			distributionId: owner === 'distribution' ? ownerId : null,
 			amitStatementId: owner === 'amitStatement' ? ownerId : null,
+			annualStatementId: owner === 'annualStatement' ? ownerId : null,
 			...stored
 		});
 

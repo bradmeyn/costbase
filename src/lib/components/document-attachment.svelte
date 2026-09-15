@@ -20,7 +20,7 @@
 		 */
 		readOnly = false
 	}: {
-		owner: 'transaction' | 'distribution' | 'amitStatement';
+		owner: 'transaction' | 'distribution' | 'amitStatement' | 'annualStatement';
 		ownerId: string;
 		documents?: Document[];
 		readOnly?: boolean;

@@ -16,7 +16,8 @@
 		importContractNotes,
 		attachNotesToTransactions,
 		importDistributionStatement,
-		importAmitStatement
+		importAmitStatement,
+		importAnnualStatement
 	} from '#lib/remotes/import.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
 	import { financialYearLabel } from '#lib/report-period.js';
@@ -36,6 +37,7 @@
 	const statements = $derived(reads.filter((r) => r.preview.kind === 'distribution-statement'));
 	const unreadable = $derived(reads.filter((r) => r.preview.kind === 'unknown'));
 	const taxStatements = $derived(reads.filter((r) => r.preview.kind === 'tax-statement'));
+	const annualStatements = $derived(reads.filter((r) => r.preview.kind === 'annual-statement'));
 
 	/*
 	  One note gets the full form, because a one-off is usually one you want to look
@@ -218,6 +220,49 @@
 	let filedCount = $state(0);
 	let savedDistributions = $state(0);
 	let savedStatements = $state(0);
+	let savedAnnual = $state(0);
+
+	const savableAnnual = $derived(
+		annualStatements.filter(
+			(r) =>
+				r.preview.kind === 'annual-statement' &&
+				r.preview.holdingId &&
+				r.preview.parsed.financialYear &&
+				r.preview.parsed.periodEnd
+		)
+	);
+
+	async function saveAnnual() {
+		if (savableAnnual.length === 0) return;
+		saveError = '';
+		saving = true;
+		try {
+			for (const read of savableAnnual) {
+				const p = read.preview as Extract<Preview, { kind: 'annual-statement' }>;
+				await importAnnualStatement({
+					portfolioId,
+					holdingId: p.holdingId!,
+					financialYear: p.parsed.financialYear!,
+					holderNumber: p.parsed.holderNumber,
+					periodEnd: p.parsed.periodEnd!,
+					openingUnits: p.parsed.openingUnits ?? 0,
+					closingUnits: p.parsed.closingUnits ?? 0,
+					closingUnitPrice: p.parsed.closingUnitPrice ?? 0,
+					closingValue: p.parsed.closingValue ?? 0,
+					cashDistributionReceived: p.parsed.cashDistributionReceived ?? 0,
+					totalFees: p.parsed.totalFees ?? 0,
+					file: read.file
+				});
+				savedAnnual += 1;
+			}
+			const done = new Set(savableAnnual);
+			reads = reads.filter((r) => !done.has(r));
+		} catch (e) {
+			saveError = e instanceof Error ? e.message : 'Those statements could not be saved.';
+		} finally {
+			saving = false;
+		}
+	}
 
 	/*
 	  A tax statement is one holding's figures for one year, straight off the document.
@@ -431,7 +476,7 @@
 	</div>
 {/if}
 
-{#if filedCount > 0 || savedDistributions > 0 || savedStatements > 0}
+{#if filedCount > 0 || savedDistributions > 0 || savedStatements > 0 || savedAnnual > 0}
 	<p class="mb-5 rounded-md border border-primary/30 bg-primary/10 px-3.5 py-3 text-[13px]">
 		{#if filedCount > 0}
 			{filedCount}
@@ -445,7 +490,77 @@
 			{savedStatements}
 			{savedStatements === 1 ? 'tax statement' : 'tax statements'} saved.
 		{/if}
+		{#if savedAnnual > 0}
+			{savedAnnual}
+			{savedAnnual === 1 ? 'annual statement' : 'annual statements'} saved.
+		{/if}
 	</p>
+{/if}
+
+{#if annualStatements.length > 0}
+	<div class="card mb-5 space-y-4">
+		<div class="flex items-center gap-2 border-b border-border pb-3">
+			<FileText class="size-4 text-muted-foreground" />
+			<p class="text-sm font-semibold">Registry annual statements</p>
+			<span class="ml-auto text-[11px] text-muted-foreground">
+				{savableAnnual.length} of {annualStatements.length} to save
+			</span>
+		</div>
+
+		<p class="text-[13px] text-muted-foreground">
+			No tax figures come from these — the statement says as much itself. They are kept as the
+			registry's own count of units and cash, to check the transactions and distributions against.
+		</p>
+
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>Document</Table.Head>
+					<Table.Head>Holding</Table.Head>
+					<Table.Head>Year</Table.Head>
+					<Table.Head class="text-right">Units at close</Table.Head>
+					<Table.Head class="text-right">Cash paid</Table.Head>
+					<Table.Head class="w-10"></Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each annualStatements as read (read.file.name)}
+					{@const p = read.preview as Extract<Preview, { kind: 'annual-statement' }>}
+					<Table.Row>
+						<Table.Cell class="max-w-64 truncate text-[13px]">{read.file.name}</Table.Cell>
+						<Table.Cell class="text-[13px]">
+							{p.holdingName ?? `${p.parsed.ticker ?? '—'} — not held here`}
+						</Table.Cell>
+						<Table.Cell class="text-[13px]">
+							{p.parsed.financialYear ? financialYearLabel(p.parsed.financialYear) : '—'}
+							{#if p.parsed.holderNumber}
+								<span class="text-[11px] text-muted-foreground">···{p.parsed.holderNumber}</span>
+							{/if}
+						</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">{p.parsed.closingUnits ?? '—'}</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">
+							{formatCurrency(p.parsed.cashDistributionReceived ?? 0)}
+						</Table.Cell>
+						<Table.Cell class="text-right">
+							<Button variant="ghost" size="sm" onclick={() => removeRead(read)}>Remove</Button>
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+
+		{#each annualStatements.flatMap((r) => (r.preview as Extract<Preview, { kind: 'annual-statement' }>).parsed.warnings) as warning, i (i)}
+			<p class="text-[13px] text-brand-2">{warning}</p>
+		{/each}
+
+		<div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+			<Button onclick={saveAnnual} disabled={saving || savableAnnual.length === 0}>
+				{saving
+					? 'Saving…'
+					: `Save ${savableAnnual.length} ${savableAnnual.length === 1 ? 'statement' : 'statements'}`}
+			</Button>
+		</div>
+	</div>
 {/if}
 
 {#if taxStatements.length > 0}

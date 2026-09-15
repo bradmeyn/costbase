@@ -184,3 +184,66 @@ describe('distributionFromRows for a reinvestment', () => {
 		expect(parsed.warnings.join(' ')).toMatch(/no reinvestment rows/);
 	});
 });
+
+/*
+  A single-holding reinvestment advice: the fund is named in an ASX Code field, the
+  one holding sits on a row labelled by class, and the units allotted are written
+  into a sentence rather than a column.
+*/
+const adviceRows = (over: string[][] = []): string[][] => [
+	['MR SOMEONE', 'X 0087526992'],
+	['NEW LAMBTON NSW 2305', 'ASX Code', 'VAS'],
+	['Record Date', '4 April 2022'],
+	['Payment Date', '20 April 2022'],
+	['Distribution Payment for the Period Ending 31 March 2022'],
+	['Distribution Reinvestment Plan Advice'],
+	['Class Description', 'Rate Per Security', 'Securities Held', 'Gross Amount'],
+	['ETF', '$1.99587876', '1,810', '$3,612.54'],
+	['Withholding tax:', '$0.00'],
+	['NET PAYMENT:', '$3,612.54'],
+	['Distribution Reinvestment Plan (DRP) Details'],
+	['Amount applied to 38 ETF securities allotted @ $95.2101 each:', '$3,617.98'],
+	['Cash surplus carried forward to next distribution:', '$53.40'],
+	...over
+];
+
+describe('distributionFromRows for a single-holding advice', () => {
+	it('knows it is a reinvestment', () => {
+		expect(distributionFromRows(adviceRows()).kind).toBe('reinvestment');
+	});
+
+	it('reads the dates, which carry no colon here', () => {
+		const s = distributionFromRows(adviceRows());
+		expect(s.recordDate).toBe('2022-04-04');
+		expect(s.paymentDate).toBe('2022-04-20');
+	});
+
+	it('takes the holding from the ASX code, not the class column', () => {
+		const s = distributionFromRows(adviceRows());
+		expect(s.rows[0].ticker).toBe('VAS');
+	});
+
+	it('reads the distribution and what it bought', () => {
+		const s = distributionFromRows(adviceRows());
+		expect(s.rows[0]).toMatchObject({
+			units: 1810,
+			centsPerUnit: 199_587_876,
+			grossPayment: 361_254,
+			taxWithheld: 0
+		});
+		expect(s.rows[0].reinvestment).toEqual({
+			unitsAllotted: 38,
+			drpPrice: 95_21,
+			cashCarriedForward: 53_40
+		});
+		expect(s.warnings).toEqual([]);
+		expect(s.rows[0].warnings).toEqual([]);
+	});
+
+	it('warns when the rate and units do not produce the gross', () => {
+		const rows = adviceRows().map((r) =>
+			r[0] === 'ETF' ? ['ETF', '$1.99587876', '1,810', '$9,999.99'] : r
+		);
+		expect(distributionFromRows(rows).rows[0].warnings.join(' ')).toMatch(/but the advice says/);
+	});
+});

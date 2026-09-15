@@ -47,20 +47,20 @@ export async function parseDistributionStatement(
 }
 
 /** "$1,389.21" -> 138921 cents. */
-function toCents(raw: string | undefined): number | null {
+function toCents(raw: string | null | undefined): number | null {
 	if (!raw) return null;
 	const m = raw.replace(/[,\s$A]/g, '').match(/^-?\d+(\.\d+)?$/);
 	return m ? Math.round(parseFloat(m[0]) * 100) : null;
 }
 
 /** "0.48829897" dollars per security -> 48829897 millionths of a cent. */
-function toRate(raw: string | undefined): number | null {
+function toRate(raw: string | null | undefined): number | null {
 	if (!raw) return null;
 	const m = raw.replace(/[,\s$]/g, '').match(/^\d+(\.\d+)?$/);
 	return m ? Math.round(parseFloat(m[0]) * 1e8) : null;
 }
 
-function toUnits(raw: string | undefined): number | null {
+function toUnits(raw: string | null | undefined): number | null {
 	if (!raw) return null;
 	const cleaned = raw.replace(/[,\s]/g, '');
 	if (!/^\d+$/.test(cleaned)) return null;
@@ -94,18 +94,102 @@ function toIsoDate(raw: string | null | undefined): string | null {
 
 /** The cell following a label within the same row. */
 function valueAfter(rows: string[][], label: string): string | null {
+	// Matched with or without a trailing colon: the registry punctuates its labels
+	// differently on the combined statement and the single-holding advice.
+	const wanted = label.replace(/:$/, '');
 	for (const row of rows) {
-		const i = row.findIndex((c) => c.toUpperCase() === label);
+		const i = row.findIndex((c) => c.trim().toUpperCase().replace(/:$/, '') === wanted);
 		if (i !== -1 && i + 1 < row.length) return row[i + 1];
 	}
 	return null;
+}
+
+function isSingleHoldingAdvice(rows: string[][]): boolean {
+	const squashed = rows.flat().join('').toUpperCase().replace(/\s+/g, '');
+	return squashed.includes('DISTRIBUTIONREINVESTMENTPLANADVICE');
+}
+
+/**
+ * One holding's reinvestment advice. The units allotted and the price they were
+ * bought at are written into a sentence rather than a column, so they are read from
+ * it: "Amount applied to 38 ETF securities allotted @ $95.2101 each".
+ */
+function adviceFromRows(
+	rows: string[][],
+	recordDate: string | null,
+	paymentDate: string | null,
+	periodEnd: string | null,
+	warnings: string[]
+): ParsedDistributionStatement {
+	const ticker = valueAfter(rows, 'ASX CODE');
+	if (!ticker) warnings.push('Could not read which holding this advice is for.');
+
+	const classRow = rows.find(
+		(row) => row.length >= 4 && /^[A-Z]{2,4}$/.test(row[0]) && /^\$?\d/.test(row[1])
+	);
+
+	const centsPerUnit = classRow ? toRate(classRow[1]) : null;
+	const units = classRow ? toUnits(classRow[2]) : null;
+	const grossPayment = classRow ? toCents(classRow[3]) : null;
+	const taxWithheld = toCents(valueAfter(rows, 'WITHHOLDING TAX:')) ?? 0;
+	const netPayment = toCents(valueAfter(rows, 'NET PAYMENT:'));
+
+	if (!classRow) warnings.push('Could not read the distribution line on this advice.');
+
+	const allotted = rows
+		.flat()
+		.join(' ')
+		.match(/Amount applied to\s+([\d,]+)\s+\w+\s+securities allotted @\s*\$([\d.]+)/i);
+	const cashCarriedForward =
+		toCents(valueAfter(rows, 'CASH SURPLUS CARRIED FORWARD TO NEXT DISTRIBUTION:')) ?? 0;
+
+	const rowWarnings: string[] = [];
+	if (units !== null && centsPerUnit !== null && grossPayment !== null) {
+		const expected = Math.round((units * centsPerUnit) / 1e6);
+		if (Math.abs(expected - grossPayment) > 2) {
+			rowWarnings.push(
+				`${ticker}: ${units} units at the stated rate comes to $${(expected / 100).toFixed(2)}, but the advice says $${(grossPayment / 100).toFixed(2)}.`
+			);
+		}
+	}
+
+	return {
+		kind: 'reinvestment',
+		recordDate,
+		paymentDate,
+		periodEnd,
+		rows:
+			ticker && centsPerUnit !== null && units !== null && grossPayment !== null
+				? [
+						{
+							ticker,
+							fundName: '',
+							reinvestment: {
+								unitsAllotted: allotted ? parseInt(allotted[1].replace(/,/g, ''), 10) : 0,
+								drpPrice: allotted ? Math.round(parseFloat(allotted[2]) * 100) : 0,
+								cashCarriedForward
+							},
+							centsPerUnit,
+							units,
+							grossPayment,
+							taxWithheld,
+							netPayment,
+							warnings: rowWarnings
+						}
+					]
+				: [],
+		totals: { grossPayment, taxWithheld, netPayment },
+		warnings
+	};
 }
 
 /** Whether these rows are a registry distribution or reinvestment statement. */
 export function looksLikeDistributionStatement(rows: string[][]): boolean {
 	const squashed = rows.flat().join('').toUpperCase().replace(/\s+/g, '');
 	return (
-		squashed.includes('DISTRIBUTIONPAYMENT') || squashed.includes('DISTRIBUTIONREINVESTMENTPLAN')
+		squashed.includes('DISTRIBUTIONPAYMENT') ||
+		squashed.includes('DISTRIBUTIONREINVESTMENTPLAN') ||
+		squashed.includes('DISTRIBUTIONREINVESTMENTPLANADVICE')
 	);
 }
 
@@ -126,6 +210,15 @@ export function distributionFromRows(rows: string[][]): ParsedDistributionStatem
 			.find((c) => /period ended/i.test(c))
 			?.match(/period ended\s+(.+)$/i)?.[1]
 			?.trim() ?? null;
+
+	/*
+	  A single-holding reinvestment advice names its fund in an "ASX Code" field and
+	  puts the one holding on a row labelled by class rather than by ticker, so it
+	  cannot be read by either of the multi-holding layouts.
+	*/
+	if (isSingleHoldingAdvice(rows)) {
+		return adviceFromRows(rows, recordDate, paymentDate, periodEnd, warnings);
+	}
 
 	if (isReinvestment) {
 		return reinvestmentFromRows(rows, recordDate, paymentDate, periodEnd, warnings);

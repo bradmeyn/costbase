@@ -219,10 +219,49 @@ export const amitStatementTable = pgTable(
 );
 
 /*
-  An attached source document (contract note, distribution or AMMA statement).
-  Exactly one of the three owner columns is set; separate nullable foreign keys are
-  used rather than a polymorphic entity_type/entity_id pair so that referential
-  integrity and cascade deletes are enforced by the database.
+  The registry's annual (MIS) statement for a holding. It carries no tax figures —
+  the document says so itself — so nothing here reaches a return. It is kept as an
+  independent record of what the registry counted: units at each year end, and the
+  cash it actually paid, against which the app's own transactions and distributions
+  can be checked.
+*/
+export const annualStatementTable = pgTable(
+	'annual_statement',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		holdingId: uuid('holding_id')
+			.notNull()
+			.references(() => holdingTable.id, { onDelete: 'cascade' }),
+		/** The year the financial year ends in. */
+		financialYear: integer('financial_year').notNull(),
+		/** Last four digits of the holder number, as on the tax statement. */
+		holderNumber: text('holder_number').notNull().default(''),
+		/** The period's end, which is 30 June unless the holding closed mid-year. */
+		periodEnd: timestamp('period_end').notNull(),
+		openingUnits: integer('opening_units').notNull().default(0),
+		closingUnits: integer('closing_units').notNull().default(0),
+		/** Cents. */
+		closingUnitPrice: integer('closing_unit_price').notNull().default(0),
+		closingValue: integer('closing_value').notNull().default(0),
+		cashDistributionReceived: integer('cash_distribution_received').notNull().default(0),
+		/** Taken inside the fund, so not a cost base item. Informational. */
+		totalFees: integer('total_fees').notNull().default(0),
+		...timesStamps
+	},
+	(t) => [
+		unique('annual_statement_holding_year_holder').on(t.holdingId, t.financialYear, t.holderNumber)
+	]
+);
+
+/*
+  An attached source document (contract note, distribution, AMMA or annual statement).
+
+  A database check constraint, document_exactly_one_owner, enforces that exactly one
+  owner column is set. It lives in the database rather than here, so adding an owner
+  means widening it there too.
+  Separate nullable foreign keys are used rather than a polymorphic
+  entity_type/entity_id pair so that referential integrity and cascade deletes are
+  enforced by the database.
 */
 export const documentTable = pgTable('document', {
 	id: uuid('id').defaultRandom().primaryKey(),
@@ -233,6 +272,9 @@ export const documentTable = pgTable('document', {
 		onDelete: 'cascade'
 	}),
 	amitStatementId: uuid('amit_statement_id').references(() => amitStatementTable.id, {
+		onDelete: 'cascade'
+	}),
+	annualStatementId: uuid('annual_statement_id').references(() => annualStatementTable.id, {
 		onDelete: 'cascade'
 	}),
 	/** Original filename as uploaded. */
@@ -291,6 +333,14 @@ export const distributionRelations = relations(distributionTable, ({ one, many }
   are null. Drizzle needs all three declared so `with: { documents: true }` works
   from whichever side is being read.
 */
+export const annualStatementRelations = relations(annualStatementTable, ({ one, many }) => ({
+	holding: one(holdingTable, {
+		fields: [annualStatementTable.holdingId],
+		references: [holdingTable.id]
+	}),
+	documents: many(documentTable)
+}));
+
 export const documentRelations = relations(documentTable, ({ one }) => ({
 	transaction: one(transactionTable, {
 		fields: [documentTable.transactionId],
@@ -303,6 +353,10 @@ export const documentRelations = relations(documentTable, ({ one }) => ({
 	amitStatement: one(amitStatementTable, {
 		fields: [documentTable.amitStatementId],
 		references: [amitStatementTable.id]
+	}),
+	annualStatement: one(annualStatementTable, {
+		fields: [documentTable.annualStatementId],
+		references: [annualStatementTable.id]
 	})
 }));
 
@@ -313,3 +367,4 @@ export type Holding = typeof holdingTable.$inferSelect;
 export type AmitStatement = typeof amitStatementTable.$inferSelect;
 export type Document = typeof documentTable.$inferSelect;
 export type CapitalLossCarryforward = typeof capitalLossCarryforwardTable.$inferSelect;
+export type AnnualStatement = typeof annualStatementTable.$inferSelect;
