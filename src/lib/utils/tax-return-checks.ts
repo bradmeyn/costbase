@@ -41,10 +41,19 @@ export interface CompletenessInput {
 	capitalGainsMismatch: number | null;
 }
 
+/*
+  Where a note belongs on the page. A problem stops you filing, so it is stated
+  once at the top; a note is only worth reading next to the thing it is about,
+  which is usually the control that resolves it.
+*/
+export type Topic = 'trusts' | 'capital-gains' | 'carried-forward-losses';
+
 export interface Problem {
 	/** A problem makes a label wrong; a note makes it unverified. */
 	severity: 'problem' | 'note';
 	message: string;
+	/** The section a note is shown under. Problems are not filed this way. */
+	topic?: Topic;
 }
 
 const money = (cents: number) =>
@@ -66,6 +75,7 @@ export function checkTaxReturn(input: CompletenessInput): Problem[] {
 		if (!holding.hasStatement) {
 			problems.push({
 				severity: 'note',
+				topic: 'trusts',
 				message: `${holding.code} has no tax statement for ${year}. If the fund paid a distribution, the return is incomplete.`
 			});
 			continue;
@@ -74,6 +84,7 @@ export function checkTaxReturn(input: CompletenessInput): Problem[] {
 		if (holding.distributionCount === 0) {
 			problems.push({
 				severity: 'note',
+				topic: 'trusts',
 				message: `${holding.code} has a tax statement for ${year} but no distributions recorded against it, so the cash side cannot be checked.`
 			});
 			continue;
@@ -96,6 +107,7 @@ export function checkTaxReturn(input: CompletenessInput): Problem[] {
 		if (holding.annualStatementCount === 0) {
 			problems.push({
 				severity: 'note',
+				topic: 'trusts',
 				message: `${holding.code} has no annual statement for ${year}, so its unit count and the cash it paid cannot be checked against the registry.`
 			});
 			continue;
@@ -137,7 +149,8 @@ export function checkTaxReturn(input: CompletenessInput): Problem[] {
 	if (!input.priorYearLossRecorded) {
 		problems.push({
 			severity: 'note',
-			message: `No capital losses carried forward have been recorded for ${year}. If last year's return carried any, 18A is overstated until they are entered.`
+			topic: 'carried-forward-losses',
+			message: `If last year's return carried capital losses forward, 18A is overstated until they are entered here.`
 		});
 	}
 

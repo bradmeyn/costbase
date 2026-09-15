@@ -17,7 +17,7 @@
 	import { getCarriedForwardLoss, setCarriedForwardLoss } from '#lib/remotes/tax-return.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import { buildTaxReturn, type StatementAmounts } from '#lib/utils/tax-return.js';
-	import { checkTaxReturn } from '#lib/utils/tax-return-checks.js';
+	import { checkTaxReturn, type Problem } from '#lib/utils/tax-return-checks.js';
 	import {
 		distributionFinancialYear,
 		financialYearLabel,
@@ -144,7 +144,9 @@
 	);
 
 	const blocking = $derived(problems.filter((p) => p.severity === 'problem'));
-	const notes = $derived(problems.filter((p) => p.severity === 'note'));
+	/** Notes are read where they apply, so each section asks for its own. */
+	const notesOn = (topic: Problem['topic']) =>
+		problems.filter((p) => p.severity === 'note' && p.topic === topic);
 
 	/* Losses carried in, edited in dollars and saved on demand. */
 	let lossDraft = $state<string | null>(null);
@@ -348,39 +350,37 @@
 	</Table.Root>
 {/snippet}
 
-{#if blocking.length > 0 || notes.length > 0}
-	<div class="mb-5 space-y-2">
-		{#if blocking.length > 0}
-			<div class="rounded-md border border-brand-2/40 bg-brand-2/10 p-4">
-				<p class="flex items-center gap-2 text-sm font-medium text-brand-2">
-					<TriangleAlert class="size-4" />
-					{blocking.length === 1
-						? 'One thing to fix before you file'
-						: `${blocking.length} things to fix before you file`}
-				</p>
-				<ul class="mt-2 space-y-1">
-					{#each blocking as problem, i (i)}
-						<li class="text-[13px] text-muted-foreground">{problem.message}</li>
-					{/each}
-				</ul>
-				<p class="mt-2 text-[11px] text-muted-foreground">
-					The labels below are still shown, but they are incomplete until these are resolved.
-				</p>
-			</div>
-		{/if}
+<!-- Notes for one section, shown under the table they qualify. -->
+{#snippet sectionNotes(topic: Problem['topic'])}
+	{@const found = notesOn(topic)}
+	{#if found.length > 0}
+		<ul class="mt-2 space-y-1">
+			{#each found as note, i (i)}
+				<li class="flex gap-1.5 text-[11px] text-muted-foreground">
+					<Info class="mt-px size-3.5 shrink-0" />
+					{note.message}
+				</li>
+			{/each}
+		</ul>
+	{/if}
+{/snippet}
 
-		{#if notes.length > 0}
-			<div class="rounded-md border border-border bg-card p-4">
-				<p class="flex items-center gap-2 text-sm font-medium">
-					<Info class="size-4 text-muted-foreground" /> Worth checking
-				</p>
-				<ul class="mt-2 space-y-1">
-					{#each notes as problem, i (i)}
-						<li class="text-[13px] text-muted-foreground">{problem.message}</li>
-					{/each}
-				</ul>
-			</div>
-		{/if}
+{#if blocking.length > 0}
+	<div class="mb-5 rounded-md border border-brand-2/40 bg-brand-2/10 p-4">
+		<p class="flex items-center gap-2 text-sm font-medium text-brand-2">
+			<TriangleAlert class="size-4" />
+			{blocking.length === 1
+				? 'One thing to fix before you file'
+				: `${blocking.length} things to fix before you file`}
+		</p>
+		<ul class="mt-2 space-y-1">
+			{#each blocking as problem, i (i)}
+				<li class="text-[13px] text-muted-foreground">{problem.message}</li>
+			{/each}
+		</ul>
+		<p class="mt-2 text-[11px] text-muted-foreground">
+			The labels below are still shown, but they are incomplete until these are resolved.
+		</p>
 	</div>
 {/if}
 
@@ -410,6 +410,7 @@
 		</span>
 	</div>
 	<div class="card">{@render labelTable(section13, perHolding.length > 1)}</div>
+	{@render sectionNotes('trusts')}
 </section>
 
 <section class="mb-6">
@@ -422,6 +423,7 @@
 		</span>
 	</div>
 	<div class="card">{@render labelTable(section18, perHolding.length > 1)}</div>
+	{@render sectionNotes('capital-gains')}
 
 	<div class="card mt-3">
 		<h3 class="mb-3 text-sm font-semibold">How 18A was worked out</h3>
@@ -481,6 +483,7 @@
 				<span class="text-[13px] text-muted-foreground">Recorded</span>
 			{/if}
 		</div>
+		{@render sectionNotes('carried-forward-losses')}
 	</div>
 </section>
 

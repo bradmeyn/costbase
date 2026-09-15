@@ -73,6 +73,8 @@ describe('checkTaxReturn', () => {
 		const r = checkTaxReturn(input({ priorYearLossRecorded: false }));
 		expect(r[0].severity).toBe('note');
 		expect(r[0].message).toMatch(/18A is overstated until they are entered/);
+		// Shown beside the input that records them, not in a banner at the top.
+		expect(r[0].topic).toBe('carried-forward-losses');
 	});
 
 	it('finds a unit count that disagrees with the registry', () => {
