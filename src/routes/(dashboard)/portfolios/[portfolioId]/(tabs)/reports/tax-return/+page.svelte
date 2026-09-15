@@ -13,33 +13,59 @@
 		getPortfolioDistributions
 	} from '#lib/remotes/portfolio.remote.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
+	import { getPortfolioAnnualStatements } from '#lib/remotes/annual.remote.js';
 	import { getCarriedForwardLoss, setCarriedForwardLoss } from '#lib/remotes/tax-return.remote.js';
 	import { formatCurrency, downloadCSV } from '#lib/utils.js';
 	import { buildTaxReturn, type StatementAmounts } from '#lib/utils/tax-return.js';
 	import { checkTaxReturn } from '#lib/utils/tax-return-checks.js';
 	import {
+		distributionFinancialYear,
 		financialYearLabel,
-		financialYearWindow,
 		readFinancialYear
 	} from '#lib/report-period.js';
+	import { financialYearEnd } from '$utils/amit-calculations';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const financialYears = $derived(await getPortfolioFinancialYears(portfolioId));
 	const reportFy = $derived(readFinancialYear(page.url, financialYears));
 	const fyLabel = $derived(financialYearLabel(reportFy));
-	const fyWindow = $derived(financialYearWindow(reportFy));
 
-	const [portfolio, taxSummary, allStatements, distributions, carried] = $derived(
+	const [portfolio, taxSummary, allStatements, allAnnual, allDistributions, carried] = $derived(
 		await Promise.all([
 			getPortfolio(portfolioId),
 			getPortfolioTaxSummary({ id: portfolioId, financialYear: reportFy }),
 			getPortfolioAmitStatements(portfolioId),
-			getPortfolioDistributions({ id: portfolioId, ...fyWindow }),
+			getPortfolioAnnualStatements(portfolioId),
+			getPortfolioDistributions({ id: portfolioId }),
 			getCarriedForwardLoss({ portfolioId, financialYear: reportFy })
 		])
 	);
 
 	const statements = $derived(allStatements.filter((s) => s.financialYear === reportFy));
+	const annualStatements = $derived(allAnnual.filter((s) => s.financialYear === reportFy));
+
+	/*
+	  The two statements a year carries are on different bases and the reconciliation
+	  only works if each is met on its own. The AMMA attributes a year's distributions,
+	  which for the June quarter is paid the following July; the registry's annual
+	  statement is a cash record, so it counts what actually landed between 1 July and
+	  30 June and ignores anything reinvested.
+	*/
+	const attributedInYear = $derived(
+		allDistributions.filter((d) => distributionFinancialYear(d) === reportFy)
+	);
+	const paidInYear = $derived(
+		allDistributions.filter((d) => !d.reinvested && fyOf(d.datePaid) === reportFy)
+	);
+
+	/** Units on hand at a date, from the trades themselves. */
+	const unitsHeldAt = (
+		transactions: { transactionDate: Date | string; type: string; quantity: number }[],
+		at: Date
+	) =>
+		transactions
+			.filter((t) => new Date(t.transactionDate) <= at)
+			.reduce((units, t) => units + (t.type === 'sell' ? -t.quantity : t.quantity), 0);
 
 	/** FY (ending year) of a date: anything from 1 July belongs to the next year. */
 	const fyOf = (d: Date | string) => {
@@ -80,16 +106,36 @@
 				// Summed: a year can carry one statement per holder number, and the cash
 				// they report between them is what the registry actually paid.
 				const forHolding = statements.filter((s) => s.holdingId === h.id);
-				const paid = distributions.filter((d) => d.code === h.investment.code);
+				const attributed = attributedInYear.filter((d) => d.code === h.investment.code);
+				const cash = paidInYear.filter((d) => d.code === h.investment.code);
+				const annual = annualStatements.filter((s) => s.holdingId === h.id);
+				/*
+				  Only the statement that closes the year says what was held at 30 June.
+				  A mid-year broker change leaves an earlier one showing nothing left,
+				  which is true of that HIN and not of the holding.
+				*/
+				const closing = annual.reduce<(typeof annual)[number] | null>(
+					(latest, s) =>
+						!latest || new Date(s.periodEnd) > new Date(latest.periodEnd) ? s : latest,
+					null
+				);
 				return {
 					code: h.investment.code,
 					hasStatement: forHolding.length > 0,
-					distributionsTotal: paid.reduce((s, d) => s + d.grossPayment, 0),
-					distributionCount: paid.length,
+					distributionsTotal: attributed.reduce((s, d) => s + d.grossPayment, 0),
+					distributionCount: attributed.length,
 					statementGrossCash:
 						forHolding.length > 0
 							? forHolding.reduce((total, s) => total + s.grossCashDistribution, 0)
-							: null
+							: null,
+					annualStatementCount: annual.length,
+					statementClosingUnits: closing ? closing.closingUnits : null,
+					unitsAtYearEnd: unitsHeldAt(h.transactions, financialYearEnd(reportFy)),
+					statementCashPaid:
+						annual.length > 0
+							? annual.reduce((total, s) => total + s.cashDistributionReceived, 0)
+							: null,
+					cashPaidTotal: cash.reduce((s, d) => s + d.grossPayment, 0)
 				};
 			}),
 			priorYearLossRecorded: carried.recorded,
@@ -119,7 +165,19 @@
 		}
 	}
 
-	type Label = { code: string; title: string; amount: number; note?: string };
+	type Label = {
+		code: string;
+		title: string;
+		amount: number;
+		note?: string;
+		/*
+		  What this label contributes for one holding, where that can be said at all.
+		  Null means the figure only exists for the portfolio as a whole — the 18A
+		  working nets gains and losses across everything you own, so splitting it by
+		  fund would invent a number myTax never asks for.
+		*/
+		cell?: (code: string) => number | null;
+	};
 
 	/*
 	  Items 13 and 20 are entered against each trust in turn — myTax asks for a record
@@ -165,23 +223,46 @@
 		}
 	]);
 
+	/*
+	  18H is the one capital gains figure that belongs to a single fund: your disposals
+	  of it, plus what it attributed, grossed up the same way the total is.
+	*/
+	const gainsFor = (code: string) => {
+		const own = yearGains
+			.filter((g) => g.holdingCode === code && g.gain > 0)
+			.reduce((s, g) => s + g.gain, 0);
+		const excess = taxSummary.amitExcessGains
+			.filter((e) => e.code === code)
+			.reduce((s, e) => s + e.amount, 0);
+		const entry = perHolding.find((h) => h.code === code);
+		const attributed = (entry?.statements ?? []).reduce(
+			(s, st) =>
+				s + st.otherMethodTap + st.otherMethodNtap + (st.discountedTap + st.discountedNtap) * 2,
+			0
+		);
+		return own + excess + attributed;
+	};
+
 	const section18 = $derived<Label[]>([
 		{
 			code: '18H',
 			title: 'Total current year capital gains',
 			amount: taxReturn.label18H,
-			note: 'Your disposals plus the capital gains each fund attributed, grossed up.'
+			note: 'Your disposals plus the capital gains each fund attributed, grossed up.',
+			cell: gainsFor
 		},
 		{
 			code: '18A',
 			title: 'Net capital gain',
 			amount: taxReturn.label18A,
-			note: 'After losses and the 50% discount. This is the amount added to your income.'
+			note: 'After losses and the 50% discount. This is the amount added to your income.',
+			cell: () => null
 		},
 		{
 			code: '18V',
 			title: 'Net capital losses carried forward to later income years',
-			amount: taxReturn.label18V
+			amount: taxReturn.label18V,
+			cell: () => null
 		}
 	]);
 
@@ -195,10 +276,11 @@
 		const columns = perHolding.map((entry) => entry.code);
 		let csv = `Tax return ${fyLabel}\n\nLabel,Item,${columns.join(',')},Total\n`;
 		for (const label of [...section13, ...section18, ...section20]) {
-			// Item 18 is a single netted figure, so its per-holding cells stay blank.
-			const cells = section18.includes(label)
-				? columns.map(() => '')
-				: perHolding.map((entry) => (amountFor(entry, label.code) / 100).toFixed(2));
+			const cells = perHolding.map((entry) => {
+				const cents = label.cell ? label.cell(entry.code) : amountFor(entry, label.code);
+				// A label with no per-fund meaning leaves the cell empty rather than zero.
+				return cents === null ? '' : (cents / 100).toFixed(2);
+			});
 			csv += `${label.code},"${label.title}",${cells.join(',')},${(label.amount / 100).toFixed(2)}\n`;
 		}
 		csv += `18G,"Did you have a capital gains tax event?",${taxReturn.label18G ? 'Yes' : 'No'}\n`;
@@ -251,8 +333,9 @@
 					</Table.Cell>
 					{#if byHolding}
 						{#each perHolding as entry (entry.code)}
+							{@const cents = row.cell ? row.cell(entry.code) : amountFor(entry, row.code)}
 							<Table.Cell class="text-right text-muted-foreground tabular-nums">
-								{formatCurrency(amountFor(entry, row.code))}
+								{cents === null ? '—' : formatCurrency(cents)}
 							</Table.Cell>
 						{/each}
 					{/if}
@@ -272,8 +355,8 @@
 				<p class="flex items-center gap-2 text-sm font-medium text-brand-2">
 					<TriangleAlert class="size-4" />
 					{blocking.length === 1
-						? 'One figure is missing'
-						: `${blocking.length} figures are missing`}
+						? 'One thing to fix before you file'
+						: `${blocking.length} things to fix before you file`}
 				</p>
 				<ul class="mt-2 space-y-1">
 					{#each blocking as problem, i (i)}
@@ -321,7 +404,7 @@
 
 <section class="mb-6">
 	<div class="mb-2 flex items-baseline gap-2">
-		<h2 class="text-base font-semibold">13 — Partnerships and trusts</h2>
+		<h2 class="text-base font-semibold">Partnerships and trusts</h2>
 		<span class="text-[11px] text-muted-foreground">
 			Entered against each trust in turn — the columns are what myTax asks for per fund
 		</span>
@@ -331,14 +414,14 @@
 
 <section class="mb-6">
 	<div class="mb-2 flex items-baseline gap-2">
-		<h2 class="text-base font-semibold">18 — Capital gains</h2>
+		<h2 class="text-base font-semibold">Capital gains</h2>
 		<span class="text-[11px] text-muted-foreground">
 			18G · Did you have a capital gains tax event? <strong class="text-foreground">
 				{taxReturn.label18G ? 'Yes' : 'No'}
 			</strong>
 		</span>
 	</div>
-	<div class="card">{@render labelTable(section18)}</div>
+	<div class="card">{@render labelTable(section18, perHolding.length > 1)}</div>
 
 	<div class="card mt-3">
 		<h3 class="mb-3 text-sm font-semibold">How 18A was worked out</h3>
@@ -403,7 +486,7 @@
 
 <section class="mb-6">
 	<div class="mb-2 flex items-baseline gap-2">
-		<h2 class="text-base font-semibold">20 — Foreign source income</h2>
+		<h2 class="text-base font-semibold">Foreign source income</h2>
 		<span class="text-[11px] text-muted-foreground">From each fund's annual tax statement</span>
 	</div>
 	<div class="card">{@render labelTable(section20, perHolding.length > 1)}</div>

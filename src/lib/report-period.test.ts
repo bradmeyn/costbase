@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	currentFinancialYear,
+	distributionFinancialYear,
 	describeWindow,
 	financialYearWindow,
 	isoDay,
@@ -134,5 +135,30 @@ describe('readFinancialYear', () => {
 
 	it('ignores a year that is not one', () => {
 		expect(readFinancialYear(url('?fy=soon'), [2026])).toBe(2026);
+	});
+});
+
+describe('distributionFinancialYear', () => {
+	/*
+	  Vanguard's quarterly record dates, as they actually fell. The July one is the
+	  case that matters: paid in the new year, taxed in the year that just ended.
+	*/
+	const cases: [string, number][] = [
+		['2024-07-01', 2024],
+		['2023-07-03', 2023],
+		['2024-10-01', 2025],
+		['2025-01-02', 2025],
+		['2026-04-01', 2026],
+		['2026-07-01', 2026]
+	];
+	for (const [recordDate, financialYear] of cases) {
+		it(`${recordDate} is taxed in ${financialYearLabel(financialYear)}`, () => {
+			expect(distributionFinancialYear({ recordDate, datePaid: '2099-01-01' })).toBe(financialYear);
+		});
+	}
+
+	it('falls back to the payment date when no record date was kept', () => {
+		expect(distributionFinancialYear({ datePaid: '2024-07-15' })).toBe(2024);
+		expect(distributionFinancialYear({ datePaid: '2024-10-15' })).toBe(2025);
 	});
 });

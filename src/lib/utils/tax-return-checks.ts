@@ -15,6 +15,21 @@ export interface HoldingCompleteness {
 	distributionCount: number;
 	/** The statement's own gross cash distribution, where one was entered. */
 	statementGrossCash: number | null;
+	/*
+	  The registry's annual statement is the other half of the year: the AMMA says what
+	  was attributed, the annual statement says what was actually held and paid. They
+	  catch different mistakes — a missing trade moves units without moving a dollar of
+	  attribution, so only the unit count finds it.
+	*/
+	annualStatementCount: number;
+	/** Units the registry had at 30 June, from the statement closing that year. */
+	statementClosingUnits: number | null;
+	/** Units the app works out were held at 30 June. */
+	unitsAtYearEnd: number;
+	/** Cash the registry says it paid across the year, summed over its statements. */
+	statementCashPaid: number | null;
+	/** Distributions recorded as taken in cash, on the same payment-date basis. */
+	cashPaidTotal: number;
 }
 
 export interface CompletenessInput {
@@ -74,6 +89,41 @@ export function checkTaxReturn(input: CompletenessInput): Problem[] {
 				severity: 'problem',
 				message: `${holding.code}: the statement says ${money(holding.statementGrossCash)} was distributed in ${year}, but ${money(holding.distributionsTotal)} is recorded — ${money(Math.abs(gap))} ${gap > 0 ? 'missing' : 'too much'}.`
 			});
+		}
+	}
+
+	for (const holding of input.holdings) {
+		if (holding.annualStatementCount === 0) {
+			problems.push({
+				severity: 'note',
+				message: `${holding.code} has no annual statement for ${year}, so its unit count and the cash it paid cannot be checked against the registry.`
+			});
+			continue;
+		}
+
+		if (
+			holding.statementClosingUnits !== null &&
+			holding.statementClosingUnits !== holding.unitsAtYearEnd
+		) {
+			const gap = holding.unitsAtYearEnd - holding.statementClosingUnits;
+			problems.push({
+				severity: 'problem',
+				message: `${holding.code}: the registry held ${holding.statementClosingUnits.toLocaleString('en-AU')} units at the end of ${year}, but this portfolio works out to ${holding.unitsAtYearEnd.toLocaleString('en-AU')} — ${Math.abs(gap).toLocaleString('en-AU')} ${gap > 0 ? 'too many' : 'missing'}. A trade or reinvestment is wrong.`
+			});
+		}
+
+		/*
+		  Annual statements round each amount to whole dollars, so a year covered by two
+		  of them can differ by that much again before anything is actually wrong.
+		*/
+		if (holding.statementCashPaid !== null) {
+			const gap = holding.statementCashPaid - holding.cashPaidTotal;
+			if (Math.abs(gap) > 100 * holding.annualStatementCount) {
+				problems.push({
+					severity: 'problem',
+					message: `${holding.code}: the registry paid ${money(holding.statementCashPaid)} in cash during ${year}, but ${money(holding.cashPaidTotal)} is recorded — ${money(Math.abs(gap))} ${gap > 0 ? 'missing' : 'too much'}.`
+				});
+			}
 		}
 	}
 

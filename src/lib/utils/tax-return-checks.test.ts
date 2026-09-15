@@ -7,6 +7,11 @@ const holding = (over: Partial<HoldingCompleteness> = {}): HoldingCompleteness =
 	distributionsTotal: 1_389_21,
 	distributionCount: 1,
 	statementGrossCash: 1_389_21,
+	annualStatementCount: 1,
+	statementClosingUnits: 2_845,
+	unitsAtYearEnd: 2_845,
+	statementCashPaid: 1_389_00,
+	cashPaidTotal: 1_389_21,
 	...over
 });
 
@@ -68,5 +73,36 @@ describe('checkTaxReturn', () => {
 		const r = checkTaxReturn(input({ priorYearLossRecorded: false }));
 		expect(r[0].severity).toBe('note');
 		expect(r[0].message).toMatch(/18A is overstated until they are entered/);
+	});
+
+	it('finds a unit count that disagrees with the registry', () => {
+		const r = checkTaxReturn(input({ holdings: [holding({ unitsAtYearEnd: 2_839 })] }));
+		expect(r[0].severity).toBe('problem');
+		expect(r[0].message).toMatch(/the registry held 2,845 units .* works out to 2,839 — 6 missing/);
+	});
+
+	it('lets a whole-dollar rounding difference pass, per statement', () => {
+		expect(checkTaxReturn(input({ holdings: [holding({ cashPaidTotal: 1_388_43 })] }))).toEqual([]);
+		const r = checkTaxReturn(input({ holdings: [holding({ cashPaidTotal: 1_386_00 })] }));
+		expect(r[0].severity).toBe('problem');
+		expect(r[0].message).toMatch(
+			/paid \$1,389.00 in cash during FY2025-26, but \$1,386.00 is recorded/
+		);
+	});
+
+	it('allows twice the rounding when a broker change split the year', () => {
+		expect(
+			checkTaxReturn(
+				input({
+					holdings: [holding({ annualStatementCount: 2, cashPaidTotal: 1_387_50 })]
+				})
+			)
+		).toEqual([]);
+	});
+
+	it('notes a year with no annual statement at all', () => {
+		const r = checkTaxReturn(input({ holdings: [holding({ annualStatementCount: 0 })] }));
+		expect(r[0].severity).toBe('note');
+		expect(r[0].message).toMatch(/has no annual statement for FY2025-26/);
 	});
 });

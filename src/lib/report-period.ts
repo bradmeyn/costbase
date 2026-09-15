@@ -97,3 +97,35 @@ export function windowTag(window: ReportWindow, years: number[]): string {
 	if (!window.from && !window.to) return 'all-time';
 	return `${window.from ?? 'start'}-to-${window.to ?? 'today'}`;
 }
+
+/*
+  A quarterly ETF distribution is paid in the financial year *after* the one it
+  belongs to when the quarter is the June one: the record date falls on the first
+  business day of July and the money lands mid-month, but the entitlement arose at
+  30 June and the fund attributes it to the year just ended. Filing those payments
+  by their payment date puts a whole quarter in the wrong tax year — the AMMA for
+  each year here sums the four distributions ending with the July payment, to the
+  cent, which is the check this rule was written against.
+
+  So a distribution is placed by the day its entitlement arose: a fortnight before
+  the record date, which lands inside the quarter it was declared for however many
+  days the registry took to strike the record. Without a record date the payment
+  date is stepped back six weeks, far enough to clear the same July boundary.
+*/
+export function distributionEntitlementDate(distribution: {
+	recordDate?: Date | string | null;
+	datePaid: Date | string;
+}): Date {
+	const anchor = new Date(distribution.recordDate ?? distribution.datePaid);
+	const date = new Date(anchor);
+	date.setDate(date.getDate() - (distribution.recordDate ? 14 : 45));
+	return date;
+}
+
+/** The financial year a distribution is taxed in, named by the year it ends in. */
+export function distributionFinancialYear(distribution: {
+	recordDate?: Date | string | null;
+	datePaid: Date | string;
+}): number {
+	return currentFinancialYear(distributionEntitlementDate(distribution));
+}

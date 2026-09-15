@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
+	import { Paperclip } from '@lucide/svelte';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import {
 		getPortfolioTransactions,
@@ -58,9 +59,9 @@
 	};
 
 	function generateCsv() {
-		let csv = 'Date,Code,Type,Platform,Quantity,Price per unit,Brokerage,Total\n';
+		let csv = 'Date,Code,Type,Platform,Quantity,Price per unit,Brokerage,Total,Document\n';
 		for (const t of transactions) {
-			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.platform ?? ''},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)}\n`;
+			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.platform ?? ''},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)},${t.documents.length > 0 ? 'Yes' : 'No'}\n`;
 		}
 		downloadCSV(
 			csv,
@@ -111,6 +112,7 @@
 					<Table.Head class="text-right">Price/unit</Table.Head>
 					<Table.Head class="text-right">Brokerage</Table.Head>
 					<Table.Head class="text-right">Total</Table.Head>
+					<Table.Head class="text-center">Document</Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -131,6 +133,21 @@
 						>
 						<Table.Cell class="text-right tabular-nums">{formatCurrency(t.brokerage)}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{formatCurrency(t.total)}</Table.Cell>
+						<Table.Cell class="text-center">
+							{#if t.documents.length > 0}
+								<a
+									href="/documents/{t.documents[0].id}"
+									target="_blank"
+									rel="noopener"
+									title={t.documents[0].filename}
+									class="inline-flex text-primary hover:text-primary/80"
+								>
+									<Paperclip class="size-4" />
+								</a>
+							{:else}
+								<Paperclip class="inline size-4 text-muted-foreground/25" />
+							{/if}
+						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>

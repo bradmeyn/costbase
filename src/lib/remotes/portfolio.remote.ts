@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { getStockPrices } from '#lib/server/prices.js';
 import { apportionCostBaseAdjustment, financialYearEnd } from '$utils/amit-calculations';
+import { distributionEntitlementDate } from '#lib/report-period.js';
 import { calculateCGT, type CGTCalculation } from '$utils/cgt-calculations';
 import { calculateHoldingMetrics } from '$utils/holding-calculations';
 
@@ -813,7 +814,7 @@ export const getPortfolioTransactions = query(windowArgs, async ({ id, ...period
 
 	const portfolio = await db.query.portfolioTable.findFirst({
 		where: eq(portfolioTable.id, id),
-		with: { holdings: { with: { investment: true, transactions: true } } }
+		with: { holdings: { with: { investment: true, transactions: { with: { documents: true } } } } }
 	});
 	if (!portfolio) error(404, 'Portfolio not found');
 	if (portfolio.userId !== user.id) error(403, 'Forbidden');
@@ -842,22 +843,28 @@ export const getPortfolioDistributions = query(windowArgs, async ({ id, ...perio
 
 	const portfolio = await db.query.portfolioTable.findFirst({
 		where: eq(portfolioTable.id, id),
-		with: { holdings: { with: { investment: true, distributions: true } } }
+		with: { holdings: { with: { investment: true, distributions: { with: { documents: true } } } } }
 	});
 	if (!portfolio) error(404, 'Portfolio not found');
 	if (portfolio.userId !== user.id) error(403, 'Forbidden');
 
 	const { start, end } = windowBounds(period);
 
-	return portfolio.holdings
-		.flatMap((h) =>
-			h.distributions.map((d) => ({
-				...d,
-				code: h.investment.code,
-				name: h.investment.name,
-				net: d.grossPayment - d.taxWithheld
-			}))
-		)
-		.filter((d) => within(d.datePaid, start, end))
+	const rows = portfolio.holdings.flatMap((h) =>
+		h.distributions.map((d) => ({
+			...d,
+			code: h.investment.code,
+			name: h.investment.name,
+			net: d.grossPayment - d.taxWithheld
+		}))
+	);
+
+	/*
+	  Filtered on the day the entitlement arose rather than the day it was paid, so
+	  asking for a financial year returns the four distributions that year's AMMA
+	  attributes — including the June quarter, which is paid the following July.
+	*/
+	return rows
+		.filter((d) => within(distributionEntitlementDate(d), start, end))
 		.sort((a, b) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime());
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
+	import { CircleCheck, Paperclip } from '@lucide/svelte';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import {
 		getPortfolioDistributions,
@@ -90,7 +91,8 @@
 					<Table.Head class="text-right">Gross</Table.Head>
 					<Table.Head class="text-right">Withheld</Table.Head>
 					<Table.Head class="text-right">Net</Table.Head>
-					<Table.Head>Reinvested</Table.Head>
+					<Table.Head class="text-center">Reinvested</Table.Head>
+					<Table.Head class="text-center">Document</Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -104,7 +106,34 @@
 						>
 						<Table.Cell class="text-right tabular-nums">{formatCurrency(d.taxWithheld)}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{formatCurrency(d.net)}</Table.Cell>
-						<Table.Cell class="text-muted-foreground">{d.reinvested ? 'Yes' : 'No'}</Table.Cell>
+						<!--
+							The same tick as the holding's own tab: a column of Yes/No reads as text to
+							be parsed, where a row of ticks can be scanned. The CSV keeps Yes/No, which
+							is what a spreadsheet can filter on.
+						-->
+						<Table.Cell class="text-center">
+							<CircleCheck
+								class="inline size-4 {d.reinvested
+									? 'text-gain'
+									: 'text-muted-foreground opacity-25'}"
+								aria-label={d.reinvested ? 'Reinvested' : 'Paid in cash'}
+							/>
+						</Table.Cell>
+						<Table.Cell class="text-center">
+							{#if d.documents.length > 0}
+								<a
+									href="/documents/{d.documents[0].id}"
+									target="_blank"
+									rel="noopener"
+									title={d.documents[0].filename}
+									class="inline-flex text-primary hover:text-primary/80"
+								>
+									<Paperclip class="size-4" />
+								</a>
+							{:else}
+								<Paperclip class="inline size-4 text-muted-foreground/25" />
+							{/if}
+						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>
