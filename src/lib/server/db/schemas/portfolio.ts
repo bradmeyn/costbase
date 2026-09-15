@@ -301,7 +301,8 @@ export const holdingRelations = relations(holdingTable, ({ many, one }) => ({
 	}),
 	transactions: many(transactionTable),
 	distributions: many(distributionTable),
-	amitStatements: many(amitStatementTable)
+	amitStatements: many(amitStatementTable),
+	annualStatements: many(annualStatementTable)
 }));
 
 export const amitStatementRelations = relations(amitStatementTable, ({ one, many }) => ({
@@ -329,8 +330,8 @@ export const distributionRelations = relations(distributionTable, ({ one, many }
 }));
 
 /*
-  A document hangs off exactly one of the three record types; the other two columns
-  are null. Drizzle needs all three declared so `with: { documents: true }` works
+  A document hangs off exactly one of the four record types; the other three columns
+  are null. Drizzle needs all four declared so `with: { documents: true }` works
   from whichever side is being read.
 */
 export const annualStatementRelations = relations(annualStatementTable, ({ one, many }) => ({

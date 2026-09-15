@@ -11,7 +11,8 @@
 		Receipt,
 		Coins,
 		Calculator,
-		ClipboardList
+		ClipboardList,
+		FolderOpen
 	} from '@lucide/svelte';
 
 	let { children } = $props();
@@ -28,6 +29,12 @@
 					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)', { portfolioId }),
 					label: 'Overview',
 					icon: LayoutGrid,
+					ready: true
+				},
+				{
+					href: resolve('/(dashboard)/portfolios/[portfolioId]/(tabs)/documents', { portfolioId }),
+					label: 'Documents',
+					icon: FolderOpen,
 					ready: true
 				}
 			]

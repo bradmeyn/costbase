@@ -58,12 +58,48 @@ export function distributionDocumentName(distribution: {
 		.concat('.pdf');
 }
 
-/** "fy_25_26_tax_statement_vgs.pdf" for the year ending in 2026. */
+/** "fy_25_26" for the year ending in 2026. */
+function financialYearParts(financialYear: number): string {
+	const start = String((financialYear - 1) % 100).padStart(2, '0');
+	const end = String(financialYear % 100).padStart(2, '0');
+	return `fy_${start}_${end}`;
+}
+
+/*
+  "fy_25_26_tax_statement_vgs.pdf" for the year ending in 2026. A year carries two
+  of these when the holding changed broker mid-year — each registry issues its own
+  against its own HIN — so the holder number is appended to keep them apart.
+*/
 export function taxStatementDocumentName(statement: {
 	financialYear: number;
 	code: string;
+	holderNumber?: string | null;
 }): string {
-	const start = String((statement.financialYear - 1) % 100).padStart(2, '0');
-	const end = String(statement.financialYear % 100).padStart(2, '0');
-	return `fy_${start}_${end}_tax_statement_${slug(statement.code)}.pdf`;
+	const parts = [
+		financialYearParts(statement.financialYear),
+		'tax_statement',
+		slug(statement.code)
+	];
+	if (statement.holderNumber) parts.push(slug(statement.holderNumber));
+	return `${parts.join('_')}.pdf`;
+}
+
+/*
+  The registry's own statement for the year, which is a different document from the
+  AMMA and often issued by a different party — so it is named apart from it, or a
+  year's two files would collide in a folder.
+*/
+export function annualStatementDocumentName(statement: {
+	financialYear: number;
+	code: string;
+	/** Last digits of the HIN, set when a year carries more than one statement. */
+	holderNumber?: string | null;
+}): string {
+	const parts = [
+		financialYearParts(statement.financialYear),
+		'annual_statement',
+		slug(statement.code)
+	];
+	if (statement.holderNumber) parts.push(slug(statement.holderNumber));
+	return `${parts.join('_')}.pdf`;
 }

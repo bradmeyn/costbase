@@ -6,6 +6,7 @@ import { documentTable } from '$db/schemas/portfolio';
 import { documentPath } from '#lib/server/documents.js';
 import { auth } from '#lib/server/auth.js';
 import {
+	annualStatementDocumentName,
 	distributionDocumentName,
 	taxStatementDocumentName,
 	transactionDocumentName
@@ -25,7 +26,16 @@ type Loaded = {
 		reinvested: boolean;
 		holding: { investment: { code: string } };
 	} | null;
-	amitStatement?: { financialYear: number; holding: { investment: { code: string } } } | null;
+	amitStatement?: {
+		financialYear: number;
+		holderNumber: string;
+		holding: { investment: { code: string } };
+	} | null;
+	annualStatement?: {
+		financialYear: number;
+		holderNumber: string;
+		holding: { investment: { code: string } };
+	} | null;
 };
 
 function downloadName(document: Loaded): string | null {
@@ -44,7 +54,15 @@ function downloadName(document: Loaded): string | null {
 	if (document.amitStatement) {
 		return taxStatementDocumentName({
 			financialYear: document.amitStatement.financialYear,
+			holderNumber: document.amitStatement.holderNumber,
 			code: document.amitStatement.holding.investment.code
+		});
+	}
+	if (document.annualStatement) {
+		return annualStatementDocumentName({
+			financialYear: document.annualStatement.financialYear,
+			holderNumber: document.annualStatement.holderNumber,
+			code: document.annualStatement.holding.investment.code
 		});
 	}
 	return null;
@@ -64,7 +82,8 @@ export const GET: RequestHandler = async ({ params, request }) => {
 		with: {
 			transaction: { with: { holding: { with: { portfolio: true, investment: true } } } },
 			distribution: { with: { holding: { with: { portfolio: true, investment: true } } } },
-			amitStatement: { with: { holding: { with: { portfolio: true, investment: true } } } }
+			amitStatement: { with: { holding: { with: { portfolio: true, investment: true } } } },
+			annualStatement: { with: { holding: { with: { portfolio: true, investment: true } } } }
 		}
 	});
 	if (!document) error(404, 'Document not found');
@@ -72,7 +91,8 @@ export const GET: RequestHandler = async ({ params, request }) => {
 	const owner =
 		document.transaction?.holding.portfolio ??
 		document.distribution?.holding.portfolio ??
-		document.amitStatement?.holding.portfolio;
+		document.amitStatement?.holding.portfolio ??
+		document.annualStatement?.holding.portfolio;
 	if (owner?.userId !== session.user.id) error(403, 'Forbidden');
 
 	let file: Buffer;

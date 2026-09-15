@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+	annualStatementDocumentName,
 	distributionDocumentName,
 	taxStatementDocumentName,
 	transactionDocumentName
@@ -79,6 +80,21 @@ describe('taxStatementDocumentName', () => {
 	it('pads a year ending in a single digit', () => {
 		expect(taxStatementDocumentName({ financialYear: 2030, code: 'VAS' })).toBe(
 			'fy_29_30_tax_statement_vas.pdf'
+		);
+	});
+
+	it('keeps two statements for one year apart by holder number', () => {
+		expect(
+			taxStatementDocumentName({ financialYear: 2025, code: 'VAS', holderNumber: '0953' })
+		).toBe('fy_24_25_tax_statement_vas_0953.pdf');
+		expect(
+			annualStatementDocumentName({ financialYear: 2025, code: 'VAS', holderNumber: '6992' })
+		).toBe('fy_24_25_annual_statement_vas_6992.pdf');
+	});
+
+	it('leaves the holder number off a year with only one', () => {
+		expect(annualStatementDocumentName({ financialYear: 2026, code: 'VGS' })).toBe(
+			'fy_25_26_annual_statement_vgs.pdf'
 		);
 	});
 });
