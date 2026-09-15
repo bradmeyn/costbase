@@ -15,9 +15,11 @@
 		importContractNote,
 		importContractNotes,
 		attachNotesToTransactions,
-		importDistributionStatement
+		importDistributionStatement,
+		importAmitStatement
 	} from '#lib/remotes/import.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
+	import { financialYearLabel } from '#lib/report-period.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const portfolio = $derived(await getPortfolio(portfolioId));
@@ -33,6 +35,7 @@
 	const notes = $derived(reads.filter((r) => r.preview.kind === 'contract-note'));
 	const statements = $derived(reads.filter((r) => r.preview.kind === 'distribution-statement'));
 	const unreadable = $derived(reads.filter((r) => r.preview.kind === 'unknown'));
+	const taxStatements = $derived(reads.filter((r) => r.preview.kind === 'tax-statement'));
 
 	/*
 	  One note gets the full form, because a one-off is usually one you want to look
@@ -214,6 +217,43 @@
 
 	let filedCount = $state(0);
 	let savedDistributions = $state(0);
+	let savedStatements = $state(0);
+
+	/*
+	  A tax statement is one holding's figures for one year, straight off the document.
+	  There is nothing to choose between, so the whole batch saves at once.
+	*/
+	const savableStatements = $derived(
+		taxStatements.filter(
+			(r) =>
+				r.preview.kind === 'tax-statement' && r.preview.holdingId && r.preview.parsed.financialYear
+		)
+	);
+
+	async function saveStatements() {
+		if (savableStatements.length === 0) return;
+		saveError = '';
+		saving = true;
+		try {
+			for (const read of savableStatements) {
+				const p = read.preview as Extract<Preview, { kind: 'tax-statement' }>;
+				await importAmitStatement({
+					portfolioId,
+					holdingId: p.holdingId!,
+					financialYear: p.parsed.financialYear!,
+					amounts: p.parsed.amounts,
+					file: read.file
+				});
+				savedStatements += 1;
+			}
+			const done = new Set(savableStatements);
+			reads = reads.filter((r) => !done.has(r));
+		} catch (e) {
+			saveError = e instanceof Error ? e.message : 'Those statements could not be saved.';
+		} finally {
+			saving = false;
+		}
+	}
 
 	async function saveBatch() {
 		if (chosenNotes.length === 0) return;
@@ -390,7 +430,7 @@
 	</div>
 {/if}
 
-{#if filedCount > 0 || savedDistributions > 0}
+{#if filedCount > 0 || savedDistributions > 0 || savedStatements > 0}
 	<p class="mb-5 rounded-md border border-primary/30 bg-primary/10 px-3.5 py-3 text-[13px]">
 		{#if filedCount > 0}
 			{filedCount}
@@ -400,7 +440,100 @@
 			{savedDistributions}
 			{savedDistributions === 1 ? 'distribution' : 'distributions'} saved.
 		{/if}
+		{#if savedStatements > 0}
+			{savedStatements}
+			{savedStatements === 1 ? 'tax statement' : 'tax statements'} saved.
+		{/if}
 	</p>
+{/if}
+
+{#if taxStatements.length > 0}
+	{@const unplaceable = taxStatements.filter((r) => !savableStatements.includes(r))}
+	<div class="card mb-5 space-y-4">
+		<div class="flex items-center gap-2 border-b border-border pb-3">
+			<FileText class="size-4 text-muted-foreground" />
+			<p class="text-sm font-semibold">Annual tax statements</p>
+			<span class="ml-auto text-[11px] text-muted-foreground">
+				{savableStatements.length} of {taxStatements.length} to save
+			</span>
+		</div>
+
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>Document</Table.Head>
+					<Table.Head>Holding</Table.Head>
+					<Table.Head>Year</Table.Head>
+					<Table.Head class="text-right">13U</Table.Head>
+					<Table.Head class="text-right">13C</Table.Head>
+					<Table.Head class="text-right">18H</Table.Head>
+					<Table.Head class="text-right">Cost base adj.</Table.Head>
+					<Table.Head class="w-10"></Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each taxStatements as read (read.file.name)}
+					{@const p = read.preview as Extract<Preview, { kind: 'tax-statement' }>}
+					{@const a = p.parsed.amounts}
+					{@const adjustment = (a.amitCostBaseShortfall ?? 0) - (a.amitCostBaseExcess ?? 0)}
+					<Table.Row>
+						<Table.Cell class="max-w-64 truncate text-[13px]">{read.file.name}</Table.Cell>
+						<Table.Cell class="text-[13px]">
+							{p.holdingName ?? `${p.parsed.ticker ?? '—'} — not held here`}
+						</Table.Cell>
+						<Table.Cell class="text-[13px]">
+							{p.parsed.financialYear ? financialYearLabel(p.parsed.financialYear) : '—'}
+						</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">
+							{formatCurrency(Math.round((a.label13U ?? 0) * 100))}
+						</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">
+							{formatCurrency(Math.round((a.label13C ?? 0) * 100))}
+						</Table.Cell>
+						<Table.Cell class="text-right tabular-nums">
+							{formatCurrency(Math.round((a.label18H ?? 0) * 100))}
+						</Table.Cell>
+						<Table.Cell
+							class="text-right tabular-nums {adjustment < 0
+								? 'text-loss'
+								: adjustment > 0
+									? 'text-gain'
+									: ''}"
+						>
+							{adjustment > 0 ? '+' : ''}{formatCurrency(Math.round(adjustment * 100))}
+						</Table.Cell>
+						<Table.Cell class="text-right">
+							<Button variant="ghost" size="sm" onclick={() => removeRead(read)}>Remove</Button>
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+
+		{#each taxStatements.flatMap((r) => (r.preview as Extract<Preview, { kind: 'tax-statement' }>).parsed.warnings) as warning, i (i)}
+			<p class="text-[13px] text-brand-2">{warning}</p>
+		{/each}
+
+		{#if unplaceable.length > 0}
+			<p class="text-[13px] text-brand-2">
+				{unplaceable.length}
+				{unplaceable.length === 1 ? 'statement' : 'statements'} cannot be placed — the holding or the
+				year could not be read.
+			</p>
+		{/if}
+
+		{#if saveError}
+			<p class="text-[13px] text-destructive">{saveError}</p>
+		{/if}
+
+		<div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+			<Button onclick={saveStatements} disabled={saving || savableStatements.length === 0}>
+				{saving
+					? 'Saving…'
+					: `Save ${savableStatements.length} ${savableStatements.length === 1 ? 'statement' : 'statements'}`}
+			</Button>
+		</div>
+	</div>
 {/if}
 
 {#if toFile.length > 0}

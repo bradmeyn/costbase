@@ -6,6 +6,8 @@
 	import * as Field from '$ui/field';
 	import { updateTransaction } from '#lib/remotes/transaction.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
+	import DocumentAttachment from '#lib/components/document-attachment.svelte';
+	import type { Document } from '$db/schemas/portfolio';
 
 	let {
 		transactionId,
@@ -19,11 +21,16 @@
 			pricePerUnit: number;
 			brokerage?: number;
 			platform?: string | null;
+			documents?: Document[];
 			transactionDate: Date | string;
 		};
 		open?: boolean;
 	} = $props();
 
+	/*
+	  Amounts are stored in cents but the form is filled in dollars — the same units a
+	  person reads off the note — so they are converted on the way in as well as out.
+	*/
 	const formatDate = (date: Date | string) => new Date(date).toISOString().split('T')[0];
 
 	const fields = updateTransaction.fields;
@@ -65,8 +72,7 @@
 					<Field.Label for="quantity">Quantity</Field.Label>
 					<Input
 						id="quantity"
-						{...fields.quantity.as('number')}
-						value={transaction.quantity}
+						{...fields.quantity.as('number', transaction.quantity)}
 						min="1"
 						step="1"
 					/>
@@ -77,8 +83,7 @@
 					<Field.Label for="pricePerUnit">Price Per Unit</Field.Label>
 					<Input
 						id="pricePerUnit"
-						{...fields.pricePerUnit.as('number')}
-						value={transaction.pricePerUnit}
+						{...fields.pricePerUnit.as('number', transaction.pricePerUnit / 100)}
 						min="0"
 						step="0.01"
 					/>
@@ -90,12 +95,25 @@
 				<Field.Label for="brokerage">Brokerage</Field.Label>
 				<Input
 					id="brokerage"
-					{...fields.brokerage.as('number')}
-					value={transaction.brokerage || 0}
+					{...fields.brokerage.as('number', (transaction.brokerage ?? 0) / 100)}
 					min="0"
 					step="0.01"
 				/>
 				<Field.Error />
+			</Field.Field>
+
+			<Field.Field>
+				<Field.Label>Document</Field.Label>
+				<div class="flex items-center gap-1">
+					<DocumentAttachment
+						owner="transaction"
+						ownerId={transactionId}
+						documents={transaction.documents}
+					/>
+					<span class="text-[13px] text-muted-foreground">
+						{transaction.documents?.[0]?.filename ?? 'No contract note attached'}
+					</span>
+				</div>
 			</Field.Field>
 
 			<Field.Field>

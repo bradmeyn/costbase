@@ -13,11 +13,17 @@
 	let {
 		owner,
 		ownerId,
-		documents = []
+		documents = [],
+		/**
+		 * Read-only shows the link and nothing else. A table row is for reading; changing
+		 * what is attached belongs with the record's other edits, not beside every row.
+		 */
+		readOnly = false
 	}: {
 		owner: 'transaction' | 'distribution' | 'amitStatement';
 		ownerId: string;
 		documents?: Document[];
+		readOnly?: boolean;
 	} = $props();
 
 	const attached = $derived(documents[0]);
@@ -70,8 +76,12 @@
 		>
 			<Paperclip class="size-4 text-primary" />
 		</Button>
-		<Button variant="ghost" size="sm" onclick={detach} class="text-muted-foreground">Remove</Button>
-	{:else}
+		{#if !readOnly}
+			<Button variant="ghost" size="sm" onclick={detach} class="text-muted-foreground">
+				Remove
+			</Button>
+		{/if}
+	{:else if !readOnly}
 		<!--
 			A label rather than a button that clicks a hidden input: one control, so the
 			file input itself takes focus and screen readers announce it once.
@@ -91,6 +101,10 @@
 				aria-label="Attach a PDF"
 			/>
 		</label>
+	{:else}
+		<span class="inline-flex size-9 items-center justify-center text-muted-foreground/30">
+			<Paperclip class="size-4" />
+		</span>
 	{/if}
 </span>
 

@@ -2,11 +2,13 @@ import { command } from '$app/server';
 import { z } from 'zod';
 import { db } from '$db';
 import {
+	amitStatementTable,
 	distributionTable,
 	documentTable,
 	portfolioTable,
 	transactionTable
 } from '$db/schemas/portfolio';
+import { AMIT_AMOUNT_FIELDS } from '#lib/schemas/amit.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
@@ -16,10 +18,11 @@ import {
 	looksLikeDistributionStatement
 } from '#lib/server/parse-distribution-statement.js';
 import { extractRows } from '#lib/server/pdf-rows.js';
+import { amitFromRows, looksLikeAmitStatement } from '#lib/server/parse-amit-statement.js';
 import { getDocumentProxy } from 'unpdf';
 import { storeDocument } from '#lib/server/documents.js';
 import { getHolding } from '#lib/remotes/holding.remote.js';
-import { getAmitStatements } from '#lib/remotes/amit.remote.js';
+import { getAmitStatements, getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
 
 /** The portfolio's holdings, keyed by ticker, for matching a parsed note. */
 async function ownedPortfolio(portfolioId: string) {
@@ -71,6 +74,9 @@ export const previewImport = command(
 		);
 		if (looksLikeContractNote(rows)) {
 			return { kind: 'contract-note' as const, ...(await contractNotePreview(portfolio, rows)) };
+		}
+		if (looksLikeAmitStatement(rows)) {
+			return { kind: 'tax-statement' as const, ...(await amitPreview(portfolio, rows)) };
 		}
 		if (looksLikeDistributionStatement(rows)) {
 			return {
@@ -198,6 +204,89 @@ export const importContractNote = command(
 		await getHolding(holding.id).refresh();
 
 		return { success: true, transactionId: created.id };
+	}
+);
+
+/** Match an annual tax statement to its holding and say what is already recorded. */
+async function amitPreview(portfolio: OwnedPortfolio, rows: string[][]) {
+	const parsed = amitFromRows(rows);
+	const holding = parsed.ticker ? findHolding(portfolio, parsed.ticker) : undefined;
+
+	const warnings = [...parsed.warnings];
+	if (parsed.ticker && !holding) {
+		warnings.push(
+			`No holding for ${parsed.ticker} in this portfolio. Add the holding first, then import the statement.`
+		);
+	}
+
+	let existing = false;
+	if (holding && parsed.financialYear) {
+		const found = await db.query.amitStatementTable.findFirst({
+			where: (a, { and: every, eq: e }) =>
+				every(e(a.holdingId, holding.id), e(a.financialYear, parsed.financialYear!))
+		});
+		if (found) {
+			existing = true;
+			warnings.push(
+				`A statement for this holding and year is already entered. Importing will replace its figures.`
+			);
+		}
+	}
+
+	return {
+		parsed: { ...parsed, warnings },
+		existing,
+		holdingId: holding?.id ?? null,
+		holdingName: holding ? `${holding.investment.code} ${holding.investment.name}` : null
+	};
+}
+
+/** Save an annual tax statement from its own figures and attach the PDF. */
+export const importAmitStatement = command(
+	z.object({
+		portfolioId: z.string().min(1),
+		holdingId: z.string().min(1),
+		financialYear: z.number().int().min(2000).max(2100),
+		/** Field name to dollar amount, as printed on the statement. */
+		amounts: z.record(z.string(), z.number()),
+		file: z.instanceof(File)
+	}),
+	async ({ portfolioId, holdingId, financialYear, amounts, file }) => {
+		const portfolio = await ownedPortfolio(portfolioId);
+		const holding = portfolio.holdings.find((h) => h.id === holdingId);
+		if (!holding) error(404, 'Holding not found in this portfolio');
+
+		// Only the schema's own fields, in cents. Anything else on the object is ignored.
+		const cents: Record<string, number> = {};
+		for (const field of AMIT_AMOUNT_FIELDS) {
+			cents[field] = Math.round((amounts[field] ?? 0) * 100);
+		}
+
+		const values = { holdingId, financialYear, ...cents };
+		const [saved] = await db
+			.insert(amitStatementTable)
+			.values(values)
+			.onConflictDoUpdate({
+				target: [amitStatementTable.holdingId, amitStatementTable.financialYear],
+				set: { ...values, updatedAt: new Date() }
+			})
+			.returning();
+
+		const alreadyFiled = await db.query.documentTable.findMany({
+			where: eq(documentTable.amitStatementId, saved.id)
+		});
+		if (alreadyFiled.length === 0) {
+			const stored = await storeDocument(file);
+			await db.insert(documentTable).values({ amitStatementId: saved.id, ...stored });
+		}
+
+		await Promise.all([
+			getHolding(holdingId).refresh(),
+			getAmitStatements(holdingId).refresh(),
+			getPortfolioAmitStatements(portfolioId).refresh()
+		]);
+
+		return { success: true };
 	}
 );
 

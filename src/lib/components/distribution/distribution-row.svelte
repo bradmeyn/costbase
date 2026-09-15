@@ -1,10 +1,10 @@
 <script lang="ts">
 	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
-	import { CircleCheck, Pencil, Trash2 } from '@lucide/svelte';
+	import { CircleCheck } from '@lucide/svelte';
 	import { formatCurrency } from '#lib/utils.js';
 	import type { Distribution, Document } from '$db/schemas/portfolio';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import { deleteDistribution } from '#lib/remotes/distribution.remote.js';
 	import { getHolding } from '#lib/remotes/holding.remote.js';
@@ -58,13 +58,13 @@
 				owner="distribution"
 				ownerId={distribution.id}
 				documents={distribution.documents}
+				readOnly
 			/>
-			<Button variant="ghost" size="icon" onclick={() => (dialog = 'edit')}>
-				<Pencil class="size-4" />
-			</Button>
-			<Button variant="ghost" size="icon" onclick={() => (dialog = 'delete')}>
-				<Trash2 class="size-4" />
-			</Button>
+			<RowActionsMenu
+				onEdit={() => (dialog = 'edit')}
+				onDelete={() => (dialog = 'delete')}
+				label="distribution paid {formatDate(distribution.datePaid)}"
+			/>
 		</div>
 	</Table.Cell>
 </Table.Row>

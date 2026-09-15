@@ -1,12 +1,11 @@
 <script lang="ts">
-	import Button from '$ui/button/button.svelte';
 	import * as Table from '$ui/table';
-	import { Pencil, Trash2 } from '@lucide/svelte';
 	import EditTransactionDialog from '#lib/components/transaction/edit-transaction-dialog.svelte';
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import { deleteTransaction } from '#lib/remotes/transaction.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import type { Transaction, Document } from '$db/schemas/portfolio';
 
 	let {
@@ -57,23 +56,13 @@
 				owner="transaction"
 				ownerId={transaction.id}
 				documents={transaction.documents}
+				readOnly
 			/>
-			<Button
-				variant="ghost"
-				size="icon"
-				onclick={() => (editOpen = true)}
-				aria-label="Edit transaction"
-			>
-				<Pencil class="size-4" />
-			</Button>
-			<Button
-				variant="ghost"
-				size="icon"
-				onclick={() => (deleteOpen = true)}
-				aria-label="Delete transaction"
-			>
-				<Trash2 class="size-4" />
-			</Button>
+			<RowActionsMenu
+				onEdit={() => (editOpen = true)}
+				onDelete={() => (deleteOpen = true)}
+				label="{badge.label} of {transaction.quantity} on {formatDate(transaction.transactionDate)}"
+			/>
 		</div>
 	</Table.Cell>
 </Table.Row>
