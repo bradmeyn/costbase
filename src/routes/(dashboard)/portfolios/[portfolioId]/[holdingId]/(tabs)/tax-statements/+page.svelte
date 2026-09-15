@@ -40,54 +40,72 @@
 		</Table.Header>
 		<Table.Body>
 			{#each offerableYears as fy (fy)}
-				{@const stmt = amitStatements.find((s) => s.financialYear === fy)}
-				<Table.Row>
-					<Table.Cell class="font-medium">{financialYearLabel(fy)}</Table.Cell>
-					{#if stmt}
-						{@const adj = netCostBaseAmount(stmt)}
-						<Table.Cell class="text-right tabular-nums"
-							>{formatCurrency(stmt.grossCashDistribution)}</Table.Cell
-						>
-						<Table.Cell class="text-right tabular-nums"
-							>{formatCurrency(stmt.grossAttribution)}</Table.Cell
-						>
-						<Table.Cell
-							class="text-right tabular-nums {adj === 0 ? '' : adj < 0 ? 'text-loss' : 'text-gain'}"
-						>
-							{adj > 0 ? '+' : ''}{formatCurrency(adj)}
+				{@const forYear = amitStatements.filter((s) => s.financialYear === fy)}
+				<!--
+					A year usually has one statement. It has two when the holding moved broker
+					mid-year: each registry issues its own against its own HIN, and both go on
+					the return, so both get a row.
+				-->
+				{#each forYear.length > 0 ? forYear : [null] as stmt, i (stmt?.id ?? 'none')}
+					<Table.Row>
+						<Table.Cell class="font-medium">
+							{i === 0 ? financialYearLabel(fy) : ''}
+							{#if stmt && forYear.length > 1}
+								<span class="ml-1 text-[11px] font-normal text-muted-foreground">
+									···{stmt.holderNumber}
+								</span>
+							{/if}
 						</Table.Cell>
-						<Table.Cell class="text-right">
-							<div class="flex items-center justify-end gap-1">
-								<DocumentAttachment
-									owner="amitStatement"
-									ownerId={stmt.id}
-									documents={stmt.documents}
-									readOnly
-								/>
+						{#if stmt}
+							{@const adj = netCostBaseAmount(stmt)}
+							<Table.Cell class="text-right tabular-nums"
+								>{formatCurrency(stmt.grossCashDistribution)}</Table.Cell
+							>
+							<Table.Cell class="text-right tabular-nums"
+								>{formatCurrency(stmt.grossAttribution)}</Table.Cell
+							>
+							<Table.Cell
+								class="text-right tabular-nums {adj === 0
+									? ''
+									: adj < 0
+										? 'text-loss'
+										: 'text-gain'}"
+							>
+								{adj > 0 ? '+' : ''}{formatCurrency(adj)}
+							</Table.Cell>
+							<Table.Cell class="text-right">
+								<div class="flex items-center justify-end gap-1">
+									<DocumentAttachment
+										owner="amitStatement"
+										ownerId={stmt.id}
+										documents={stmt.documents}
+										readOnly
+									/>
+									<Button
+										variant="ghost"
+										size="sm"
+										href={resolve(
+											'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
+											{ portfolioId, holdingId, financialYear: String(fy) }
+										) + (stmt.holderNumber ? `?holder=${stmt.holderNumber}` : '')}>Edit</Button
+									>
+								</div>
+							</Table.Cell>
+						{:else}
+							<Table.Cell colspan={3} class="text-muted-foreground">Not entered</Table.Cell>
+							<Table.Cell class="text-right">
 								<Button
 									variant="ghost"
 									size="sm"
 									href={resolve(
 										'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
 										{ portfolioId, holdingId, financialYear: String(fy) }
-									)}>Edit</Button
+									)}>Add</Button
 								>
-							</div>
-						</Table.Cell>
-					{:else}
-						<Table.Cell colspan={3} class="text-muted-foreground">Not entered</Table.Cell>
-						<Table.Cell class="text-right">
-							<Button
-								variant="ghost"
-								size="sm"
-								href={resolve(
-									'/(dashboard)/portfolios/[portfolioId]/[holdingId]/tax-statement/[financialYear]',
-									{ portfolioId, holdingId, financialYear: String(fy) }
-								)}>Add</Button
-							>
-						</Table.Cell>
-					{/if}
-				</Table.Row>
+							</Table.Cell>
+						{/if}
+					</Table.Row>
+				{/each}
 			{/each}
 		</Table.Body>
 	</Table.Root>

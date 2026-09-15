@@ -77,14 +77,19 @@
 		checkTaxReturn({
 			financialYearLabel: fyLabel,
 			holdings: portfolio.holdings.map((h) => {
-				const statement = statements.find((s) => s.holdingId === h.id);
+				// Summed: a year can carry one statement per holder number, and the cash
+				// they report between them is what the registry actually paid.
+				const forHolding = statements.filter((s) => s.holdingId === h.id);
 				const paid = distributions.filter((d) => d.code === h.investment.code);
 				return {
 					code: h.investment.code,
-					hasStatement: !!statement,
+					hasStatement: forHolding.length > 0,
 					distributionsTotal: paid.reduce((s, d) => s + d.grossPayment, 0),
 					distributionCount: paid.length,
-					statementGrossCash: statement?.grossCashDistribution ?? null
+					statementGrossCash:
+						forHolding.length > 0
+							? forHolding.reduce((total, s) => total + s.grossCashDistribution, 0)
+							: null
 				};
 			}),
 			priorYearLossRecorded: carried.recorded,
@@ -122,20 +127,22 @@
 	  one aggregate: capital gains are netted across everything you own, not per trust.
 	*/
 	const perHolding = $derived(
-		statements
-			.map((statement) => ({
-				code:
-					portfolio.holdings.find((h) => h.id === statement.holdingId)?.investment.code ??
-					'Unknown',
-				statement
+		portfolio.holdings
+			.map((holding) => ({
+				code: holding.investment.code,
+				// A holding can have two statements for one year, one per holder number.
+				// Both are the same trust, so the column adds them.
+				statements: statements.filter((s) => s.holdingId === holding.id)
 			}))
+			.filter((entry) => entry.statements.length > 0)
 			.sort((a, b) => a.code.localeCompare(b.code))
 	);
 
-	const amountFor = (statement: (typeof statements)[number], code: string) => {
-		const field = `label${code}` as keyof typeof statement;
-		return Number(statement[field] ?? 0);
-	};
+	const amountFor = (group: (typeof perHolding)[number], code: string) =>
+		group.statements.reduce((total, statement) => {
+			const field = `label${code}` as keyof typeof statement;
+			return total + Number(statement[field] ?? 0);
+		}, 0);
 
 	const section13 = $derived<Label[]>([
 		{
@@ -191,7 +198,7 @@
 			// Item 18 is a single netted figure, so its per-holding cells stay blank.
 			const cells = section18.includes(label)
 				? columns.map(() => '')
-				: perHolding.map((entry) => (amountFor(entry.statement, label.code) / 100).toFixed(2));
+				: perHolding.map((entry) => (amountFor(entry, label.code) / 100).toFixed(2));
 			csv += `${label.code},"${label.title}",${cells.join(',')},${(label.amount / 100).toFixed(2)}\n`;
 		}
 		csv += `18G,"Did you have a capital gains tax event?",${taxReturn.label18G ? 'Yes' : 'No'}\n`;
@@ -225,7 +232,7 @@
 				<Table.Head class="w-16">Label</Table.Head>
 				<Table.Head>Item</Table.Head>
 				{#if byHolding}
-					{#each perHolding as entry (entry.statement.id)}
+					{#each perHolding as entry (entry.code)}
 						<Table.Head class="w-32 text-right">{entry.code}</Table.Head>
 					{/each}
 				{/if}
@@ -243,9 +250,9 @@
 						{/if}
 					</Table.Cell>
 					{#if byHolding}
-						{#each perHolding as entry (entry.statement.id)}
+						{#each perHolding as entry (entry.code)}
 							<Table.Cell class="text-right text-muted-foreground tabular-nums">
-								{formatCurrency(amountFor(entry.statement, row.code))}
+								{formatCurrency(amountFor(entry, row.code))}
 							</Table.Cell>
 						{/each}
 					{/if}

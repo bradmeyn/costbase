@@ -132,6 +132,12 @@ export const amitStatementTable = pgTable(
 			.notNull()
 			.references(() => holdingTable.id, { onDelete: 'cascade' }),
 		financialYear: integer('financial_year').notNull(),
+		/**
+		 * The holder number the statement was issued against, as printed. A holding can
+		 * produce two statements in one year — moving broker moves the units to a new HIN
+		 * and each registry issues its own — and both sets of figures go on the return.
+		 */
+		holderNumber: text('holder_number').notNull().default(''),
 
 		// Part A — summary of tax return items
 		label13U: integer('label_13u').notNull().default(0),
@@ -207,7 +213,9 @@ export const amitStatementTable = pgTable(
 
 		...timesStamps
 	},
-	(t) => [unique('amit_statement_holding_year').on(t.holdingId, t.financialYear)]
+	(t) => [
+		unique('amit_statement_holding_year_holder').on(t.holdingId, t.financialYear, t.holderNumber)
+	]
 );
 
 /*

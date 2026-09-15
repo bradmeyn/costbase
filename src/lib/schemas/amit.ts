@@ -91,6 +91,11 @@ export const amitStatementSchema = z.object({
 		.int()
 		.min(2000, 'Financial year looks too early')
 		.max(2100, 'Financial year looks too late'),
+	/**
+	 * Last four digits of the holder number. Blank for a holding that has only ever had
+	 * one; set when a year carries two statements because the broker changed.
+	 */
+	holderNumber: z.string().default(''),
 
 	// Written out explicitly rather than generated: SvelteKit's form() needs a
 	// concrete ZodObject shape to infer the handler's `data` type.

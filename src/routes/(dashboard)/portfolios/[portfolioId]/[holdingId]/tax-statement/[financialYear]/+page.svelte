@@ -23,7 +23,14 @@
 
 	const holding = $derived(await getHolding(holdingId));
 	const statements = $derived(await getAmitStatements(holdingId));
-	const existing = $derived(statements.find((s) => s.financialYear === financialYear));
+	/*
+	  A year can hold two statements when the holding moved broker. The holder number
+	  in the query says which one is being edited; without it, a new one is started.
+	*/
+	const holderNumber = $derived(page.url.searchParams.get('holder') ?? '');
+	const existing = $derived(
+		statements.find((s) => s.financialYear === financialYear && s.holderNumber === holderNumber)
+	);
 
 	/** Stored in cents; the form is entered in dollars. */
 	const dollarValue = (field: string) => {
@@ -92,6 +99,7 @@
 >
 	<input {...saveAmitStatement.fields.holdingId.as('hidden', holdingId)} />
 	<input {...saveAmitStatement.fields.financialYear.as('hidden', financialYear)} />
+	<input {...saveAmitStatement.fields.holderNumber.as('hidden', holderNumber)} />
 
 	{#each saveAmitStatement.fields.allIssues?.() ?? [] as issue, i (i)}
 		<p class="text-[13px] text-destructive">{issue.message}</p>

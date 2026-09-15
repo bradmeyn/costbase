@@ -241,6 +241,7 @@
 					portfolioId,
 					holdingId: p.holdingId!,
 					financialYear: p.parsed.financialYear!,
+					holderNumber: p.parsed.holderNumber,
 					amounts: p.parsed.amounts,
 					file: read.file
 				});

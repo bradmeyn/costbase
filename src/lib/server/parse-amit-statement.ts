@@ -21,6 +21,11 @@ export interface ParsedAmitStatement {
 	/** The year the financial year ends in: 2026 = 1 Jul 2025 - 30 Jun 2026. */
 	financialYear: number | null;
 	ticker: string | null;
+	/**
+	 * The holder number the statement was issued against, masked as printed. Two
+	 * statements for one year differ only by this, so it is what tells them apart.
+	 */
+	holderNumber: string;
 	/** Field name from the statement schema to a dollar amount, as typed. */
 	amounts: Record<string, number>;
 	warnings: string[];
@@ -97,6 +102,20 @@ export function amitFromRows(rows: string[][]): ParsedAmitStatement {
 			.find((cell) => /^[A-Z]{3,4}$/.test(cell)) ?? null;
 	if (!ticker) warnings.push('Could not read which holding this statement is for.');
 
+	/*
+	  The holder number sits beside the address, printed masked on some years
+	  ("X ******0953") and in full on others ("X 0087526992"). Reduced to its last four
+	  digits: that is all that differs between two statements for the same year, and it
+	  is the same four whichever way the registry chose to print it.
+	*/
+	const holderNumber =
+		rows
+			.slice(0, 25)
+			.flat()
+			.map((cell) => cell.replace(/\s+/g, ''))
+			.find((cell) => /^[A-Z][*\d]{6,}$/.test(cell))
+			?.slice(-4) ?? '';
+
 	// Part A: description, label, amount.
 	const byLabel = new Map<string, string>(AMIT_PART_A.map(([field, label]) => [label, field]));
 	for (const row of rows) {
@@ -141,5 +160,5 @@ export function amitFromRows(rows: string[][]): ParsedAmitStatement {
 		}
 	}
 
-	return { financialYear, ticker, amounts, warnings };
+	return { financialYear, ticker, holderNumber, amounts, warnings };
 }

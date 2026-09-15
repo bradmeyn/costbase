@@ -219,16 +219,25 @@ async function amitPreview(portfolio: OwnedPortfolio, rows: string[][]) {
 		);
 	}
 
+	/*
+	  Matched on the holder number as well as the year. Moving broker moves the units to
+	  a new HIN and each registry issues its own statement, so one year can legitimately
+	  have two — they are added together, not replaced.
+	*/
 	let existing = false;
 	if (holding && parsed.financialYear) {
 		const found = await db.query.amitStatementTable.findFirst({
 			where: (a, { and: every, eq: e }) =>
-				every(e(a.holdingId, holding.id), e(a.financialYear, parsed.financialYear!))
+				every(
+					e(a.holdingId, holding.id),
+					e(a.financialYear, parsed.financialYear!),
+					e(a.holderNumber, parsed.holderNumber)
+				)
 		});
 		if (found) {
 			existing = true;
 			warnings.push(
-				`A statement for this holding and year is already entered. Importing will replace its figures.`
+				`A statement for this holding, year and holder number is already entered. Importing will replace its figures.`
 			);
 		}
 	}
@@ -247,11 +256,13 @@ export const importAmitStatement = command(
 		portfolioId: z.string().min(1),
 		holdingId: z.string().min(1),
 		financialYear: z.number().int().min(2000).max(2100),
+		/** Last four digits of the holder number, telling two statements for a year apart. */
+		holderNumber: z.string().default(''),
 		/** Field name to dollar amount, as printed on the statement. */
 		amounts: z.record(z.string(), z.number()),
 		file: z.instanceof(File)
 	}),
-	async ({ portfolioId, holdingId, financialYear, amounts, file }) => {
+	async ({ portfolioId, holdingId, financialYear, holderNumber, amounts, file }) => {
 		const portfolio = await ownedPortfolio(portfolioId);
 		const holding = portfolio.holdings.find((h) => h.id === holdingId);
 		if (!holding) error(404, 'Holding not found in this portfolio');
@@ -262,12 +273,16 @@ export const importAmitStatement = command(
 			cents[field] = Math.round((amounts[field] ?? 0) * 100);
 		}
 
-		const values = { holdingId, financialYear, ...cents };
+		const values = { holdingId, financialYear, holderNumber, ...cents };
 		const [saved] = await db
 			.insert(amitStatementTable)
 			.values(values)
 			.onConflictDoUpdate({
-				target: [amitStatementTable.holdingId, amitStatementTable.financialYear],
+				target: [
+					amitStatementTable.holdingId,
+					amitStatementTable.financialYear,
+					amitStatementTable.holderNumber
+				],
 				set: { ...values, updatedAt: new Date() }
 			})
 			.returning();

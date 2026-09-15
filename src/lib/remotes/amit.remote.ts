@@ -79,6 +79,7 @@ export const saveAmitStatement = form(amitStatementSchema, async (data) => {
 	const values = {
 		holdingId: data.holdingId,
 		financialYear: data.financialYear,
+		holderNumber: data.holderNumber,
 		...amountsToCents(data as unknown as Record<string, unknown>)
 	};
 
@@ -87,7 +88,11 @@ export const saveAmitStatement = form(amitStatementSchema, async (data) => {
 		.insert(amitStatementTable)
 		.values(values)
 		.onConflictDoUpdate({
-			target: [amitStatementTable.holdingId, amitStatementTable.financialYear],
+			target: [
+				amitStatementTable.holdingId,
+				amitStatementTable.financialYear,
+				amitStatementTable.holderNumber
+			],
 			set: { ...values, updatedAt: new Date() }
 		});
 
