@@ -116,6 +116,27 @@
 
 	type Label = { code: string; title: string; amount: number; note?: string };
 
+	/*
+	  Items 13 and 20 are entered against each trust in turn — myTax asks for a record
+	  per fund — so they are shown per holding with the total alongside. Item 18 is the
+	  one aggregate: capital gains are netted across everything you own, not per trust.
+	*/
+	const perHolding = $derived(
+		statements
+			.map((statement) => ({
+				code:
+					portfolio.holdings.find((h) => h.id === statement.holdingId)?.investment.code ??
+					'Unknown',
+				statement
+			}))
+			.sort((a, b) => a.code.localeCompare(b.code))
+	);
+
+	const amountFor = (statement: (typeof statements)[number], code: string) => {
+		const field = `label${code}` as keyof typeof statement;
+		return Number(statement[field] ?? 0);
+	};
+
 	const section13 = $derived<Label[]>([
 		{
 			code: '13U',
@@ -164,9 +185,14 @@
 	]);
 
 	function generateCsv() {
-		let csv = `Tax return ${fyLabel}\n\nLabel,Item,Amount\n`;
+		const columns = perHolding.map((entry) => entry.code);
+		let csv = `Tax return ${fyLabel}\n\nLabel,Item,${columns.join(',')},Total\n`;
 		for (const label of [...section13, ...section18, ...section20]) {
-			csv += `${label.code},"${label.title}",${(label.amount / 100).toFixed(2)}\n`;
+			// Item 18 is a single netted figure, so its per-holding cells stay blank.
+			const cells = section18.includes(label)
+				? columns.map(() => '')
+				: perHolding.map((entry) => (amountFor(entry.statement, label.code) / 100).toFixed(2));
+			csv += `${label.code},"${label.title}",${cells.join(',')},${(label.amount / 100).toFixed(2)}\n`;
 		}
 		csv += `18G,"Did you have a capital gains tax event?",${taxReturn.label18G ? 'Yes' : 'No'}\n`;
 		downloadCSV(csv, `tax-return-${fyLabel}`);
@@ -192,13 +218,18 @@
 	</Table.Row>
 {/snippet}
 
-{#snippet labelTable(rows: Label[])}
+{#snippet labelTable(rows: Label[], byHolding = false)}
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>
 				<Table.Head class="w-16">Label</Table.Head>
 				<Table.Head>Item</Table.Head>
-				<Table.Head class="w-40 text-right">Amount</Table.Head>
+				{#if byHolding}
+					{#each perHolding as entry (entry.statement.id)}
+						<Table.Head class="w-32 text-right">{entry.code}</Table.Head>
+					{/each}
+				{/if}
+				<Table.Head class="w-40 text-right">{byHolding ? 'Total' : 'Amount'}</Table.Head>
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
@@ -211,6 +242,13 @@
 							<p class="mt-0.5 text-[11px] text-muted-foreground">{row.note}</p>
 						{/if}
 					</Table.Cell>
+					{#if byHolding}
+						{#each perHolding as entry (entry.statement.id)}
+							<Table.Cell class="text-right text-muted-foreground tabular-nums">
+								{formatCurrency(amountFor(entry.statement, row.code))}
+							</Table.Cell>
+						{/each}
+					{/if}
 					<Table.Cell class="text-right font-semibold tabular-nums">
 						{formatCurrency(row.amount)}
 					</Table.Cell>
@@ -277,9 +315,11 @@
 <section class="mb-6">
 	<div class="mb-2 flex items-baseline gap-2">
 		<h2 class="text-base font-semibold">13 — Partnerships and trusts</h2>
-		<span class="text-[11px] text-muted-foreground">From each fund's annual tax statement</span>
+		<span class="text-[11px] text-muted-foreground">
+			Entered against each trust in turn — the columns are what myTax asks for per fund
+		</span>
 	</div>
-	<div class="card">{@render labelTable(section13)}</div>
+	<div class="card">{@render labelTable(section13, perHolding.length > 1)}</div>
 </section>
 
 <section class="mb-6">
@@ -359,7 +399,7 @@
 		<h2 class="text-base font-semibold">20 — Foreign source income</h2>
 		<span class="text-[11px] text-muted-foreground">From each fund's annual tax statement</span>
 	</div>
-	<div class="card">{@render labelTable(section20)}</div>
+	<div class="card">{@render labelTable(section20, perHolding.length > 1)}</div>
 </section>
 
 <p class="text-[11px] text-muted-foreground">

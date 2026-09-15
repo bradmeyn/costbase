@@ -5,7 +5,8 @@
 	import { deleteTransaction } from '#lib/remotes/transaction.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
-	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
+	import Button from '$ui/button/button.svelte';
+	import { Pencil } from '@lucide/svelte';
 	import type { Transaction, Document } from '$db/schemas/portfolio';
 
 	let {
@@ -58,17 +59,30 @@
 				documents={transaction.documents}
 				readOnly
 			/>
-			<RowActionsMenu
-				onEdit={() => (editOpen = true)}
-				onDelete={() => (deleteOpen = true)}
-				label="{badge.label} of {transaction.quantity} on {formatDate(transaction.transactionDate)}"
-			/>
+			<Button
+				variant="ghost"
+				size="icon"
+				onclick={() => (editOpen = true)}
+				aria-label="Edit {badge.label} of {transaction.quantity} on {formatDate(
+					transaction.transactionDate
+				)}"
+			>
+				<Pencil class="size-4" />
+			</Button>
 		</div>
 	</Table.Cell>
 </Table.Row>
 
 <!-- Edit Transaction Dialog -->
-<EditTransactionDialog transactionId={transaction.id} {transaction} bind:open={editOpen} />
+<EditTransactionDialog
+	transactionId={transaction.id}
+	{transaction}
+	bind:open={editOpen}
+	onDelete={() => {
+		editOpen = false;
+		deleteOpen = true;
+	}}
+/>
 
 <!-- Delete Transaction Dialog -->
 <DeleteDialog

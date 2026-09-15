@@ -1,5 +1,6 @@
 import { getDocumentProxy } from 'unpdf';
 import { extractRows, isoFromLongDate } from './pdf-rows.js';
+import { PLATFORMS } from '#lib/platforms.js';
 
 /*
   Parses a Stake ASX trade confirmation.
@@ -32,24 +33,6 @@ export interface ParsedContractNote {
 	/** Anything that did not parse, or arithmetic that did not reconcile. */
 	warnings: string[];
 }
-
-/*
-  Brokers whose name appears on their own confirmations. Matched on the flattened
-  text rather than a fixed position: the branding sits in a different place on each
-  one, and getting it wrong costs a label, not a figure.
-*/
-const BROKERS = [
-	'Stake',
-	'CommSec',
-	'SelfWealth',
-	'Pearler',
-	'Superhero',
-	'nabtrade',
-	'CMC Markets',
-	'Bell Direct',
-	'Westpac Share Trading',
-	'ANZ Share Investing'
-];
 
 /*
   The same text with every space removed. PDF extraction splits a word at a ligature
@@ -208,7 +191,6 @@ function selfWealthFields(rows: string[][]): ParsedContractNote {
 /** Stake, whose notes are a grid of LABEL/value pairs. */
 function stakeFields(rows: string[][]): ParsedContractNote {
 	const warnings: string[] = [];
-	const flat = rows.flat().join(' ').toUpperCase();
 	const squashed = squash(rows);
 
 	// The heading is the most reliable signal; the SIDE cell can run into its neighbour.
@@ -257,7 +239,7 @@ function stakeFields(rows: string[][]): ParsedContractNote {
 		executionDate: toIsoDate(valueAfter(rows, 'EXECUTION DATE')),
 		settlementDate: toIsoDate(valueAfter(rows, 'SETTLEMENT DATE')),
 		confirmationNumber: valueAfter(rows, 'CONFIRMATION NUMBER'),
-		platform: BROKERS.find((b) => flat.includes(b.toUpperCase())) ?? null,
+		platform: PLATFORMS.find((b) => squashed.includes(b.toUpperCase())) ?? null,
 		warnings
 	};
 }

@@ -1,19 +1,24 @@
 <script lang="ts">
 	import Button from '$ui/button/button.svelte';
 	import * as Dialog from '$ui/dialog/index.js';
-	import * as NativeSelect from '$ui/native-select/index.js';
+	import * as Select from '$ui/select/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
 	import { updateTransaction } from '#lib/remotes/transaction.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
+	import { Trash2 } from '@lucide/svelte';
+	import { PLATFORMS } from '#lib/platforms.js';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
 	import type { Document } from '$db/schemas/portfolio';
 
 	let {
 		transactionId,
 		transaction,
-		open = $bindable(false)
+		open = $bindable(false),
+		onDelete
 	}: {
+		/** Removing the transaction, offered at the foot of the form it belongs to. */
+		onDelete?: () => void;
 		transactionId: string;
 		transaction: {
 			type: string;
@@ -34,6 +39,26 @@
 	const formatDate = (date: Date | string) => new Date(date).toISOString().split('T')[0];
 
 	const fields = updateTransaction.fields;
+
+	/*
+	  The select is a bits-ui listbox rather than a native one, so its value is held
+	  here and submitted through the hidden input the component renders for `name`.
+	*/
+	const TRANSACTION_TYPES = [
+		{ value: 'buy', label: 'Buy' },
+		{ value: 'sell', label: 'Sell' },
+		{ value: 'reinvestment', label: 'Reinvestment' }
+	];
+	// Seeded from the row by the effect below, so reopening the dialog starts fresh.
+	let type = $state('');
+	let platform = $state('');
+	$effect(() => {
+		type = transaction.type;
+		platform = transaction.platform ?? '';
+	});
+	const typeLabel = $derived(
+		TRANSACTION_TYPES.find((t) => t.value === type)?.label ?? 'Select type'
+	);
 </script>
 
 <Dialog.Root bind:open>
@@ -58,12 +83,14 @@
 
 			<Field.Field>
 				<Field.Label for="type">Transaction Type</Field.Label>
-				<NativeSelect.Root id="type" {...fields.type.as('text')} value={transaction.type}>
-					<NativeSelect.Option value="">Select type</NativeSelect.Option>
-					<NativeSelect.Option value="buy">Buy</NativeSelect.Option>
-					<NativeSelect.Option value="sell">Sell</NativeSelect.Option>
-					<NativeSelect.Option value="reinvestment">Reinvestment</NativeSelect.Option>
-				</NativeSelect.Root>
+				<Select.Root type="single" name={fields.type.as('text').name} bind:value={type}>
+					<Select.Trigger id="type" class="w-full">{typeLabel}</Select.Trigger>
+					<Select.Content>
+						{#each TRANSACTION_TYPES as option (option.value)}
+							<Select.Item value={option.value}>{option.label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 				<Field.Error />
 			</Field.Field>
 
@@ -118,11 +145,17 @@
 
 			<Field.Field>
 				<Field.Label for="platform">Platform</Field.Label>
-				<Input
-					id="platform"
-					{...fields.platform.as('text', transaction.platform ?? '')}
-					placeholder="Stake, CommSec, …"
-				/>
+				<Select.Root type="single" name={fields.platform.as('text').name} bind:value={platform}>
+					<Select.Trigger id="platform" class="w-full">
+						{platform || 'Not recorded'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item value="">Not recorded</Select.Item>
+						{#each PLATFORMS as option (option)}
+							<Select.Item value={option}>{option}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 				<Field.Error />
 			</Field.Field>
 
@@ -136,15 +169,28 @@
 				<Field.Error />
 			</Field.Field>
 
-			<div class="mt-4 flex justify-end gap-2">
-				<Button type="button" variant="outline" onclick={() => (open = false)}>Cancel</Button>
-				<Button type="submit" disabled={!!updateTransaction.pending}>
-					{#if updateTransaction.pending}
-						<Spinner class="size-4" />
-					{:else}
-						Save Changes
-					{/if}
-				</Button>
+			<div class="mt-4 flex items-center gap-2 border-t border-border pt-4">
+				{#if onDelete}
+					<Button
+						type="button"
+						variant="ghost"
+						class="text-destructive hover:bg-destructive/10 hover:text-destructive"
+						onclick={onDelete}
+					>
+						<Trash2 class="size-4" />
+						Delete transaction
+					</Button>
+				{/if}
+				<div class="ml-auto flex gap-2">
+					<Button type="button" variant="outline" onclick={() => (open = false)}>Cancel</Button>
+					<Button type="submit" disabled={!!updateTransaction.pending}>
+						{#if updateTransaction.pending}
+							<Spinner class="size-4" />
+						{:else}
+							Save Changes
+						{/if}
+					</Button>
+				</div>
 			</div>
 		</form>
 	</Dialog.Content>
