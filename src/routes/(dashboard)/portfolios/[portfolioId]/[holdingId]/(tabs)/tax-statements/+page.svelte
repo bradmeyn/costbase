@@ -62,6 +62,7 @@
 									owner="amitStatement"
 									ownerId={stmt.id}
 									documents={stmt.documents}
+									readOnly
 								/>
 								<Button
 									variant="ghost"

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { financialYearLabel } from '#lib/report-period.js';
+	import DocumentAttachment from '#lib/components/document-attachment.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -27,7 +28,7 @@
 	/** Stored in cents; the form is entered in dollars. */
 	const dollarValue = (field: string) => {
 		const cents = existing?.[field as keyof typeof existing];
-		return typeof cents === 'number' ? (cents / 100).toFixed(2) : '';
+		return typeof cents === 'number' ? cents / 100 : 0;
 	};
 
 	const fields = saveAmitStatement.fields;
@@ -37,9 +38,14 @@
 	 * runtime string widens to a union that also includes the form's own methods, which
 	 * have no `.as()`. Narrow to just the numeric-field surface we use.
 	 */
-	type NumberField = { as: (type: 'number') => Record<string, unknown> };
+	type NumberField = { as: (type: 'number', value?: number) => Record<string, unknown> };
+	/*
+	  The stored amount is passed to `as()` rather than set as a defaultValue beside it:
+	  the field proxy supplies its own value getter, which wins over any attribute after
+	  the spread, so a defaultValue is silently ignored and every box renders empty.
+	*/
 	const amountField = (name: string) =>
-		(fields as unknown as Record<string, NumberField>)[name].as('number');
+		(fields as unknown as Record<string, NumberField>)[name].as('number', dollarValue(name));
 </script>
 
 <svelte:head>
@@ -102,7 +108,6 @@
 			<Input
 				id={field}
 				{...amountField(field)}
-				defaultValue={dollarValue(field)}
 				step="0.01"
 				placeholder="0.00"
 				class="w-32 shrink-0 text-right tabular-nums"
@@ -151,6 +156,25 @@
 			{@render amountRow(field, label)}
 		{/each}
 	</section>
+
+	{#if existing}
+		<section class="card">
+			<h2 class="text-sm font-semibold">Document</h2>
+			<p class="mt-1 text-[13px] text-muted-foreground">
+				The statement this was entered from, kept with it.
+			</p>
+			<div class="mt-2 flex items-center gap-1">
+				<DocumentAttachment
+					owner="amitStatement"
+					ownerId={existing.id}
+					documents={existing.documents}
+				/>
+				<span class="text-[13px] text-muted-foreground">
+					{existing.documents?.[0]?.filename ?? 'No statement attached'}
+				</span>
+			</div>
+		</section>
+	{/if}
 
 	<div class="flex items-center justify-end gap-2">
 		<Button
