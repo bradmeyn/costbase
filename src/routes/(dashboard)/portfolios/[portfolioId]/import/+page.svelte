@@ -49,10 +49,20 @@
 
 	/* A note for a trade already recorded is paperwork to file, not a trade to import. */
 	const newTrades = $derived(notes.filter((r) => !asNote(r).matchedTransactionId));
+	/*
+	  A note belongs in this list when the trade has no document yet, and also when the
+	  row is short a figure the note carries — filing completes the row either way.
+	*/
 	const toFile = $derived(
-		notes.filter((r) => asNote(r).matchedTransactionId && !asNote(r).matchedHasDocument)
+		notes.filter(
+			(r) =>
+				asNote(r).matchedTransactionId &&
+				(!asNote(r).matchedHasDocument || asNote(r).matchedNeedsFigures)
+		)
 	);
-	const alreadyFiled = $derived(notes.filter((r) => asNote(r).matchedHasDocument));
+	const alreadyFiled = $derived(
+		notes.filter((r) => asNote(r).matchedHasDocument && !asNote(r).matchedNeedsFigures)
+	);
 
 	const single = $derived(
 		newTrades.length === 1 && notes.length === 1 && statements.length === 0 ? notes[0] : null
@@ -157,8 +167,11 @@
 			pdfs.map(async (f) => {
 				try {
 					const preview = await previewImport({ portfolioId, file: f });
-					// Filed notes need no decision; everything else is ticked ready to go.
-					const done = preview.kind === 'contract-note' && preview.matchedHasDocument;
+					// Only a note with nothing left to add needs no decision.
+					const done =
+						preview.kind === 'contract-note' &&
+						preview.matchedHasDocument &&
+						!preview.matchedNeedsFigures;
 					reads = [...reads, { file: f, preview, include: !done }];
 				} catch (e) {
 					saveError = e instanceof Error ? e.message : `${f.name} could not be read.`;
@@ -203,7 +216,8 @@
 				notes: chosenToFile.map((r) => ({
 					file: r.file,
 					transactionId: asNote(r).matchedTransactionId!,
-					platform: asNote(r).parsed.platform ?? undefined
+					platform: asNote(r).parsed.platform ?? undefined,
+					value: asNote(r).parsed.value ?? undefined
 				}))
 			});
 			// Drop what was filed so the list shows only what is left to decide.

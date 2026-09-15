@@ -113,14 +113,20 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 	  A note for a trade that is already recorded is not waste: it is the paperwork for
 	  that trade. Finding the row it belongs to turns a refusal into an offer to file it.
 	*/
-	let matched: { id: string; hasDocument: boolean } | null = null;
+	let matched: { id: string; hasDocument: boolean; needsFigures: boolean } | null = null;
 
 	if (parsed.confirmationNumber) {
 		const existing = await db.query.transactionTable.findFirst({
 			where: eq(transactionTable.confirmationNumber, parsed.confirmationNumber),
 			with: { documents: true }
 		});
-		if (existing) matched = { id: existing.id, hasDocument: existing.documents.length > 0 };
+		if (existing) {
+			matched = {
+				id: existing.id,
+				hasDocument: existing.documents.length > 0,
+				needsFigures: existing.value === null || existing.platform === null
+			};
+		}
 	}
 
 	/*
@@ -139,13 +145,17 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 			const documents = await db.query.documentTable.findMany({
 				where: eq(documentTable.transactionId, sameTrade.id)
 			});
-			matched = { id: sameTrade.id, hasDocument: documents.length > 0 };
+			matched = {
+				id: sameTrade.id,
+				hasDocument: documents.length > 0,
+				needsFigures: sameTrade.value === null || sameTrade.platform === null
+			};
 		}
 	}
 
 	if (matched) {
 		warnings.push(
-			matched.hasDocument
+			matched.hasDocument && !matched.needsFigures
 				? `This trade is already recorded and already has a document attached.`
 				: `This trade is already recorded. The note can be filed against it instead of importing it again.`
 		);
@@ -156,6 +166,8 @@ async function contractNotePreview(portfolio: OwnedPortfolio, rows: string[][]) 
 		duplicate: !!matched,
 		matchedTransactionId: matched?.id ?? null,
 		matchedHasDocument: matched?.hasDocument ?? false,
+		/** The row is short something the note carries — its value, or which broker. */
+		matchedNeedsFigures: matched?.needsFigures ?? false,
 		holdingId: holding?.id ?? null,
 		holdingName: holding ? `${holding.investment.code} ${holding.investment.name}` : null
 	};
@@ -414,7 +426,9 @@ export const attachNotesToTransactions = command(
 				z.object({
 					file: z.instanceof(File),
 					transactionId: z.string().min(1),
-					platform: z.string().optional()
+					platform: z.string().optional(),
+					/** The note's stated consideration in cents, for a row that has none. */
+					value: z.number().int().nonnegative().optional()
 				})
 			)
 			.min(1)
@@ -429,15 +443,11 @@ export const attachNotesToTransactions = command(
 
 		let attached = 0;
 		for (const note of notes) {
-			const existing = await db.query.documentTable.findMany({
-				where: eq(documentTable.transactionId, note.transactionId)
-			});
-			// Filing the same note twice would leave two copies against one trade.
-			if (existing.length > 0) continue;
-
-			const stored = await storeDocument(note.file);
-			await db.insert(documentTable).values({ transactionId: note.transactionId, ...stored });
-
+			/*
+			  Filing a note also completes the row from it. Only what the row is missing is
+			  filled in — a figure a person typed is never overwritten — so running this
+			  again over notes already filed costs nothing and fixes anything left blank.
+			*/
 			if (note.platform) {
 				await db
 					.update(transactionTable)
@@ -446,6 +456,21 @@ export const attachNotesToTransactions = command(
 						and(eq(transactionTable.id, note.transactionId), isNull(transactionTable.platform))
 					);
 			}
+			if (note.value !== undefined) {
+				await db
+					.update(transactionTable)
+					.set({ value: note.value })
+					.where(and(eq(transactionTable.id, note.transactionId), isNull(transactionTable.value)));
+			}
+
+			const existing = await db.query.documentTable.findMany({
+				where: eq(documentTable.transactionId, note.transactionId)
+			});
+			// Filing the same note twice would leave two copies against one trade.
+			if (existing.length > 0) continue;
+
+			const stored = await storeDocument(note.file);
+			await db.insert(documentTable).values({ transactionId: note.transactionId, ...stored });
 			attached += 1;
 		}
 
