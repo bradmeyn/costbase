@@ -56,7 +56,7 @@
 				<Field.Error />
 			</Field.Field>
 
-			<input type="hidden" name="id" value={portfolioId} />
+			<input {...updatePortfolio.fields.id.as('hidden', portfolioId)} />
 
 			<div class="mt-4 flex justify-end gap-2">
 				<Button type="button" variant="outline" onclick={() => onOpenChange(false)}>Cancel</Button>

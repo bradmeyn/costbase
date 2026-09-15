@@ -31,7 +31,20 @@ export function calculateHoldingMetrics(transactions: Transaction[]): HoldingMet
 	// (units * round(cost / units)) drifts by up to half a cent per unit.
 	let totalCost = 0;
 
-	for (const transaction of transactions) {
+	/*
+	  Sorted here rather than trusting the caller. A sell reduces the cost base by the
+	  share of it the disposed units carry, so a sell seen before the buys that supplied
+	  its units prices the whole holding wrongly — and the database returns rows in
+	  whatever order it likes. Acquisitions settle before disposals on the same day,
+	  since you cannot sell what you have not yet bought.
+	*/
+	const inOrder = [...transactions].sort((a, b) => {
+		const byDate = new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime();
+		if (byDate !== 0) return byDate;
+		return Number(a.type === 'sell') - Number(b.type === 'sell');
+	});
+
+	for (const transaction of inOrder) {
 		if (transaction.type === 'buy' || transaction.type === 'reinvestment') {
 			totalUnits += transaction.quantity;
 			// Brokerage on acquisition forms part of the cost base.

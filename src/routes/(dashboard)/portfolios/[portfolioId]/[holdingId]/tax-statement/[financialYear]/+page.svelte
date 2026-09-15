@@ -84,8 +84,8 @@
 	})}
 	class="space-y-5 pb-10"
 >
-	<input type="hidden" name="holdingId" value={holdingId} />
-	<input type="hidden" name="financialYear" value={financialYear} />
+	<input {...saveAmitStatement.fields.holdingId.as('hidden', holdingId)} />
+	<input {...saveAmitStatement.fields.financialYear.as('hidden', financialYear)} />
 
 	{#each saveAmitStatement.fields.allIssues?.() ?? [] as issue, i (i)}
 		<p class="text-[13px] text-destructive">{issue.message}</p>

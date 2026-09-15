@@ -29,6 +29,12 @@
 	}
 
 	const fields = updateDistribution.fields;
+
+	/*
+	  The checkbox is a bits-ui control, not a native input, so its state is held here
+	  and submitted through the hidden input it renders for `name`.
+	*/
+	let reinvested = $derived(distribution.reinvested);
 	let netPayment = $derived(
 		((Number(fields.grossPayment.value() ?? distribution.grossPayment / 100) || 0) -
 			(Number(fields.taxWithheld.value() ?? distribution.taxWithheld / 100) || 0)) *
@@ -99,7 +105,11 @@
 			</div>
 
 			<div class="flex items-center gap-2 rounded-lg border p-4">
-				<Checkbox id="reinvested" name="reinvested" value="on" checked={distribution.reinvested} />
+				<Checkbox
+					id="reinvested"
+					name={updateDistribution.fields.reinvested.as('checkbox').name}
+					bind:checked={reinvested}
+				/>
 				<Label for="reinvested">Distribution Reinvested (DRP)</Label>
 			</div>
 

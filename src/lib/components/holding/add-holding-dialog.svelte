@@ -74,7 +74,7 @@
 				<Field.Error />
 			</Field.Field>
 
-			<input type="hidden" name="portfolioId" value={portfolioId} />
+			<input {...addHolding.for(portfolioId).fields.portfolioId.as('hidden', portfolioId)} />
 
 			<div class="mt-4 flex justify-end gap-2">
 				<Button type="button" variant="outline" onclick={() => (open = false)}>Cancel</Button>

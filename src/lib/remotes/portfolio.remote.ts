@@ -5,33 +5,10 @@ import { db } from '$db';
 import { portfolioTable } from '$db/schemas/portfolio';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import type { InferSelectModel } from 'drizzle-orm';
-import type { transactionTable } from '$db/schemas/portfolio';
 import { getStockPrices } from '#lib/server/prices.js';
 import { apportionCostBaseAdjustment, financialYearEnd } from '$utils/amit-calculations';
 import { calculateCGT, type CGTCalculation } from '$utils/cgt-calculations';
-
-type Transaction = InferSelectModel<typeof transactionTable>;
-
-// Helper function to calculate units, average price, and cost base from transactions
-function calculateHoldingMetrics(transactions: Transaction[]) {
-	let totalUnits = 0;
-	let totalCost = 0;
-
-	for (const transaction of transactions) {
-		if (transaction.type === 'buy' || transaction.type === 'reinvestment') {
-			totalUnits += transaction.quantity;
-			totalCost += transaction.quantity * transaction.pricePerUnit;
-		} else if (transaction.type === 'sell') {
-			totalUnits -= transaction.quantity;
-		}
-	}
-
-	const averagePrice = totalUnits > 0 ? Math.round(totalCost / totalUnits) : 0;
-	const costBase = totalUnits > 0 ? totalUnits * averagePrice : 0;
-
-	return { units: totalUnits, averagePrice, costBase };
-}
+import { calculateHoldingMetrics } from '$utils/holding-calculations';
 
 export const getPortfolios = query(async () => {
 	const user = await getCurrentUser();
@@ -174,6 +151,8 @@ export const updatePortfolio = form(
 			.set({ name })
 			.where(eq(portfolioTable.id, id))
 			.returning();
+
+		await Promise.all([getPortfolio(id).refresh(), getPortfolios().refresh()]);
 
 		return { success: true, portfolio: updatedPortfolio };
 	}

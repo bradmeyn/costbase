@@ -5,10 +5,12 @@ export const distributionSchema = z.object({
 	datePaid: z.string(),
 	grossPayment: z.number().min(0).default(0),
 	taxWithheld: z.number().min(0).default(0),
-	reinvested: z
-		.string()
-		.optional()
-		.transform((val) => val === 'on')
+	/*
+	  A real boolean. The old "on" string was how a plain form action reported a
+	  checkbox; a remote form encodes the type in the field name and hands over a
+	  boolean, so the string would never arrive.
+	*/
+	reinvested: z.boolean().default(false)
 });
 
 export const updateDistributionSchema = distributionSchema.extend({

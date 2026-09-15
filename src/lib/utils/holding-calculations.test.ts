@@ -68,3 +68,49 @@ describe('calculateHoldingMetrics', () => {
 		expect(calculateHoldingMetrics([])).toEqual({ units: 0, averagePrice: 0, costBase: 0 });
 	});
 });
+
+describe('calculateHoldingMetrics ordering', () => {
+	const row = (over: Partial<Transaction>): Transaction =>
+		({
+			id: crypto.randomUUID(),
+			holdingId: 'h',
+			quantity: 0,
+			pricePerUnit: 0,
+			brokerage: 0,
+			value: null,
+			confirmationNumber: null,
+			platform: null,
+			transactionDate: new Date(2024, 0, 1),
+			type: 'buy',
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			...over
+		}) as Transaction;
+
+	const buy = row({ quantity: 100, pricePerUnit: 10_00, transactionDate: new Date(2024, 0, 1) });
+	const sell = row({
+		quantity: 40,
+		pricePerUnit: 15_00,
+		type: 'sell',
+		transactionDate: new Date(2024, 5, 1)
+	});
+
+	it('gives the same answer whatever order the rows arrive in', () => {
+		const forwards = calculateHoldingMetrics([buy, sell]);
+		const backwards = calculateHoldingMetrics([sell, buy]);
+		expect(backwards).toEqual(forwards);
+		expect(forwards).toEqual({ units: 60, costBase: 60_000, averagePrice: 10_00 });
+	});
+
+	it('settles a same-day buy before the sell that disposes of it', () => {
+		const sameDayBuy = row({
+			quantity: 50,
+			pricePerUnit: 20_00,
+			transactionDate: new Date(2024, 5, 1)
+		});
+		const result = calculateHoldingMetrics([sell, sameDayBuy, buy]);
+		// 100 at $10 then 50 at $20 is $2,000 over 150 units; selling 40 leaves 110.
+		expect(result.units).toBe(110);
+		expect(result.costBase).toBe(146_667);
+	});
+});

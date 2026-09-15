@@ -21,6 +21,9 @@
 	} = $props();
 
 	const fields = addDistribution.fields;
+
+	/* Held here and submitted through the hidden input the checkbox renders. */
+	let reinvested = $state(false);
 	let netPayment = $derived(
 		((Number(fields.grossPayment.value()) || 0) - (Number(fields.taxWithheld.value()) || 0)) * 100
 	);
@@ -82,7 +85,11 @@
 			</div>
 
 			<div class="flex items-center gap-2 rounded-lg border p-4">
-				<Checkbox id="reinvested" name="reinvested" value="on" />
+				<Checkbox
+					id="reinvested"
+					name={addDistribution.fields.reinvested.as('checkbox').name}
+					bind:checked={reinvested}
+				/>
 				<Label for="reinvested">Distribution Reinvested (DRP)</Label>
 			</div>
 

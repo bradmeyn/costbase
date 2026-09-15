@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { holdingTable, portfolioTable } from '$db/schemas/portfolio';
+import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import type {
@@ -126,6 +127,9 @@ export const addHolding = form(holdingSchema, async ({ portfolioId, investmentId
 		})
 		.returning();
 
+	// Refreshed here so the form's own `.updates()` are satisfied in one round trip.
+	await Promise.all([getHoldings(portfolioId).refresh(), getPortfolio(portfolioId).refresh()]);
+
 	return { success: true, holding: newHolding };
 });
 
@@ -148,6 +152,12 @@ export const updateHolding = form(updateHoldingSchema, async ({ id, investmentId
 		.set({ investmentId })
 		.where(eq(holdingTable.id, id))
 		.returning();
+
+	await Promise.all([
+		getHolding(id).refresh(),
+		getHoldings(holding.portfolioId).refresh(),
+		getPortfolio(holding.portfolioId).refresh()
+	]);
 
 	return { success: true, holding: updatedHolding };
 });
