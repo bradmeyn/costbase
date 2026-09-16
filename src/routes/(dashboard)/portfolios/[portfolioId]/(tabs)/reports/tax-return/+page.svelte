@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
+	import * as Accordion from '$ui/accordion';
 	import Input from '$ui/input/input.svelte';
 	import Button from '$ui/button/button.svelte';
 	import SummaryCard from '#lib/components/summary-card.svelte';
@@ -166,6 +167,16 @@
 			savingLoss = false;
 		}
 	}
+
+	/* The heading carries the answer, so opening the working is a choice. */
+	const workingSummary = $derived.by(() => {
+		const applied = taxReturn.cgt.lossesAppliedToShortTerm + taxReturn.cgt.lossesAppliedToLongTerm;
+		const gains = `${formatCurrency(taxReturn.label18H)} of gains`;
+		// Naming a loss of nothing reads as an omission rather than an absence.
+		return applied > 0
+			? `${gains}, less ${formatCurrency(applied)} of losses and the 50% discount`
+			: `${gains}, less the 50% discount`;
+	});
 
 	type Label = {
 		code: string;
@@ -425,40 +436,58 @@
 	<div class="card">{@render labelTable(section18, perHolding.length > 1)}</div>
 	{@render sectionNotes('capital-gains')}
 
-	<div class="card mt-3">
-		<h3 class="mb-3 text-sm font-semibold">How 18A was worked out</h3>
-		<Table.Root>
-			<Table.Body>
-				{@render working('Your disposals — held 12 months or less', ownShortTermGains)}
-				{@render working('Your disposals — held over 12 months', ownLongTermGains)}
-				{@render working(
-					'Attributed by the funds — other method',
-					taxReturn.trustOtherMethodGains,
-					'no discount applies'
-				)}
-				{@render working(
-					'Attributed by the funds — discounted, grossed up',
-					taxReturn.trustDiscountedGrossedUp,
-					'doubled, so your own losses apply to the whole gain'
-				)}
-				{@render working('Your capital losses this year', -ownCapitalLosses)}
-				{@render working('Losses carried in from earlier years', -taxReturn.cgt.priorYearLosses)}
-				{@render working(
-					'Less losses applied',
-					-(taxReturn.cgt.lossesAppliedToShortTerm + taxReturn.cgt.lossesAppliedToLongTerm)
-				)}
-				{@render working('Less 50% CGT discount', -taxReturn.cgt.cgtDiscount)}
-			</Table.Body>
-			<Table.Footer>
-				<Table.Row>
-					<Table.Cell class="font-medium">Net capital gain (18A)</Table.Cell>
-					<Table.Cell class="text-right font-semibold tabular-nums">
-						{formatCurrency(taxReturn.label18A)}
-					</Table.Cell>
-				</Table.Row>
-			</Table.Footer>
-		</Table.Root>
-	</div>
+	<!--
+		Derivation, not a figure you file: nothing in it goes on the return, and it is
+		read when a number looks wrong rather than every time. Folded away by default
+		so the labels stay adjacent to each other, and the heading carries the answer
+		so opening it is a choice rather than the only way to see what it concluded.
+	-->
+	<Accordion.Root type="single" class="card mt-3 px-4">
+		<Accordion.Item value="working" class="border-b-0">
+			<Accordion.Trigger class="py-3 text-sm font-semibold hover:no-underline">
+				<span class="flex w-full items-baseline justify-between pr-2">
+					How 18A was worked out
+					<span class="text-[11px] font-normal text-muted-foreground">{workingSummary}</span>
+				</span>
+			</Accordion.Trigger>
+			<Accordion.Content>
+				<Table.Root>
+					<Table.Body>
+						{@render working('Your disposals — held 12 months or less', ownShortTermGains)}
+						{@render working('Your disposals — held over 12 months', ownLongTermGains)}
+						{@render working(
+							'Attributed by the funds — other method',
+							taxReturn.trustOtherMethodGains,
+							'no discount applies'
+						)}
+						{@render working(
+							'Attributed by the funds — discounted, grossed up',
+							taxReturn.trustDiscountedGrossedUp,
+							'doubled, so your own losses apply to the whole gain'
+						)}
+						{@render working('Your capital losses this year', -ownCapitalLosses)}
+						{@render working(
+							'Losses carried in from earlier years',
+							-taxReturn.cgt.priorYearLosses
+						)}
+						{@render working(
+							'Less losses applied',
+							-(taxReturn.cgt.lossesAppliedToShortTerm + taxReturn.cgt.lossesAppliedToLongTerm)
+						)}
+						{@render working('Less 50% CGT discount', -taxReturn.cgt.cgtDiscount)}
+					</Table.Body>
+					<Table.Footer>
+						<Table.Row>
+							<Table.Cell class="font-medium">Net capital gain (18A)</Table.Cell>
+							<Table.Cell class="text-right font-semibold tabular-nums">
+								{formatCurrency(taxReturn.label18A)}
+							</Table.Cell>
+						</Table.Row>
+					</Table.Footer>
+				</Table.Root>
+			</Accordion.Content>
+		</Accordion.Item>
+	</Accordion.Root>
 
 	<div class="card mt-3 print:hidden">
 		<h3 class="text-sm font-semibold">Capital losses carried forward into {fyLabel}</h3>
