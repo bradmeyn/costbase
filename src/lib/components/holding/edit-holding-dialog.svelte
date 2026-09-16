@@ -2,10 +2,10 @@
 	import Button from '$ui/button/button.svelte';
 	import * as Dialog from '$ui/dialog/index.js';
 	import * as Field from '$ui/field';
-	import { updateHolding } from '$lib/remotes/holding.remote';
-	import { getHolding, getHoldings } from '$lib/remotes/holding.remote';
-	import { getPortfolio } from '$lib/remotes/portfolio.remote';
-	import { getInvestments } from '$lib/remotes/investment.remote';
+	import { updateHolding } from '#lib/remotes/holding.remote.js';
+	import { getHolding, getHoldings } from '#lib/remotes/holding.remote.js';
+	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
+	import { getInvestments } from '#lib/remotes/investment.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 
 	let {
@@ -34,8 +34,8 @@
 			<Dialog.Description>Update your holding details.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each updateHolding.fields.issues() as issue}
-			<p class="text-sm text-red-600">{issue.message}</p>
+		{#each updateHolding.fields.issues() as issue, i (i)}
+			<p class="text-sm text-loss">{issue.message}</p>
 		{/each}
 
 		<form
@@ -62,7 +62,7 @@
 					class="w-full rounded-md border border-input bg-background px-3 py-2"
 				>
 					<option value="">Select an investment</option>
-					{#each investments as investment}
+					{#each investments as investment (investment.id)}
 						<option value={investment.id}>
 							{investment.name} ({investment.code})
 						</option>
@@ -71,7 +71,7 @@
 				<Field.Error />
 			</Field.Field>
 
-			<input type="hidden" name="id" value={holdingId} />
+			<input {...updateHolding.fields.id.as('hidden', holdingId)} />
 
 			<div class="mt-4 flex justify-end gap-2">
 				<Button type="button" variant="outline" onclick={() => onOpenChange(false)}>Cancel</Button>

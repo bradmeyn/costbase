@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as Select from '$lib/components/ui/select';
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
-	import FrequencyInput from '$lib/components/inputs/frequency-select.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
+	import FrequencyInput from '#lib/components/inputs/frequency-select.svelte';
 	import type { BudgetItem as BudgetItemType } from '../budget.svelte';
 	import Input from '$ui/input/input.svelte';
 
@@ -39,8 +39,12 @@
 	const isValid = $derived(editedItem.name.trim().length > 0 && editedItem.amount > 0);
 	let nameTouched = $state(false);
 	let amountTouched = $state(false);
-	const nameError = $derived(nameTouched && editedItem.name.trim().length === 0 ? 'Name is required.' : '');
-	const amountError = $derived(amountTouched && editedItem.amount <= 0 ? 'Amount must be greater than 0.' : '');
+	const nameError = $derived(
+		nameTouched && editedItem.name.trim().length === 0 ? 'Name is required.' : ''
+	);
+	const amountError = $derived(
+		amountTouched && editedItem.amount <= 0 ? 'Amount must be greater than 0.' : ''
+	);
 
 	function handleSubmit() {
 		if (isValid) {
@@ -83,15 +87,24 @@
 		<div class="space-y-4 py-4">
 			<div class="space-y-2">
 				<label for="item-name" class="text-sm font-medium">Name</label>
-				<Input bind:value={editedItem.name} id="item-name" placeholder="Enter item name" onblur={() => (nameTouched = true)} />
-				{#if nameError}<p class="text-destructive text-xs mt-1">{nameError}</p>{/if}
+				<Input
+					bind:value={editedItem.name}
+					id="item-name"
+					placeholder="Enter item name"
+					onblur={() => (nameTouched = true)}
+				/>
+				{#if nameError}<p class="mt-1 text-xs text-destructive">{nameError}</p>{/if}
 			</div>
 
 			<div class="grid grid-cols-2 gap-4">
 				<div class="space-y-2">
 					<Label for="item-amount" class="text-sm font-medium">Amount</Label>
-					<CurrencyInput id="item-amount" bind:value={editedItem.amount} onchange={() => (amountTouched = true)} />
-					{#if amountError}<p class="text-destructive text-xs mt-1">{amountError}</p>{/if}
+					<CurrencyInput
+						id="item-amount"
+						bind:value={editedItem.amount}
+						onchange={() => (amountTouched = true)}
+					/>
+					{#if amountError}<p class="mt-1 text-xs text-destructive">{amountError}</p>{/if}
 				</div>
 
 				<div class="space-y-2">
@@ -116,7 +129,7 @@
 					</Select.Trigger>
 					<Select.Content>
 						<Select.Group>
-							{#each [...budget.categories[budgetItem.type]] as category}
+							{#each [...budget.categories[budgetItem.type]] as category (category)}
 								<Select.Item value={category} />
 							{/each}
 						</Select.Group>

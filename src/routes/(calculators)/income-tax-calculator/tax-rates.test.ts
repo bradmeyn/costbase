@@ -136,10 +136,7 @@ describe('calculatePersonalTax', () => {
 	it('totalTax is sum of all components', () => {
 		const result = calculatePersonalTax(120000, 0, false, true);
 		const expected =
-			result.incomeTax +
-			result.medicareLevy +
-			result.medicareLevySurcharge +
-			result.helpRepayment;
+			result.incomeTax + result.medicareLevy + result.medicareLevySurcharge + result.helpRepayment;
 		expect(result.totalTax).toBeCloseTo(expected, 2);
 	});
 });

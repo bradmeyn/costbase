@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { WithElementRef } from "$lib/utils.js";
-	import type { HTMLAttributes } from "svelte/elements";
+	import type { WithElementRef } from '#lib/utils/tailwind.js';
+	import { cn } from '#lib/utils/tailwind.js';
+	import type { HTMLAttributes } from 'svelte/elements';
 
 	let {
 		ref = $bindable(null),
@@ -13,8 +14,8 @@
 <nav
 	bind:this={ref}
 	data-slot="breadcrumb"
-	class={className}
 	aria-label="breadcrumb"
+	class={cn(className)}
 	{...restProps}
 >
 	{@render children?.()}

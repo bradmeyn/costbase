@@ -1,19 +1,20 @@
 <script lang="ts">
-	import { Separator as SeparatorPrimitive } from "bits-ui";
-	import { cn } from "$lib/utils/tailwind.js";
+	import { Separator as SeparatorPrimitive } from 'bits-ui';
+	import { cn } from '#lib/utils/tailwind.js';
 
 	let {
 		ref = $bindable(null),
 		class: className,
+		'data-slot': dataSlot = 'separator',
 		...restProps
 	}: SeparatorPrimitive.RootProps = $props();
 </script>
 
 <SeparatorPrimitive.Root
 	bind:ref
-	data-slot="separator"
+	data-slot={dataSlot}
 	class={cn(
-		"bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px",
+		'shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch',
 		className
 	)}
 	{...restProps}

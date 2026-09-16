@@ -1,8 +1,9 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/button/button.svelte';
-	import * as Field from '$lib/components/ui/field';
-	import { Input } from '$lib/components/ui/input';
-	import { registerUser } from '$lib/remotes/auth.remote';
+	import { resolve } from '$app/paths';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as Field from '#lib/components/ui/field/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { registerUser } from '#lib/remotes/auth.remote.js';
 	import { Circle, CircleCheck } from '@lucide/svelte';
 
 	const password = $derived(registerUser.fields.password.value() ?? '');
@@ -36,7 +37,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>Create account — MoneyKit</title>
+	<title>Create account — Costbase</title>
 </svelte:head>
 
 <div class="w-full max-w-lg">
@@ -52,7 +53,7 @@
 		{/if}
 
 		<form {...registerUser} class="space-y-4">
-			{#each registerUser.fields.issues() as issue}
+			{#each registerUser.fields.issues() as issue, i (i)}
 				<p class="text-sm text-destructive">{issue.message}</p>
 			{/each}
 
@@ -141,6 +142,6 @@
 
 	<p class="mt-4 text-center text-sm text-muted-foreground">
 		Already have an account?
-		<a href="/login" class="font-medium text-primary hover:underline">Log in</a>
+		<a href={resolve('/(auth)/login')} class="font-medium text-primary hover:underline">Log in</a>
 	</p>
 </div>

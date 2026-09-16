@@ -10,11 +10,11 @@ services:
       POSTGRES_PASSWORD: mmt_pass
       POSTGRES_DB: mmt_db
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mmt_user -d mmt_db"]
+      test: ['CMD-SHELL', 'pg_isready -U mmt_user -d mmt_db']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
     container_name: moneykit-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       DATABASE_URL: postgres://mmt_user:mmt_pass@db:5432/mmt_db
       BETTER_AUTH_SECRET: your-secret-key-change-in-production

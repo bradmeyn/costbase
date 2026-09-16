@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { LineChart, Tooltip } from 'layerchart';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import type { AnnualData } from '../calculator.svelte';
-	import { COLOURS } from '$lib/constants/colours';
+	import { COLOURS } from '#lib/constants/colours.js';
 	import { LC_TOOLTIP_PROPS, LC_AXIS_PROPS, LC_GRID } from '$constants/chart-config';
 
 	let {
@@ -26,7 +26,8 @@
 
 	let series = $derived.by(() => {
 		const baseColor = COLOURS[0];
-		const goalColor = COLOURS[1];
+		// green (tertiary) reads as a target; orange is reserved for tax owed elsewhere
+		const goalColor = COLOURS[2];
 		const bandColor = COLOURS[0];
 
 		const result = [];
@@ -80,7 +81,7 @@
 	});
 </script>
 
-<div class="h-100 relative md:h-80 lg:h-100 min-w-50 border overflow-hidden p-4 rounded-2xl">
+<div class="relative h-100 min-w-50 overflow-hidden pt-2 md:h-80 lg:h-100">
 	<LineChart
 		data={chartData}
 		x="year"
@@ -123,16 +124,6 @@
 								{...LC_TOOLTIP_PROPS.item}
 							/>
 						{/each}
-						{#if series.length > 1}
-							<Tooltip.Separator />
-							<Tooltip.Item
-								label="Total"
-								value={series.reduce((acc, s) => acc + Number(data[s.key] ?? 0), 0)}
-								format={(v: unknown) => formatCurrency(Number(v), false)}
-								valueAlign="right"
-								{...LC_TOOLTIP_PROPS.item}
-							/>
-						{/if}
 					</Tooltip.List>
 				{/snippet}
 			</Tooltip.Root>

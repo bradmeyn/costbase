@@ -31,7 +31,7 @@
 </script>
 
 <div>
-	<div class="flex gap-2 mb-2 items-center">
+	<div class="mb-2 flex items-center gap-2">
 		<Label class="mb-0" for={id}>{label}</Label>
 		{#if explainer}
 			<Explainer text={explainer} />
@@ -40,7 +40,7 @@
 
 	<Slider type="single" bind:value {min} {max} {step} {id} />
 
-	<div class="text-sm text-muted-foreground mt-1 flex justify-between">
+	<div class="mt-1 flex justify-between text-sm text-muted-foreground">
 		<span>{formatPercentage(value)} p.a.</span>
 		<span class="text-sm">{formatRange()}</span>
 	</div>

@@ -5,11 +5,20 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+/**
+ * Format an amount held in CENTS, as the database stores money.
+ *
+ * Not to be confused with formatCurrency in utils/formatters.ts, which takes
+ * DOLLARS and is for the calculators. Passing cents to that one renders every
+ * figure a hundred times too large.
+ */
 export function formatCurrency(amount: number, currency: string = 'USD'): string {
 	return new Intl.NumberFormat('en-US', {
 		style: 'currency',
 		currency
-	}).format(amount / 100); // assuming amount is in cents
+		// `-0` is what negating an empty deduction produces, and it formats as
+		// "-$0.00". No amount of money is negative zero, so flatten it first.
+	}).format(amount === 0 ? 0 : amount / 100); // assuming amount is in cents
 }
 
 export function formatPercent(value: number): string {

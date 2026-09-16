@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { HTMLOlAttributes } from "svelte/elements";
-	import { cn, type WithElementRef } from "$lib/utils.js";
+	import { cn, type WithElementRef } from '#lib/utils/tailwind.js';
+	import type { HTMLOlAttributes } from 'svelte/elements';
 
 	let {
 		ref = $bindable(null),
@@ -14,7 +14,7 @@
 	bind:this={ref}
 	data-slot="breadcrumb-list"
 	class={cn(
-		"text-muted-foreground flex flex-wrap items-center gap-1.5 break-words text-sm sm:gap-2.5",
+		'flex flex-wrap items-center gap-1.5 text-sm wrap-break-word text-muted-foreground',
 		className
 	)}
 	{...restProps}

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { setCalculatorState, getCalculatorState } from './calculator.svelte';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import * as Tabs from '#lib/components/ui/tabs/index.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import { Flame, CheckCircle, XCircle } from '@lucide/svelte';
 	import Inputs from './_components/savings-inputs.svelte';
 	import GrowthChart from './_components/growth-chart.svelte';
 	import ScrollableTable from '$ui/scrollable-table.svelte';
-	import CalculatorActions from '$lib/components/calculator-actions.svelte';
+	import CalculatorActions from '#lib/components/calculator-actions.svelte';
 
 	setCalculatorState();
 	let calculator = getCalculatorState();
@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Savings & FIRE Calculator | MoneyKit</title>
+	<title>Savings & FIRE Calculator | Costbase</title>
 	<meta
 		name="description"
 		content="Project your savings growth, track progress towards a savings goal, or calculate your FIRE number and time to financial independence."
@@ -22,7 +22,7 @@
 </svelte:head>
 
 <main class="container">
-	<div class="flex justify-between items-center mb-4">
+	<div class="mb-4 flex items-center justify-between">
 		<h1 class="heading-primary">Savings & FIRE Calculator</h1>
 		<CalculatorActions
 			filename="savings-calculator.csv"
@@ -30,12 +30,12 @@
 		/>
 	</div>
 
-	<section class="flex flex-col lg:flex-row gap-8">
+	<section class="flex flex-col gap-8 lg:flex-row">
 		<Inputs />
 
 		<div class="w-full min-w-0 space-y-4">
 			<div class="card">
-				<div class="flex gap-2 flex-col md:flex-row md:justify-between w-full mb-4">
+				<div class="mb-4 flex w-full flex-col gap-2 md:flex-row md:justify-between">
 					<h2 class="heading-secondary">Outcome</h2>
 					<Tabs.Root
 						value={selectedView}
@@ -49,8 +49,8 @@
 					</Tabs.Root>
 				</div>
 
-				<div class="space-y-4 mb-4">
-					<div class="flex gap-8 flex-wrap">
+				<div class="mb-4 space-y-4">
+					<div class="flex flex-wrap gap-8">
 						{@render metric(
 							'Value after ' + calculator.years + ' years',
 							calculator.result.totalValue
@@ -59,29 +59,29 @@
 						{@render metric('Total Interest', calculator.result.totalInterest)}
 					</div>
 
-					<div class="flex gap-8 flex-wrap items-start">
+					<div class="flex flex-wrap items-start gap-8">
 						{@render metric(
 							calculator.mode === 'fire' ? 'FIRE Number' : 'Savings Goal',
 							calculator.goal
 						)}
 
 						<div>
-							<p class="text-muted-foreground mb-1">
+							<p class="mb-1 text-muted-foreground">
 								{calculator.mode === 'fire' ? 'Time to FIRE' : 'Time to Goal'}
 							</p>
 							{#if calculator.yearsToGoal !== null}
 								<div class="flex items-center gap-2">
 									{#if calculator.mode === 'fire'}
-										<Flame class="size-6 text-primary shrink-0" />
+										<Flame class="size-6 shrink-0 text-primary" />
 									{:else}
-										<CheckCircle class="size-6 text-primary shrink-0" />
+										<CheckCircle class="size-6 shrink-0 text-primary" />
 									{/if}
 									<div>
-										<p class="text-3xl md:text-4xl font-bold leading-none">
+										<p class="text-3xl leading-none font-bold md:text-4xl">
 											{calculator.yearsToGoal}
 											<span class="text-xl font-semibold text-muted-foreground">yrs</span>
 										</p>
-										<p class="text-sm text-muted-foreground mt-0.5">
+										<p class="mt-0.5 text-sm text-muted-foreground">
 											{calculator.mode === 'fire' ? 'Retire in' : 'Reach goal in'}
 											{new Date().getFullYear() + calculator.yearsToGoal}
 										</p>
@@ -89,7 +89,7 @@
 								</div>
 							{:else}
 								<div class="flex items-center gap-2">
-									<XCircle class="size-6 text-rose-500 shrink-0" />
+									<XCircle class="size-6 shrink-0 text-loss" />
 									<p class="text-xl font-semibold text-muted-foreground">Not reached</p>
 								</div>
 							{/if}
@@ -117,6 +117,6 @@
 {#snippet metric(label: string, value: number)}
 	<div>
 		<p class="text-muted-foreground">{label}</p>
-		<p class="font-semibold text-xl md:text-2xl">{formatCurrency(value)}</p>
+		<p class="text-xl font-semibold md:text-2xl">{formatCurrency(value)}</p>
 	</div>
 {/snippet}

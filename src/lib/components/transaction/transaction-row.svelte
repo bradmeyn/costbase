@@ -1,18 +1,18 @@
 <script lang="ts">
-	import Button from '$ui/button/button.svelte';
 	import * as Table from '$ui/table';
-	import { Pencil, Trash2 } from '@lucide/svelte';
-	import EditTransactionDialog from '$lib/components/transaction/edit-transaction-dialog.svelte';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import { deleteTransaction } from '$lib/remotes/transaction.remote';
-	import { formatCurrency } from '$lib/utils';
+	import EditTransactionDialog from '#lib/components/transaction/edit-transaction-dialog.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import { deleteTransaction } from '#lib/remotes/transaction.remote.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import DocumentAttachment from '#lib/components/document-attachment.svelte';
+	import Button from '$ui/button/button.svelte';
+	import { Pencil } from '@lucide/svelte';
+	import type { Transaction, Document } from '$db/schemas/portfolio';
 
 	let {
-		transaction,
-		holdingId
+		transaction
 	}: {
-		transaction: any;
-		holdingId: string;
+		transaction: Transaction & { documents?: Document[] };
 	} = $props();
 
 	let editOpen = $state(false);
@@ -27,9 +27,9 @@
 	};
 
 	const TYPE_BADGES = {
-		buy: { label: 'Buy', dot: 'bg-emerald-500' },
-		sell: { label: 'Sell', dot: 'bg-rose-500' },
-		reinvestment: { label: 'Reinvestment', dot: 'bg-sky-500' }
+		buy: { label: 'Buy', dot: 'bg-gain' },
+		sell: { label: 'Sell', dot: 'bg-loss' },
+		reinvestment: { label: 'Reinvestment', dot: 'bg-primary' }
 	} as const;
 
 	const badge = $derived(
@@ -49,25 +49,25 @@
 	<Table.Cell class="text-right">{formatCurrency(transaction.pricePerUnit)}</Table.Cell>
 	<Table.Cell class="text-right">{formatCurrency(transaction.brokerage || 0)}</Table.Cell>
 	<Table.Cell class="text-right">
-		{formatCurrency(transaction.quantity * transaction.pricePerUnit)}
+		{formatCurrency(transaction.value ?? transaction.quantity * transaction.pricePerUnit)}
 	</Table.Cell>
 	<Table.Cell class="text-right">
-		<div class="flex justify-end gap-2">
+		<div class="flex items-center justify-end gap-1">
+			<DocumentAttachment
+				owner="transaction"
+				ownerId={transaction.id}
+				documents={transaction.documents}
+				readOnly
+			/>
 			<Button
 				variant="ghost"
 				size="icon"
 				onclick={() => (editOpen = true)}
-				aria-label="Edit transaction"
+				aria-label="Edit {badge.label} of {transaction.quantity} on {formatDate(
+					transaction.transactionDate
+				)}"
 			>
 				<Pencil class="size-4" />
-			</Button>
-			<Button
-				variant="ghost"
-				size="icon"
-				onclick={() => (deleteOpen = true)}
-				aria-label="Delete transaction"
-			>
-				<Trash2 class="size-4" />
 			</Button>
 		</div>
 	</Table.Cell>
@@ -76,9 +76,12 @@
 <!-- Edit Transaction Dialog -->
 <EditTransactionDialog
 	transactionId={transaction.id}
-	{holdingId}
 	{transaction}
 	bind:open={editOpen}
+	onDelete={() => {
+		editOpen = false;
+		deleteOpen = true;
+	}}
 />
 
 <!-- Delete Transaction Dialog -->

@@ -3,12 +3,12 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { updateDistribution } from '$lib/remotes/distribution.remote';
+	import { updateDistribution } from '#lib/remotes/distribution.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Checkbox } from '$ui/checkbox';
 	import Label from '$ui/label/label.svelte';
-	import { formatCurrency } from '$lib/utils';
-	import type { distributionTable } from '$lib/server/db/schemas/portfolio';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { distributionTable } from '#lib/server/db/schemas/portfolio.js';
 	import type { InferSelectModel } from 'drizzle-orm';
 
 	type Distribution = InferSelectModel<typeof distributionTable>;
@@ -29,6 +29,12 @@
 	}
 
 	const fields = updateDistribution.fields;
+
+	/*
+	  The checkbox is a bits-ui control, not a native input, so its state is held here
+	  and submitted through the hidden input it renders for `name`.
+	*/
+	let reinvested = $derived(distribution.reinvested);
 	let netPayment = $derived(
 		((Number(fields.grossPayment.value() ?? distribution.grossPayment / 100) || 0) -
 			(Number(fields.taxWithheld.value() ?? distribution.taxWithheld / 100) || 0)) *
@@ -43,7 +49,7 @@
 			<Dialog.Description>Update the distribution details.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each fields.allIssues?.() ?? [] as issue}
+		{#each fields.allIssues?.() ?? [] as issue, i (i)}
 			<p class="text-sm text-destructive">{issue.message}</p>
 		{/each}
 
@@ -99,7 +105,11 @@
 			</div>
 
 			<div class="flex items-center gap-2 rounded-lg border p-4">
-				<Checkbox id="reinvested" name="reinvested" value="on" checked={distribution.reinvested} />
+				<Checkbox
+					id="reinvested"
+					name={updateDistribution.fields.reinvested.as('checkbox').name}
+					bind:checked={reinvested}
+				/>
 				<Label for="reinvested">Distribution Reinvested (DRP)</Label>
 			</div>
 

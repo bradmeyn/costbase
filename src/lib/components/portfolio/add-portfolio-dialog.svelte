@@ -3,8 +3,8 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { addPortfolio } from '$lib/remotes/portfolio.remote';
-	import { getPortfolios } from '$lib/remotes/portfolio.remote';
+	import { addPortfolio } from '#lib/remotes/portfolio.remote.js';
+	import { getPortfolios } from '#lib/remotes/portfolio.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Plus } from '@lucide/svelte';
 
@@ -31,8 +31,8 @@
 			<Dialog.Description>Create a new portfolio to track your investments.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each addPortfolio.fields.issues() as issue}
-			<p class="text-sm text-red-600">{issue.message}</p>
+		{#each addPortfolio.fields.issues() as issue, i (i)}
+			<p class="text-sm text-loss">{issue.message}</p>
 		{/each}
 
 		<form

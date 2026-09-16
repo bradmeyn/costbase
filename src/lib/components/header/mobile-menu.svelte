@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { X } from '@lucide/svelte';
-	import { calculators } from '$lib/constants/calculators';
+	import { calculators } from '#lib/constants/calculators.js';
 
 	let activeUrl = $derived(page.url.pathname);
 	let user = $derived(page.data.user);
@@ -12,16 +13,22 @@
 			if (!node.contains(event.target as Node)) callback();
 		}
 		document.addEventListener('click', handleClick, true);
-		return { destroy() { document.removeEventListener('click', handleClick, true); } };
+		return {
+			destroy() {
+				document.removeEventListener('click', handleClick, true);
+			}
+		};
 	}
 
-	function closeMenu() { isOpen = false; }
+	function closeMenu() {
+		isOpen = false;
+	}
 </script>
 
-<div class="relative md:hidden block" use:clickOutside={closeMenu}>
+<div class="relative block md:hidden" use:clickOutside={closeMenu}>
 	<button
 		onclick={() => (isOpen = !isOpen)}
-		class="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors ml-auto hover:bg-muted rounded-lg size-5 p-5"
+		class="ml-auto flex size-5 items-center justify-center rounded-lg p-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 		aria-expanded={isOpen}
 		aria-label="Toggle menu"
 	>
@@ -29,58 +36,67 @@
 			<X class="size-5" />
 		{:else}
 			<div class="flex flex-col gap-1">
-				<div class="w-4 h-0.5 bg-current"></div>
-				<div class="w-4 h-0.5 bg-current"></div>
+				<div class="h-0.5 w-4 bg-current"></div>
+				<div class="h-0.5 w-4 bg-current"></div>
 			</div>
 		{/if}
 	</button>
 
 	{#if isOpen}
-		<div class="fixed top-0 left-0 right-0 bg-card shadow-lg z-50 max-h-screen overflow-y-auto border-b border-border">
-			<div class="flex items-center justify-between p-4 border-b border-border">
-				<span class="text-foreground text-xl font-medium tracking-tight">
-					Money<span class="text-transparent bg-clip-text bg-linear-to-b from-primary to-brand">Kit</span>
+		<div
+			class="fixed top-0 right-0 left-0 z-50 max-h-screen overflow-y-auto border-b border-border bg-card shadow-lg"
+		>
+			<div class="flex items-center justify-between border-b border-border p-4">
+				<span class="text-xl font-medium tracking-tight text-foreground">
+					Cost<span class="text-primary">base</span>
 				</span>
-				<button onclick={closeMenu} class="p-2 hover:bg-muted rounded-lg transition-colors" aria-label="Close menu">
+				<button
+					onclick={closeMenu}
+					class="rounded-lg p-2 transition-colors hover:bg-muted"
+					aria-label="Close menu"
+				>
 					<X class="size-5 text-muted-foreground" />
 				</button>
 			</div>
 
-			<nav class="p-4 space-y-1">
-				<p class="px-4 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Calculators</p>
-				{#each calculators as calculator}
+			<nav class="space-y-1 p-4">
+				<p class="px-4 pb-1 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+					Calculators
+				</p>
+				{#each calculators as calculator (calculator.href)}
 					<a
 						href={calculator.href}
 						onclick={closeMenu}
-						class="flex items-center rounded-lg px-4 py-2.5 text-sm transition-colors {activeUrl === calculator.href
-							? 'text-foreground bg-muted font-medium'
-							: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
+						class="flex items-center rounded-lg px-4 py-2.5 text-sm transition-colors {activeUrl ===
+						calculator.href
+							? 'bg-muted font-medium text-foreground'
+							: 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
 					>
 						{calculator.name}
 					</a>
 				{/each}
 
-				<div class="pt-3 border-t border-border mt-2 space-y-2">
+				<div class="mt-2 space-y-2 border-t border-border pt-3">
 					{#if user}
 						<a
-							href="/portfolios"
+							href={resolve('/(dashboard)/portfolios')}
 							onclick={closeMenu}
-							class="flex items-center justify-center w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+							class="flex w-full items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 						>
-							Dashboard
+							Portfolios
 						</a>
 					{:else}
 						<a
-							href="/login"
+							href={resolve('/(auth)/login')}
 							onclick={closeMenu}
-							class="flex items-center justify-center w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+							class="flex w-full items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
 						>
 							Log in
 						</a>
 						<a
-							href="/register"
+							href={resolve('/(auth)/register')}
 							onclick={closeMenu}
-							class="flex items-center justify-center w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+							class="flex w-full items-center justify-center rounded-md bg-primary-solid px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-solid/85"
 						>
 							Sign up
 						</a>

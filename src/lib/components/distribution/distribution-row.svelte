@@ -1,16 +1,17 @@
 <script lang="ts">
 	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
-	import { CircleCheck, Pencil, Trash2 } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
-	import type { Distribution } from '$db/schemas/portfolio';
-	import DeleteDialog from '$lib/components/delete-dialog.svelte';
-	import { deleteDistribution } from '$lib/remotes/distribution.remote';
-	import { getHolding } from '$lib/remotes/holding.remote';
+	import { CircleCheck } from '@lucide/svelte';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { Distribution, Document } from '$db/schemas/portfolio';
+	import DocumentAttachment from '#lib/components/document-attachment.svelte';
+	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
+	import DeleteDialog from '#lib/components/delete-dialog.svelte';
+	import { deleteDistribution } from '#lib/remotes/distribution.remote.js';
+	import { getHolding } from '#lib/remotes/holding.remote.js';
 	import EditDistributionDialog from './edit-distribution-dialog.svelte';
 
 	interface Props {
-		distribution: Distribution;
+		distribution: Distribution & { documents?: Document[] };
 		holdingId: string;
 	}
 
@@ -46,19 +47,24 @@
 	<Table.Cell class="text-right font-medium">{formatCurrency(netPayment * 100)}</Table.Cell>
 	<Table.Cell>
 		{#if distribution.reinvested}
-			<CircleCheck class="size-6 text-green-600" />
+			<CircleCheck class="size-6 text-gain" />
 		{:else}
 			<CircleCheck class="size-6 text-muted-foreground opacity-30" />
 		{/if}
 	</Table.Cell>
 	<Table.Cell class="text-right">
-		<div class="flex justify-end gap-1">
-			<Button variant="ghost" size="icon" onclick={() => (dialog = 'edit')}>
-				<Pencil class="size-4" />
-			</Button>
-			<Button variant="ghost" size="icon" onclick={() => (dialog = 'delete')}>
-				<Trash2 class="size-4" />
-			</Button>
+		<div class="flex items-center justify-end gap-1">
+			<DocumentAttachment
+				owner="distribution"
+				ownerId={distribution.id}
+				documents={distribution.documents}
+				readOnly
+			/>
+			<RowActionsMenu
+				onEdit={() => (dialog = 'edit')}
+				onDelete={() => (dialog = 'delete')}
+				label="distribution paid {formatDate(distribution.datePaid)}"
+			/>
 		</div>
 	</Table.Cell>
 </Table.Row>

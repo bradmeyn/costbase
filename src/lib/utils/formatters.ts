@@ -13,6 +13,12 @@ export const parsePercentage = (value: string): number => {
 	return isNaN(parsed) ? 0 : parsed;
 };
 
+/**
+ * Format an amount held in DOLLARS, for the calculators.
+ *
+ * Anything read from the database is in cents — use formatCurrency from utils.ts
+ * for that instead.
+ */
 export const formatCurrency = (value: number, includeCents: boolean = false): string => {
 	return new Intl.NumberFormat('en-US', {
 		style: 'currency',

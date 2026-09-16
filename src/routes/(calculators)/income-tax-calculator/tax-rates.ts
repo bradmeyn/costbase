@@ -4,7 +4,7 @@ export const CURRENT_FINANCIAL_YEAR = '2025-26';
 export const INCOME_TAX_BRACKETS = [
 	{ min: 0, max: 18200, rate: 0 },
 	{ min: 18201, max: 45000, rate: 0.16 },
-	{ min: 45001, max: 135000, rate: 0.30 },
+	{ min: 45001, max: 135000, rate: 0.3 },
 	{ min: 135001, max: 190000, rate: 0.37 },
 	{ min: 190001, max: Infinity, rate: 0.45 }
 ];

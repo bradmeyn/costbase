@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { FREQUENCIES } from '$lib/constants/frequencies';
-	import { formatCurrency } from '$lib/utils/formatters';
+	import { FREQUENCIES } from '#lib/constants/frequencies.js';
+	import { formatCurrency } from '#lib/utils/formatters.js';
 	import BudgetCardMenu from './budget-card-menu.svelte';
 	import { getBudgetState, calculateCategoryTotal, type BudgetItem } from '../budget.svelte';
 	import BudgetTable from './budget-table.svelte';
@@ -42,11 +42,11 @@
 		<div>
 			<h2 class="heading-secondary mb-2">{title[type]}</h2>
 			<div class="flex items-baseline gap-2">
-				<p class={`text-2xl font-semibold  ${total < 0 ? 'text-red-400' : ''}`}>
+				<p class={`text-2xl font-semibold  ${total < 0 ? 'text-loss' : ''}`}>
 					{formatCurrency(total)}
 				</p>
 				<button
-					class="text-muted-foreground hover:text-foreground transition-colors duration-150"
+					class="text-muted-foreground transition-colors duration-150 hover:text-foreground"
 					onclick={changeFrequency}
 				>
 					/ {FREQUENCIES[budget.frequency].singular}
@@ -60,11 +60,10 @@
 		{#if viewMode === 'simple'}
 			<BudgetFlatTable {items} {type} {categories} />
 		{:else}
-			{#each categories as category}
+			{#each categories as category (category)}
 				{@const categoryItems = items.filter((i) => i.category === category && i.type === type)}
 
 				<BudgetAccordion
-					{type}
 					{category}
 					categoryTotal={calculateCategoryTotal(items, category, budget.frequency)}
 				>

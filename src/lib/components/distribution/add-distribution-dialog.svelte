@@ -3,12 +3,12 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { addDistribution } from '$lib/remotes/distribution.remote';
+	import { addDistribution } from '#lib/remotes/distribution.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Plus } from '@lucide/svelte';
 	import { Checkbox } from '$ui/checkbox';
 	import Label from '$ui/label/label.svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { formatCurrency } from '#lib/utils.js';
 
 	let {
 		holdingId,
@@ -21,6 +21,9 @@
 	} = $props();
 
 	const fields = addDistribution.fields;
+
+	/* Held here and submitted through the hidden input the checkbox renders. */
+	let reinvested = $state(false);
 	let netPayment = $derived(
 		((Number(fields.grossPayment.value()) || 0) - (Number(fields.taxWithheld.value()) || 0)) * 100
 	);
@@ -40,7 +43,7 @@
 			<Dialog.Description>Record a distribution payment for this holding.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each fields.allIssues?.() ?? [] as issue}
+		{#each fields.allIssues?.() ?? [] as issue, i (i)}
 			<p class="text-sm text-destructive">{issue.message}</p>
 		{/each}
 
@@ -82,7 +85,11 @@
 			</div>
 
 			<div class="flex items-center gap-2 rounded-lg border p-4">
-				<Checkbox id="reinvested" name="reinvested" value="on" />
+				<Checkbox
+					id="reinvested"
+					name={addDistribution.fields.reinvested.as('checkbox').name}
+					bind:checked={reinvested}
+				/>
 				<Label for="reinvested">Distribution Reinvested (DRP)</Label>
 			</div>
 

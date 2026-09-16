@@ -1,9 +1,13 @@
-import { FREQUENCIES, type FrequencyType } from '$lib/constants/frequencies';
+import { FREQUENCIES, type FrequencyType } from '#lib/constants/frequencies.js';
 import { setContext, getContext } from 'svelte';
-import { calculateCompoundInterest, calculateBandData, buildTableData } from '$lib/utils/growth-calculations';
+import {
+	calculateCompoundInterest,
+	calculateBandData,
+	buildTableData
+} from '#lib/utils/growth-calculations.js';
 
 export type Mode = 'savings' | 'fire';
-export type { GrowthResult, AnnualData } from '$lib/utils/growth-calculations';
+export type { GrowthResult, AnnualData } from '#lib/utils/growth-calculations.js';
 
 class SavingsCalculatorState {
 	mode = $state<Mode>('savings');

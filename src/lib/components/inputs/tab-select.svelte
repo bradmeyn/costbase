@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	let {
 		value = $bindable(),
 		options,
@@ -16,10 +14,10 @@
 </script>
 
 <div
-	class="bg-muted text-muted-foreground inline-flex h-9 w-full items-center justify-center rounded-lg p-[3px]"
+	class="inline-flex h-9 w-full items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground"
 >
-	{#each options as option}
-		<label class="flex-1 mb-0" for={`${name}-tabs-${option.value}`}>
+	{#each options as option (option.value)}
+		<label class="mb-0 flex-1" for={`${name}-tabs-${option.value}`}>
 			<input
 				type="radio"
 				id={`${name}-tabs-${option.value}`}
@@ -27,11 +25,11 @@
 				bind:group={value}
 				value={option.value}
 				checked={value == option.value}
-				class="sr-only peer"
+				class="peer sr-only"
 			/>
 			<div
-				class="flex focus-visible:ring-ring/50 h-[calc(100%-1px)] items-center data-[state=checked]:shadow-sm focus-visible:border-ring border border-transparent justify-center px-2 whitespace-nowrap py-1 text-sm font-medium rounded-md transition-all gap-1.5
-					data-[state=checked]:bg-background data-[state=checked]:text-foreground data-[state=checked]:border-input
+				class="flex h-[calc(100%-1px)] items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-ring/50 data-[state=checked]:border-input
+					data-[state=checked]:bg-background data-[state=checked]:text-foreground data-[state=checked]:shadow-sm
 					data-[state=unchecked]:text-muted-foreground"
 				data-state={value == option.value ? 'checked' : 'unchecked'}
 			>

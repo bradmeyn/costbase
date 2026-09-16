@@ -3,8 +3,8 @@
 	import * as Dialog from '$ui/dialog/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { updatePortfolio } from '$lib/remotes/portfolio.remote';
-	import { getPortfolio, getPortfolios } from '$lib/remotes/portfolio.remote';
+	import { updatePortfolio } from '#lib/remotes/portfolio.remote.js';
+	import { getPortfolio, getPortfolios } from '#lib/remotes/portfolio.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 
 	let {
@@ -27,8 +27,8 @@
 			<Dialog.Description>Update your portfolio details.</Dialog.Description>
 		</Dialog.Header>
 
-		{#each updatePortfolio.fields.issues() as issue}
-			<p class="text-sm text-red-600">{issue.message}</p>
+		{#each updatePortfolio.fields.issues() as issue, i (i)}
+			<p class="text-sm text-loss">{issue.message}</p>
 		{/each}
 
 		<form
@@ -56,7 +56,7 @@
 				<Field.Error />
 			</Field.Field>
 
-			<input type="hidden" name="id" value={portfolioId} />
+			<input {...updatePortfolio.fields.id.as('hidden', portfolioId)} />
 
 			<div class="mt-4 flex justify-end gap-2">
 				<Button type="button" variant="outline" onclick={() => onOpenChange(false)}>Cancel</Button>

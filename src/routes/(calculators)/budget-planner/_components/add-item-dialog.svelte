@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { buttonVariants } from '$lib/components/ui/button/button.svelte';
-	import { cn } from '$lib/utils/tailwind';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as Select from '$lib/components/ui/select';
-	import CurrencyInput from '$lib/components/inputs/currency-input.svelte';
-	import FrequencyInput from '$lib/components/inputs/frequency-select.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { buttonVariants } from '#lib/components/ui/button/button.svelte';
+	import { cn } from '#lib/utils/tailwind.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
+	import FrequencyInput from '#lib/components/inputs/frequency-select.svelte';
 	import type { BudgetItem as BudgetItemType } from '../budget.svelte';
 	import Input from '$ui/input/input.svelte';
 	import { v4 as uuidv4 } from 'uuid';
@@ -58,8 +58,12 @@
 	let categoryError = $state('');
 	let nameTouched = $state(false);
 	let amountTouched = $state(false);
-	const nameError = $derived(nameTouched && newItem.name.trim().length === 0 ? 'Name is required.' : '');
-	const amountError = $derived(amountTouched && newItem.amount <= 0 ? 'Amount must be greater than 0.' : '');
+	const nameError = $derived(
+		nameTouched && newItem.name.trim().length === 0 ? 'Name is required.' : ''
+	);
+	const amountError = $derived(
+		amountTouched && newItem.amount <= 0 ? 'Amount must be greater than 0.' : ''
+	);
 
 	function validateCategory() {
 		if (addingNewCategory) {
@@ -140,11 +144,11 @@
 			>
 			<Dialog.Description>
 				{#if category === 'uncategorised'}
-					Add a new {type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'savings'} item
-					and assign it to a category.
+					Add a new {type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'savings'} item and
+					assign it to a category.
 				{:else}
-					Add a new {type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'savings'} item
-					to the {category} category.
+					Add a new {type === 'income' ? 'income' : type === 'expense' ? 'expense' : 'savings'} item to
+					the {category} category.
 				{/if}
 			</Dialog.Description>
 		</Dialog.Header>
@@ -152,15 +156,24 @@
 		<div class="space-y-4 py-4">
 			<div class="space-y-2">
 				<label for="item-name" class="text-sm font-medium">Name</label>
-				<Input bind:value={newItem.name} id="item-name" placeholder="Enter item name" onblur={() => (nameTouched = true)} />
-				{#if nameError}<p class="text-destructive text-xs mt-1">{nameError}</p>{/if}
+				<Input
+					bind:value={newItem.name}
+					id="item-name"
+					placeholder="Enter item name"
+					onblur={() => (nameTouched = true)}
+				/>
+				{#if nameError}<p class="mt-1 text-xs text-destructive">{nameError}</p>{/if}
 			</div>
 
 			<div class="grid grid-cols-2 gap-4">
 				<div class="space-y-2">
 					<Label for="item-amount" class="text-sm font-medium">Amount</Label>
-					<CurrencyInput id="item-amount" bind:value={newItem.amount} onchange={() => (amountTouched = true)} />
-					{#if amountError}<p class="text-destructive text-xs mt-1">{amountError}</p>{/if}
+					<CurrencyInput
+						id="item-amount"
+						bind:value={newItem.amount}
+						onchange={() => (amountTouched = true)}
+					/>
+					{#if amountError}<p class="mt-1 text-xs text-destructive">{amountError}</p>{/if}
 				</div>
 
 				<div class="space-y-2">
@@ -186,7 +199,7 @@
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Group>
-								{#each [...budget.categories[type], 'New Category'] as category}
+								{#each [...budget.categories[type], 'New Category'] as category (category)}
 									<Select.Item value={category} />
 								{/each}
 							</Select.Group>
@@ -205,7 +218,7 @@
 						placeholder="Enter new category name"
 					/>
 					{#if categoryError}
-						<small class="text-red-500">{categoryError}</small>
+						<small class="text-destructive">{categoryError}</small>
 					{/if}
 				</div>
 			{/if}

@@ -1,7 +1,7 @@
-import { FREQUENCIES, type FrequencyType } from '$lib/constants/frequencies';
+import { FREQUENCIES, type FrequencyType } from '#lib/constants/frequencies.js';
 import { setContext, getContext } from 'svelte';
 import { defaultBudgetItems, defaultCategories } from './default-budget-items';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 export type BudgetItem = {
 	id: string;
@@ -260,11 +260,11 @@ class Budget {
 			(acc, item) => acc + convertToFrequency(item.amount, item.frequency, 'monthly'),
 			0
 		);
+
 		const monthlyexpenses = expenses.reduce(
 			(acc, item) => acc + convertToFrequency(item.amount, item.frequency, 'monthly'),
 			0
 		);
-
 		const monthlyUnallocated = monthlyincome - monthlyexpenses;
 
 		const annualincome = income.reduce(

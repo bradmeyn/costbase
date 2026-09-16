@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { EllipsisVertical, Pencil, Trash2 } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 
@@ -24,7 +24,7 @@
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+		class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-accent-foreground"
 		aria-label="More options for {label}"
 	>
 		<EllipsisVertical class="size-4" />

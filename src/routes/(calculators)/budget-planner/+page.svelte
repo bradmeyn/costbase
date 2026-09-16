@@ -1,12 +1,12 @@
 <script lang="ts">
-	import DoughnutChart from '$lib/components/charts/doughnut-chart.svelte';
-	import LegendList from '$lib/components/charts/legend-list.svelte';
-	import { formatPercentage } from '$lib/utils/formatters';
+	import DoughnutChart from '#lib/components/charts/doughnut-chart.svelte';
+	import LegendList from '#lib/components/charts/legend-list.svelte';
+	import { formatPercentage } from '#lib/utils/formatters.js';
 	import { setBudgetState } from './budget.svelte';
 	import BudgetCard from './_components/budget-card.svelte';
 	import ActionsMenu from './_components/actions-menu.svelte';
 	import LoadBudgetAlert from './_components/load-budget-alert.svelte';
-	import TabSelect from '$lib/components/inputs/tab-select.svelte';
+	import TabSelect from '#lib/components/inputs/tab-select.svelte';
 
 	const budget = setBudgetState();
 
@@ -54,17 +54,17 @@
 		property="og:description"
 		content="Create and manage your personal budget with our free budget planner. Track income, expenses, and savings goals."
 	/>
-	<meta property="og:url" content="https://moneykit.au/budget-planner" />
-	<meta property="og:image" content="https://moneykit.au/budget-preview.jpg" />
+	<meta property="og:url" content="https://costbase.au/budget-planner" />
+	<meta property="og:image" content="https://costbase.au/budget-preview.jpg" />
 
 	<!-- Additional SEO -->
 	<meta name="robots" content="index, follow" />
-	<link rel="canonical" href="https://moneykit.au/budget-planner" />
+	<link rel="canonical" href="https://costbase.au/budget-planner" />
 </svelte:head>
 
-<main class="flex flex-col flex-1 mx-auto w-full px-4 md:px-6 max-w-300">
+<main class="mx-auto flex w-full max-w-300 flex-1 flex-col px-4 md:px-6">
 	<LoadBudgetAlert />
-	<div class="flex justify-between items-center mb-2">
+	<div class="mb-2 flex items-center justify-between">
 		<h1 class="heading-primary">Budget Planner</h1>
 		<div class="flex items-center gap-4">
 			<ActionsMenu />
@@ -75,8 +75,8 @@
 		<TabSelect bind:value={viewMode} name="budget-view" options={viewOptions} />
 	</div>
 
-	<div class="flex flex-col lg:flex-row gap-4 w-full">
-		<div class="flex-1 flex gap-4 flex-col">
+	<div class="flex w-full flex-col gap-4 lg:flex-row">
+		<div class="flex flex-1 flex-col gap-4">
 			<BudgetCard
 				type="income"
 				categories={budget.categories['income']}
@@ -93,8 +93,8 @@
 			/>
 		</div>
 		{#if budget.totalExpenses > 0}
-			<div class="flex flex-row lg:flex-col flex-wrap gap-4 min-w-75 h-fit">
-				<div class="card flex-1">
+			<div class="flex h-fit min-w-75 flex-row flex-wrap gap-4 lg:flex-col">
+				<div class="card w-full">
 					<h2 class="heading-secondary">Spending Breakdown</h2>
 					<DoughnutChart data={chartData} formatter={formatPercentage} />
 					<LegendList data={chartData} formatter={formatPercentage} />

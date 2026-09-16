@@ -3,26 +3,6 @@
  * These functions are separated from the data fetching logic to make them testable
  */
 
-export interface RealisedGain {
-	holdingName: string;
-	holdingCode: string;
-	saleDate: Date;
-	quantity: number;
-	proceeds: number; // in cents
-	costBase: number; // in cents
-	gain: number; // in cents
-	isLongTerm: boolean; // held > 12 months
-}
-
-export interface TaxLot {
-	date: Date;
-	quantity: number;
-	costPerUnit: number; // in cents
-	holdingId: string;
-	holdingName: string;
-	holdingCode: string;
-}
-
 export interface CGTCalculation {
 	shortTermGains: number;
 	lossesAppliedToShortTerm: number;
@@ -33,73 +13,35 @@ export interface CGTCalculation {
 	cgtDiscount: number;
 	longTermTaxable: number;
 	totalTaxableGain: number;
+	/** Losses brought in from earlier years that were available this year. */
+	priorYearLosses: number;
+	/** Losses left over once gains are exhausted; carried forward to a later year. */
+	lossesCarriedForward: number;
 }
 
 /**
- * Calculate if a holding period qualifies for long-term CGT discount (> 12 months)
- */
-export function isLongTermHolding(purchaseDate: Date, saleDate: Date): boolean {
-	const holdingPeriodMs = saleDate.getTime() - purchaseDate.getTime();
-	const oneYearMs = 365 * 24 * 60 * 60 * 1000;
-	return holdingPeriodMs > oneYearMs;
-}
-
-/**
- * Calculate realised gains from a sale transaction using FIFO
- */
-export function calculateRealisedGains(
-	taxLots: TaxLot[],
-	quantity: number,
-	salePrice: number,
-	saleDate: Date
-): { gains: RealisedGain[]; remainingLots: TaxLot[] } {
-	const gains: RealisedGain[] = [];
-	const lots = [...taxLots]; // Clone to avoid mutation
-	let remainingToSell = quantity;
-
-	while (remainingToSell > 0 && lots.length > 0) {
-		const lot = lots[0];
-		const quantityFromLot = Math.min(lot.quantity, remainingToSell);
-
-		const proceeds = quantityFromLot * salePrice;
-		const costBase = quantityFromLot * lot.costPerUnit;
-		const gain = proceeds - costBase;
-		const isLongTerm = isLongTermHolding(lot.date, saleDate);
-
-		gains.push({
-			holdingName: lot.holdingName,
-			holdingCode: lot.holdingCode,
-			saleDate,
-			quantity: quantityFromLot,
-			proceeds,
-			costBase,
-			gain,
-			isLongTerm
-		});
-
-		lot.quantity -= quantityFromLot;
-		remainingToSell -= quantityFromLot;
-
-		if (lot.quantity === 0) {
-			lots.shift();
-		}
-	}
-
-	return { gains, remainingLots: lots };
-}
-
-/**
- * Calculate CGT with loss offsetting and discount
- * Losses are applied to short-term gains first, then long-term gains
- * Long-term gains receive a 50% discount
+ * Net a year's capital gains against its losses and apply the 50% discount.
+ *
+ * All amounts are in cents. `capitalLosses` and `priorYearLosses` are taken as
+ * magnitudes, so either may be passed signed or unsigned.
+ *
+ * Losses go against short-term gains before long-term ones. That order is the
+ * taxpayer's choice under the ATO rules and always the better one: a dollar of loss
+ * cancels a full dollar of an undiscounted gain, but only fifty cents of a
+ * discounted one.
+ *
+ * This year's losses and those carried in from earlier years form one pool. Which
+ * is spent first cannot change the outcome — whatever is left over carries forward
+ * either way — so they are applied together and only reported apart.
  */
 export function calculateCGT(
 	shortTermGains: number,
 	longTermGains: number,
-	capitalLosses: number
+	capitalLosses: number,
+	priorYearLosses: number = 0
 ): CGTCalculation {
-	const totalLosses = Math.abs(capitalLosses);
-	let remainingLosses = totalLosses;
+	const brought = Math.abs(priorYearLosses);
+	let remainingLosses = Math.abs(capitalLosses) + brought;
 
 	// Apply losses to short-term gains first
 	const lossesAppliedToShortTerm = Math.min(remainingLosses, shortTermGains);
@@ -108,10 +50,12 @@ export function calculateCGT(
 
 	// Apply remaining losses to long-term gains
 	const lossesAppliedToLongTerm = Math.min(remainingLosses, longTermGains);
+	remainingLosses -= lossesAppliedToLongTerm;
 	const longTermAfterLosses = longTermGains - lossesAppliedToLongTerm;
 
-	// Apply 50% CGT discount to long-term gains
-	const cgtDiscount = longTermAfterLosses > 0 ? longTermAfterLosses * 0.5 : 0;
+	// Apply 50% CGT discount to long-term gains. Rounded, because an odd number of
+	// cents would otherwise leave half a cent in every downstream total.
+	const cgtDiscount = longTermAfterLosses > 0 ? Math.round(longTermAfterLosses / 2) : 0;
 	const longTermTaxable = longTermAfterLosses - cgtDiscount;
 
 	const totalTaxableGain = shortTermAfterLosses + longTermTaxable;
@@ -125,7 +69,9 @@ export function calculateCGT(
 		longTermAfterLosses,
 		cgtDiscount,
 		longTermTaxable,
-		totalTaxableGain
+		totalTaxableGain,
+		priorYearLosses: brought,
+		lossesCarriedForward: remainingLosses
 	};
 }
 
@@ -148,41 +94,5 @@ export function getCurrentFinancialYear(date: Date = new Date()): {
 		start,
 		end,
 		label: `FY${fyYear}-${fyYear + 1}`
-	};
-}
-
-/**
- * Filter gains for a specific financial year
- */
-export function filterGainsByFinancialYear(
-	gains: RealisedGain[],
-	fyStart: Date,
-	fyEnd: Date
-): RealisedGain[] {
-	return gains.filter((g) => g.saleDate >= fyStart && g.saleDate <= fyEnd);
-}
-
-/**
- * Calculate unrealised gain for a tax lot
- */
-export function calculateUnrealisedGain(
-	lot: TaxLot,
-	currentPrice: number
-): {
-	unrealisedGain: number;
-	currentValue: number;
-	costBase: number;
-	isLongTerm: boolean;
-} {
-	const costBase = lot.quantity * lot.costPerUnit;
-	const currentValue = lot.quantity * currentPrice;
-	const unrealisedGain = currentValue - costBase;
-	const isLongTerm = isLongTermHolding(lot.date, new Date());
-
-	return {
-		unrealisedGain,
-		currentValue,
-		costBase,
-		isLongTerm
 	};
 }

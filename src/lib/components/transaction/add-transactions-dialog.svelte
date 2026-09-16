@@ -1,12 +1,13 @@
 <script lang="ts">
 	import Button, { buttonVariants } from '$ui/button/button.svelte';
 	import * as Dialog from '$ui/dialog/index.js';
-	import * as NativeSelect from '$ui/native-select/index.js';
+	import * as Select from '$ui/select/index.js';
 	import Input from '$ui/input/input.svelte';
 	import * as Field from '$ui/field';
-	import { addTransactions } from '$lib/remotes/transaction.remote';
+	import { addTransactions } from '#lib/remotes/transaction.remote.js';
 	import Spinner from '$ui/spinner/spinner.svelte';
 	import { Plus, Trash, Upload } from '@lucide/svelte';
+	import { PLATFORMS } from '#lib/platforms.js';
 
 	let {
 		holdingId,
@@ -18,12 +19,24 @@
 		showTrigger?: boolean;
 	} = $props();
 
-	let transactions = $state([{ id: 0 }]);
+	const TRANSACTION_TYPES = [
+		{ value: 'buy', label: 'Buy' },
+		{ value: 'sell', label: 'Sell' },
+		{ value: 'reinvestment', label: 'Reinvestment' }
+	];
+
+	/* Each row's type is held here and submitted through the select's hidden input. */
+	let transactions = $state([{ id: 0, type: '' }]);
+	/*
+	  One platform for the batch rather than a column per row: a sitting of manual
+	  entry is a sitting with one broker's statement in front of you.
+	*/
+	let platform = $state('');
 	let fileInput: HTMLInputElement;
 	let isDragging = $state(false);
 
 	function addMore() {
-		transactions = [...transactions, { id: transactions.length }];
+		transactions = [...transactions, { id: transactions.length, type: '' }];
 	}
 
 	function removeAt(index: number) {
@@ -88,7 +101,7 @@
 				// Skip if quantity is 0
 				if (quantity === 0) return;
 
-				transactions.push({ id: index });
+				transactions.push({ id: index, type: '' });
 
 				// Set form values
 				const type = row[typeIdx].toLowerCase().trim();
@@ -144,7 +157,8 @@
 	}
 
 	function resetForm() {
-		transactions = [{ id: 0 }];
+		platform = '';
+		transactions = [{ id: 0, type: '' }];
 	}
 
 	$effect(() => {
@@ -204,13 +218,16 @@
 			</div>
 		</div>
 
-		{#each addTransactions.fields.allIssues?.() ?? [] as issue}
+		{#each addTransactions.fields.allIssues?.() ?? [] as issue, i (i)}
 			<p class="text-sm text-destructive">{issue.message}</p>
 		{/each}
 
 		<form
 			{...addTransactions.enhance(async (form) => {
 				try {
+					for (let i = 0; i < transactions.length; i++) {
+						addTransactions.fields.transactions[i].platform.set(platform.trim() || undefined);
+					}
 					await form.submit();
 					if (form.result?.success) {
 						form.element.reset();
@@ -223,6 +240,24 @@
 			})}
 			class="space-y-3"
 		>
+			<Field.Field>
+				<Field.Label for="platform">Platform</Field.Label>
+				<Select.Root type="single" bind:value={platform} disabled={!!addTransactions.pending}>
+					<Select.Trigger id="platform" class="w-full">
+						{platform || 'Not recorded'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item value="">Not recorded</Select.Item>
+						{#each PLATFORMS as option (option)}
+							<Select.Item value={option}>{option}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+				<p class="text-[11px] text-muted-foreground">
+					Optional. Which broker these went through — applied to every row below.
+				</p>
+			</Field.Field>
+
 			<div class="mb-2 rounded-lg bg-muted/30 p-3">
 				<div class="flex items-center gap-3">
 					<div class="flex-1 text-sm font-medium text-muted-foreground">Type</div>
@@ -239,15 +274,22 @@
 					<div class="rounded-lg border bg-card p-3 transition-shadow hover:shadow-sm">
 						<div class="flex items-center gap-3">
 							<Field.Field class="flex-1">
-								<NativeSelect.Root
-									{...addTransactions.fields.transactions[i].type.as('text')}
+								<Select.Root
+									type="single"
+									name={addTransactions.fields.transactions[i].type.as('text').name}
+									bind:value={transactions[i].type}
 									disabled={!!addTransactions.pending}
 								>
-									<NativeSelect.Option value="">Type</NativeSelect.Option>
-									<NativeSelect.Option value="buy">Buy</NativeSelect.Option>
-									<NativeSelect.Option value="sell">Sell</NativeSelect.Option>
-									<NativeSelect.Option value="reinvestment">Reinvestment</NativeSelect.Option>
-								</NativeSelect.Root>
+									<Select.Trigger class="w-full">
+										{TRANSACTION_TYPES.find((t) => t.value === transactions[i].type)?.label ??
+											'Type'}
+									</Select.Trigger>
+									<Select.Content>
+										{#each TRANSACTION_TYPES as option (option.value)}
+											<Select.Item value={option.value}>{option.label}</Select.Item>
+										{/each}
+									</Select.Content>
+								</Select.Root>
 								<Field.Error />
 							</Field.Field>
 

@@ -1,17 +1,24 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
-import { getCurrentUser } from '$lib/remotes/auth.remote';
+import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 import { db } from '$db';
 import { holdingTable, portfolioTable } from '$db/schemas/portfolio';
+import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import type { Holding, Investment, Transaction, Distribution } from '$db/schemas/portfolio';
-import { getStockPrice } from '$lib/server/prices';
+import type {
+	Holding,
+	Investment,
+	Transaction,
+	Distribution,
+	Document
+} from '$db/schemas/portfolio';
+import { getStockPrice } from '#lib/server/prices.js';
 import {
 	calculateHoldingMetrics,
 	calculateUnrealisedMetrics
-} from '$lib/utils/holding-calculations';
-import { holdingSchema, updateHoldingSchema } from '$lib/schemas/portfolio';
+} from '#lib/utils/holding-calculations.js';
+import { holdingSchema, updateHoldingSchema } from '#lib/schemas/portfolio.js';
 
 interface HoldingWithBasicMetrics extends Holding {
 	units: number;
@@ -33,8 +40,8 @@ interface HoldingWithMetrics extends Holding {
 	name: string;
 	code: string;
 	investment: Investment;
-	transactions: Transaction[];
-	distributions: Distribution[];
+	transactions: (Transaction & { documents: Document[] })[];
+	distributions: (Distribution & { documents: Document[] })[];
 }
 
 export const getHoldings = query(z.string(), async (portfolioId: string) => {
@@ -79,8 +86,8 @@ export const getHolding = query(z.string(), async (id: string) => {
 		with: {
 			portfolio: true,
 			investment: true,
-			transactions: true,
-			distributions: true
+			transactions: { with: { documents: true } },
+			distributions: { with: { documents: true } }
 		}
 	});
 
@@ -120,6 +127,9 @@ export const addHolding = form(holdingSchema, async ({ portfolioId, investmentId
 		})
 		.returning();
 
+	// Refreshed here so the form's own `.updates()` are satisfied in one round trip.
+	await Promise.all([getHoldings(portfolioId).refresh(), getPortfolio(portfolioId).refresh()]);
+
 	return { success: true, holding: newHolding };
 });
 
@@ -142,6 +152,12 @@ export const updateHolding = form(updateHoldingSchema, async ({ id, investmentId
 		.set({ investmentId })
 		.where(eq(holdingTable.id, id))
 		.returning();
+
+	await Promise.all([
+		getHolding(id).refresh(),
+		getHoldings(holding.portfolioId).refresh(),
+		getPortfolio(holding.portfolioId).refresh()
+	]);
 
 	return { success: true, holding: updatedHolding };
 });

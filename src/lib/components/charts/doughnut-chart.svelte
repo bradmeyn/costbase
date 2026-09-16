@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PieChart } from 'layerchart';
-	import { COLOURS } from '$lib/constants/colours';
+	import { COLOURS } from '#lib/constants/colours.js';
 	import { LC_TOOLTIP_PROPS } from '$constants/chart-config';
 
 	let {
@@ -14,7 +14,7 @@
 	let cRange = $derived(data.map((_, i) => COLOURS[i % COLOURS.length]));
 </script>
 
-<div class="w-full relative h-55 md:h-60 min-w-50">
+<div class="relative mx-auto aspect-square w-full max-w-56">
 	<PieChart
 		{data}
 		key="label"

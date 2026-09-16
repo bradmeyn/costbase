@@ -1,12 +1,13 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/button/button.svelte';
-	import * as Field from '$lib/components/ui/field';
-	import { Input } from '$lib/components/ui/input';
-	import { loginUser } from '$lib/remotes/auth.remote';
+	import { resolve } from '$app/paths';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as Field from '#lib/components/ui/field/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { loginUser } from '#lib/remotes/auth.remote.js';
 </script>
 
 <svelte:head>
-	<title>Log in — MoneyKit</title>
+	<title>Log in — Costbase</title>
 </svelte:head>
 
 <div class="w-full max-w-sm">
@@ -53,6 +54,8 @@
 
 	<p class="mt-4 text-center text-sm text-muted-foreground">
 		No account?
-		<a href="/register" class="font-medium text-primary hover:underline">Sign up</a>
+		<a href={resolve('/(auth)/register')} class="font-medium text-primary hover:underline"
+			>Sign up</a
+		>
 	</p>
 </div>

@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { logoutUser } from '$lib/remotes/auth.remote';
-	import { calculators } from '$lib/constants/calculators';
+	import { logoutUser } from '#lib/remotes/auth.remote.js';
+	import { calculators } from '#lib/constants/calculators.js';
 	import * as DropdownMenu from '$ui/dropdown-menu';
 	import { ChevronDown } from '@lucide/svelte';
 
@@ -12,26 +13,24 @@
 <header class="border-b bg-card">
 	<div class="container flex items-center justify-between py-3">
 		<div class="flex items-center gap-8">
-			<a href="/" class="text-xl font-medium tracking-tight">
-				Money<span class="text-transparent bg-clip-text bg-linear-to-b from-primary to-primary-dark"
-					>Kit</span
-				>
+			<a href={resolve('/(calculators)')} class="text-xl font-medium tracking-tight">
+				Cost<span class="text-primary">base</span>
 			</a>
 
-			<nav class="hidden md:flex items-center gap-6">
+			<nav class="hidden items-center gap-6 md:flex">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger
 						class="flex items-center gap-1 text-sm transition-colors duration-200 {calculatorsActive
-							? 'text-primary font-medium'
+							? 'font-medium text-primary'
 							: 'text-muted-foreground hover:text-foreground'}"
 					>
 						Calculators
 						<ChevronDown class="size-3.5" />
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="start" class="w-52">
-						{#each calculators as calculator}
+						{#each calculators as calculator (calculator.href)}
 							<DropdownMenu.Item
-								class={activeUrl === calculator.href ? 'text-primary font-medium' : ''}
+								class={activeUrl === calculator.href ? 'font-medium text-primary' : ''}
 							>
 								<a href={calculator.href} class="w-full">{calculator.name}</a>
 							</DropdownMenu.Item>
@@ -44,7 +43,7 @@
 		<form {...logoutUser} method="POST">
 			<button
 				type="submit"
-				class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+				class="text-sm text-muted-foreground transition-colors hover:text-foreground"
 			>
 				Log out
 			</button>

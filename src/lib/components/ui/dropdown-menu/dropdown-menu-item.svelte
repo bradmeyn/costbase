@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { cn } from "$lib/utils/tailwind.js";
-	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
+	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+	import { cn } from '#lib/utils/tailwind.js';
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		inset,
-		variant = "default",
+		variant = 'default',
 		...restProps
 	}: DropdownMenuPrimitive.ItemProps & {
 		inset?: boolean;
-		variant?: "default" | "destructive";
+		variant?: 'default' | 'destructive';
 	} = $props();
 </script>
 
@@ -20,7 +20,7 @@
 	data-inset={inset}
 	data-variant={variant}
 	class={cn(
-		"data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive/10 data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground outline-hidden relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm data-[disabled]:pointer-events-none data-[inset]:pl-8 data-[disabled]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		"group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
 		className
 	)}
 	{...restProps}
