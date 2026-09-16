@@ -7,7 +7,8 @@
 	import Input from '$ui/input/input.svelte';
 	import Button from '$ui/button/button.svelte';
 	import SummaryCard from '#lib/components/summary-card.svelte';
-	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import { calculateCGT } from '#lib/utils/cgt-calculations.js';
 	import { simulateSale } from '#lib/utils/sale-simulation.js';
 
@@ -103,69 +104,116 @@
 
 	const dollars = (cents: number) => (cents / 100).toFixed(2);
 
-	function generateEstimate() {
-		let csv = `CGT estimate - ${taxSummary.currentFY.label}\n`;
-		csv += `Marginal rate,${marginalRate}%\n\n`;
+	function reportDocument(): ReportDocument {
+		const money = (cents: number) => formatCurrency(cents);
+		const lossesAdded =
+			combined.lossesAppliedToShortTerm +
+			combined.lossesAppliedToLongTerm -
+			realised.lossesAppliedToShortTerm -
+			realised.lossesAppliedToLongTerm;
 
-		if (anythingModelled) {
-			csv += 'Modelled sale\n';
-			csv += 'Holding,Code,Units,Proceeds,Cost base,Gain\n';
-			for (const { holding, units, sale } of modelledByHolding) {
-				if (units <= 0) continue;
-				csv += `${holding.name},${holding.code},${sale.units},${dollars(sale.proceeds)},${dollars(sale.costBase)},${dollars(sale.netGain)}\n`;
-			}
-			csv += `Total,,${modelled.units},${dollars(modelled.proceeds)},${dollars(modelled.costBase)},${dollars(modelled.netGain)}\n\n`;
-		}
-
-		csv += 'Position,Realised,Added by the sale,Total\n';
-		const row = (label: string, a: number, b: number, c: number) => {
-			csv += `${label},${dollars(a)},${dollars(b)},${dollars(c)}\n`;
+		return {
+			title: 'CGT estimate',
+			subtitle: `${taxSummary.currentFY.label} · what you have realised, and what selling more would add · marginal rate ${marginalRate}%`,
+			filename: `cgt-estimate-${taxSummary.currentFY.label}`,
+			sections: [
+				...(anythingModelled
+					? [
+							{
+								heading: 'Modelled sale',
+								columns: [
+									{ header: 'Holding' },
+									{ header: 'Code' },
+									{ header: 'Units', align: 'right' as const },
+									{ header: 'Proceeds', align: 'right' as const },
+									{ header: 'Cost base', align: 'right' as const },
+									{ header: 'Gain', align: 'right' as const }
+								],
+								rows: modelledByHolding
+									.filter(({ units }) => units > 0)
+									.map(({ holding, sale }) => [
+										holding.name,
+										holding.code,
+										sale.units.toLocaleString('en-AU'),
+										money(sale.proceeds),
+										money(sale.costBase),
+										money(sale.netGain)
+									]),
+								footer: [
+									'Total',
+									'',
+									modelled.units.toLocaleString('en-AU'),
+									money(modelled.proceeds),
+									money(modelled.costBase),
+									money(modelled.netGain)
+								]
+							}
+						]
+					: []),
+				{
+					heading: 'Position',
+					columns: [
+						{ header: '', width: '*' as const },
+						{ header: 'Realised', align: 'right' as const },
+						{ header: 'Added by the sale', align: 'right' as const },
+						{ header: 'Total', align: 'right' as const }
+					],
+					rows: [
+						[
+							'Short-term gains',
+							money(realised.shortTermGains),
+							money(modelled.shortTermGains),
+							money(combined.shortTermGains)
+						],
+						[
+							'Long-term gains',
+							money(realised.longTermGains),
+							money(modelled.longTermGains),
+							money(combined.longTermGains)
+						],
+						[
+							'Capital losses',
+							money(-Math.abs(taxSummary.currentFY.totalCapitalLosses)),
+							money(-modelled.capitalLosses),
+							money(-(Math.abs(taxSummary.currentFY.totalCapitalLosses) + modelled.capitalLosses))
+						],
+						[
+							'Losses applied',
+							money(-(realised.lossesAppliedToShortTerm + realised.lossesAppliedToLongTerm)),
+							money(-lossesAdded),
+							money(-(combined.lossesAppliedToShortTerm + combined.lossesAppliedToLongTerm))
+						],
+						[
+							'CGT discount',
+							money(-realised.cgtDiscount),
+							money(-(combined.cgtDiscount - realised.cgtDiscount)),
+							money(-combined.cgtDiscount)
+						],
+						[
+							'Assessable capital gain',
+							money(realised.totalTaxableGain),
+							money(addedAssessable),
+							money(combined.totalTaxableGain)
+						]
+					],
+					footer: [
+						`Estimated tax at ${marginalRate}%`,
+						money(realisedTax),
+						money(addedTax),
+						money(combinedTax)
+					]
+				}
+			],
+			notes: [
+				'An estimate for this portfolio only, at the marginal rate chosen above. It knows nothing about your other income, and nothing here has been sold.'
+			]
 		};
-		row(
-			'Short-term gains',
-			realised.shortTermGains,
-			modelled.shortTermGains,
-			combined.shortTermGains
-		);
-		row('Long-term gains', realised.longTermGains, modelled.longTermGains, combined.longTermGains);
-		row(
-			'Capital losses',
-			-Math.abs(taxSummary.currentFY.totalCapitalLosses),
-			-modelled.capitalLosses,
-			-(Math.abs(taxSummary.currentFY.totalCapitalLosses) + modelled.capitalLosses)
-		);
-		row(
-			'Losses applied',
-			-(realised.lossesAppliedToShortTerm + realised.lossesAppliedToLongTerm),
-			-(
-				combined.lossesAppliedToShortTerm +
-				combined.lossesAppliedToLongTerm -
-				realised.lossesAppliedToShortTerm -
-				realised.lossesAppliedToLongTerm
-			),
-			-(combined.lossesAppliedToShortTerm + combined.lossesAppliedToLongTerm)
-		);
-		row(
-			'CGT discount',
-			-realised.cgtDiscount,
-			-(combined.cgtDiscount - realised.cgtDiscount),
-			-combined.cgtDiscount
-		);
-		row(
-			'Assessable capital gain',
-			realised.totalTaxableGain,
-			addedAssessable,
-			combined.totalTaxableGain
-		);
-		row(`Estimated tax at ${marginalRate}%`, realisedTax, addedTax, combinedTax);
-
-		downloadCSV(csv, `CGT-estimate-${taxSummary.currentFY.label}`);
 	}
 
 	registerReport(() => ({
 		title: 'CGT estimator',
 		subtitle: `${taxSummary.currentFY.label} · what you have realised, and what selling more would add`,
-		csv: generateEstimate
+		document: reportDocument
 	}));
 </script>
 

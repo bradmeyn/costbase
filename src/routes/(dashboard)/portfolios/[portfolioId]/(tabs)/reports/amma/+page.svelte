@@ -4,9 +4,10 @@
 	import * as Table from '$ui/table';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
-	import { getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
+	import { getPortfolio, getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
 	import { netCostBaseAmount } from '#lib/utils/amit-calculations.js';
-	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import {
 		AMIT_PART_A,
 		AMIT_AUSTRALIAN_INCOME,
@@ -18,6 +19,7 @@
 	const portfolioId = $derived(page.params.portfolioId!);
 	const all = $derived(await getPortfolioAmitStatements(portfolioId));
 	const financialYears = $derived(await getPortfolioFinancialYears(portfolioId));
+	const portfolio = $derived(await getPortfolio(portfolioId));
 	const reportFy = $derived(readFinancialYear(page.url, financialYears));
 	const statements = $derived(all.filter((s) => s.financialYear === reportFy));
 
@@ -35,24 +37,46 @@
 		['Foreign income and reconciliation', AMIT_RECONCILIATION]
 	] as const);
 
-	function generateCsv() {
-		let csv = `Tax statements ${financialYearLabel(reportFy)}\n\nLabel,Item,${statements.map((s) => s.holdingCode).join(',')},Total\n`;
-		for (const [field, code, label] of AMIT_PART_A) {
-			csv += `${code},"${label}",${statements.map((s) => (cents(s, field) / 100).toFixed(2)).join(',')},${(total(field) / 100).toFixed(2)}\n`;
-		}
-		for (const [heading, rows] of partB) {
-			csv += `\n${heading}\n`;
-			for (const [field, label] of rows) {
-				csv += `,"${label}",${statements.map((s) => (cents(s, field) / 100).toFixed(2)).join(',')},${(total(field) / 100).toFixed(2)}\n`;
-			}
-		}
-		downloadCSV(csv, `amma-${financialYearLabel(reportFy)}`);
+	/** One column per statement, plus the total — the same shape as the tables below. */
+	const statementColumns = $derived([
+		{ header: 'Label' as string, width: 34 },
+		{ header: 'Item', width: '*' as const },
+		...statements.map((s) => ({ header: s.holdingCode, align: 'right' as const })),
+		{ header: 'Total', align: 'right' as const }
+	]);
+
+	const amountRow = (field: string, label: string, code = '') => [
+		code,
+		label,
+		...statements.map((s) => formatCurrency(cents(s, field))),
+		formatCurrency(total(field))
+	];
+
+	function reportDocument(): ReportDocument {
+		return {
+			title: 'Tax statements',
+			portfolioName: portfolio.name,
+			subtitle: `Year ended 30 June ${reportFy} · AMIT Member Annual Statement (AMMA), as entered`,
+			filename: `amma-${financialYearLabel(reportFy)}`,
+			sections: [
+				{
+					heading: 'Part A — summary of tax return items',
+					columns: statementColumns,
+					rows: AMIT_PART_A.map(([field, code, label]) => amountRow(field, label, code))
+				},
+				...partB.map(([heading, rows]) => ({
+					heading,
+					columns: statementColumns,
+					rows: rows.map(([field, label]) => amountRow(field, label))
+				}))
+			]
+		};
 	}
 
 	registerReport(() => ({
 		title: 'Tax statements',
 		subtitle: `Year ended 30 June ${reportFy} · AMIT Member Annual Statement (AMMA), as entered`,
-		csv: statements.length > 0 ? generateCsv : undefined
+		document: statements.length > 0 ? reportDocument : undefined
 	}));
 </script>
 
@@ -101,7 +125,7 @@
 			{@const field = row[0]}
 			<Table.Row>
 				{#if withLabels}
-					<Table.Cell class="font-medium text-brand-3 tabular-nums">{row[1]}</Table.Cell>
+					<Table.Cell class="font-medium text-primary tabular-nums">{row[1]}</Table.Cell>
 					<Table.Cell class="text-muted-foreground">{row[2]}</Table.Cell>
 				{:else}
 					<Table.Cell colspan={2} class="text-muted-foreground">{row[1]}</Table.Cell>

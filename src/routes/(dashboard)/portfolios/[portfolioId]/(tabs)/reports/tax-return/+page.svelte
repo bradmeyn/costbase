@@ -16,7 +16,8 @@
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
 	import { getPortfolioAnnualStatements } from '#lib/remotes/annual.remote.js';
 	import { getCarriedForwardLoss, setCarriedForwardLoss } from '#lib/remotes/tax-return.remote.js';
-	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import { buildTaxReturn, type StatementAmounts } from '#lib/utils/tax-return.js';
 	import { checkTaxReturn, type Problem } from '#lib/utils/tax-return-checks.js';
 	import {
@@ -285,25 +286,89 @@
 		{ code: '20O', title: 'Foreign income tax offset', amount: taxReturn.label20O }
 	]);
 
-	function generateCsv() {
-		const columns = perHolding.map((entry) => entry.code);
-		let csv = `Tax return ${fyLabel}\n\nLabel,Item,${columns.join(',')},Total\n`;
-		for (const label of [...section13, ...section18, ...section20]) {
-			const cells = perHolding.map((entry) => {
-				const cents = label.cell ? label.cell(entry.code) : amountFor(entry, label.code);
-				// A label with no per-fund meaning leaves the cell empty rather than zero.
-				return cents === null ? '' : (cents / 100).toFixed(2);
-			});
-			csv += `${label.code},"${label.title}",${cells.join(',')},${(label.amount / 100).toFixed(2)}\n`;
-		}
-		csv += `18G,"Did you have a capital gains tax event?",${taxReturn.label18G ? 'Yes' : 'No'}\n`;
-		downloadCSV(csv, `tax-return-${fyLabel}`);
+	/* The three label sections share a shape: a label, its item, a column per fund. */
+	function labelSection(heading: string, rows: Label[]) {
+		return {
+			heading,
+			columns: [
+				{ header: 'Label', width: 34 },
+				{ header: 'Item', width: '*' as const },
+				...perHolding.map((entry) => ({ header: entry.code, align: 'right' as const })),
+				{ header: 'Total', align: 'right' as const }
+			],
+			rows: rows.map((row) => [
+				row.code,
+				row.title,
+				...perHolding.map((entry) => {
+					const cents = row.cell ? row.cell(entry.code) : amountFor(entry, row.code);
+					// A label with no per-fund meaning leaves the cell blank rather than zero.
+					return cents === null ? '—' : formatCurrency(cents);
+				}),
+				formatCurrency(row.amount)
+			])
+		};
+	}
+
+	function reportDocument(): ReportDocument {
+		const applied = taxReturn.cgt.lossesAppliedToShortTerm + taxReturn.cgt.lossesAppliedToLongTerm;
+		return {
+			title: 'Tax return',
+			portfolioName: portfolio.name,
+			subtitle: `${fyLabel} · every label this portfolio contributes, in the order myTax asks for them`,
+			filename: `tax-return-${fyLabel}`,
+			sections: [
+				labelSection('13 — Partnerships and trusts', section13),
+				labelSection('18 — Capital gains', section18),
+				{
+					columns: [
+						{ header: 'Item', width: '*' as const },
+						{ header: '', align: 'right' as const }
+					],
+					rows: [
+						['18G — Did you have a capital gains tax event?', taxReturn.label18G ? 'Yes' : 'No']
+					]
+				},
+				{
+					heading: 'How 18A was worked out',
+					columns: [
+						{ header: 'Step', width: '*' as const },
+						{ header: 'Amount', align: 'right' as const }
+					],
+					rows: [
+						['Your disposals — held 12 months or less', formatCurrency(ownShortTermGains)],
+						['Your disposals — held over 12 months', formatCurrency(ownLongTermGains)],
+						[
+							'Attributed by the funds — other method',
+							formatCurrency(taxReturn.trustOtherMethodGains)
+						],
+						[
+							'Attributed by the funds — discounted, grossed up',
+							formatCurrency(taxReturn.trustDiscountedGrossedUp)
+						],
+						['Your capital losses this year', formatCurrency(-ownCapitalLosses)],
+						[
+							'Losses carried in from earlier years',
+							formatCurrency(-taxReturn.cgt.priorYearLosses)
+						],
+						['Less losses applied', formatCurrency(-applied)],
+						['Less 50% CGT discount', formatCurrency(-taxReturn.cgt.cgtDiscount)]
+					],
+					footer: ['Net capital gain (18A)', formatCurrency(taxReturn.label18A)]
+				},
+				labelSection('20 — Foreign source income', section20)
+			],
+			notes: [
+				...blocking.map((p) => `To fix before filing: ${p.message}`),
+				...problems.filter((p) => p.severity === 'note').map((p) => `Worth checking: ${p.message}`),
+				`This portfolio only. It knows nothing about employment income, other investments, or anything held outside ${portfolio.name}. Check it against the statements before you file.`
+			]
+		};
 	}
 
 	registerReport(() => ({
 		title: 'Tax return',
 		subtitle: `${fyLabel} · every label this portfolio contributes, in the order myTax asks for them`,
-		csv: generateCsv
+		document: reportDocument
 	}));
 </script>
 

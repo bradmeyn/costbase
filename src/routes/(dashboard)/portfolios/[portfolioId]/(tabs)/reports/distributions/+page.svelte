@@ -4,16 +4,19 @@
 	import { CircleCheck, Paperclip } from '@lucide/svelte';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import {
+		getPortfolio,
 		getPortfolioDistributions,
 		getPortfolioFinancialYears
 	} from '#lib/remotes/portfolio.remote.js';
-	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
 	import { readList } from '#lib/report-query.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const period = $derived(readWindow(page.url));
 	const years = $derived(await getPortfolioFinancialYears(portfolioId));
+	const portfolio = $derived(await getPortfolio(portfolioId));
 
 	const allInPeriod = $derived(await getPortfolioDistributions({ id: portfolioId, ...period }));
 
@@ -36,18 +39,59 @@
 		net: distributions.reduce((s, d) => s + d.net, 0)
 	});
 
-	function generateCsv() {
-		let csv = 'Payment date,Record date,Code,Units,Gross,Tax withheld,Net,Reinvested\n';
-		for (const d of distributions) {
-			csv += `${formatDate(d.datePaid)},${formatDate(d.recordDate)},${d.code},${d.units ?? ''},${(d.grossPayment / 100).toFixed(2)},${(d.taxWithheld / 100).toFixed(2)},${(d.net / 100).toFixed(2)},${d.reinvested ? 'Yes' : 'No'}\n`;
-		}
-		downloadCSV(csv, `distributions-${[windowTag(period, years), ...holdings].join('-')}`);
+	function reportDocument(): ReportDocument {
+		return {
+			title: 'Distributions',
+			portfolioName: portfolio.name,
+			subtitle: `${describeWindow(period)}${narrowing ? ` · ${narrowing}` : ''}`,
+			filename: `distributions-${[windowTag(period, years), ...holdings].join('-')}`,
+			sections: [
+				{
+					columns: [
+						{ header: 'Paid' },
+						{ header: 'Record date' },
+						{ header: 'Code' },
+						{ header: 'Units', align: 'right' },
+						{ header: 'Gross', align: 'right' },
+						{ header: 'Withheld', align: 'right' },
+						{ header: 'Net', align: 'right' },
+						{ header: 'Reinvested', align: 'center' },
+						{ header: 'Document', align: 'center' }
+					],
+					rows: distributions.map((d) => [
+						formatDate(d.datePaid),
+						formatDate(d.recordDate),
+						d.code,
+						d.units?.toLocaleString('en-AU') ?? '',
+						formatCurrency(d.grossPayment),
+						formatCurrency(d.taxWithheld),
+						formatCurrency(d.net),
+						d.reinvested ? 'Yes' : 'No',
+						d.documents.length > 0 ? 'Yes' : 'No'
+					]),
+					footer: [
+						'Total',
+						'',
+						'',
+						'',
+						formatCurrency(totals.gross),
+						formatCurrency(totals.withheld),
+						formatCurrency(totals.net),
+						'',
+						''
+					]
+				}
+			],
+			notes: [
+				'A financial year covers the distributions attributed to it: the June quarter is paid the following July and belongs to the year just ended.'
+			]
+		};
 	}
 
 	registerReport(() => ({
 		title: 'Distributions',
 		subtitle: `${describeWindow(period)} · ${narrowing || 'cash received, per holding'}`,
-		csv: generateCsv
+		document: reportDocument
 	}));
 </script>
 

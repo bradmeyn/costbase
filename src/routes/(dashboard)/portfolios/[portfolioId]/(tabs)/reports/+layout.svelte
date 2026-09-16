@@ -11,8 +11,35 @@
 	import ReportFilterMenu from '#lib/components/report-filter-menu.svelte';
 	import { TRANSACTION_TYPES, UNSET } from '#lib/report-query.js';
 	import { financialYearLabel, readFinancialYear } from '#lib/report-period.js';
+	import { toCsv } from '#lib/report-document.js';
+	import { downloadCSV } from '#lib/utils.js';
 
 	const chrome = setReportChrome();
+
+	/*
+	  Both exports are built from the report's own description of itself. The PDF
+	  renderer and its fonts are a megabyte, so they are fetched on first use rather
+	  than by everyone who opens a report.
+	*/
+	let building = $state(false);
+
+	async function exportPdf() {
+		const document = chrome.document?.();
+		if (!document) return;
+		building = true;
+		try {
+			const { downloadReportPdf } = await import('#lib/report-pdf.js');
+			await downloadReportPdf(document);
+		} finally {
+			building = false;
+		}
+	}
+
+	function exportCsv() {
+		const report = chrome.document?.();
+		if (!report) return;
+		downloadCSV(toCsv(report), report.filename);
+	}
 	import { getPortfolio, getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';
 
 	let { children } = $props();
@@ -175,10 +202,15 @@
 						{/snippet}
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end">
-						<DropdownMenu.Item onSelect={() => window.print()}>PDF</DropdownMenu.Item>
-						{#if chrome.csv}
-							<DropdownMenu.Item onSelect={() => chrome.csv?.()}>CSV</DropdownMenu.Item>
+						{#if chrome.document}
+							<DropdownMenu.Item onSelect={exportPdf} disabled={building}>
+								{building ? 'Building…' : 'PDF'}
+							</DropdownMenu.Item>
+							<DropdownMenu.Item onSelect={exportCsv}>CSV</DropdownMenu.Item>
+							<DropdownMenu.Separator />
 						{/if}
+						<!-- Kept: printing is still how you get a copy that matches the screen. -->
+						<DropdownMenu.Item onSelect={() => window.print()}>Print</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			{/if}

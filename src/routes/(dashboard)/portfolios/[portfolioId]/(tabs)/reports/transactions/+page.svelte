@@ -4,16 +4,19 @@
 	import { Paperclip } from '@lucide/svelte';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import {
+		getPortfolio,
 		getPortfolioTransactions,
 		getPortfolioFinancialYears
 	} from '#lib/remotes/portfolio.remote.js';
-	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import { describeWindow, readWindow, windowTag } from '#lib/report-period.js';
 	import { readList, TRANSACTION_TYPES, UNSET } from '#lib/report-query.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const period = $derived(readWindow(page.url));
 	const years = $derived(await getPortfolioFinancialYears(portfolioId));
+	const portfolio = $derived(await getPortfolio(portfolioId));
 
 	const allInPeriod = $derived(await getPortfolioTransactions({ id: portfolioId, ...period }));
 
@@ -58,21 +61,45 @@
 		reinvestment: { label: 'Reinvestment', dot: 'bg-primary' }
 	};
 
-	function generateCsv() {
-		let csv = 'Date,Code,Type,Platform,Quantity,Price per unit,Brokerage,Total,Document\n';
-		for (const t of transactions) {
-			csv += `${formatDate(t.transactionDate)},${t.code},${t.type},${t.platform ?? ''},${t.quantity},${(t.pricePerUnit / 100).toFixed(2)},${(t.brokerage / 100).toFixed(2)},${(t.total / 100).toFixed(2)},${t.documents.length > 0 ? 'Yes' : 'No'}\n`;
-		}
-		downloadCSV(
-			csv,
-			`transactions-${[windowTag(period, years), ...holdings, ...types, ...platforms].join('-')}`
-		);
+	function reportDocument(): ReportDocument {
+		return {
+			title: 'Transactions',
+			portfolioName: portfolio.name,
+			subtitle: `${describeWindow(period)}${narrowing ? ` · ${narrowing}` : ''}`,
+			filename: `transactions-${[windowTag(period, years), ...holdings, ...types, ...platforms].join('-')}`,
+			sections: [
+				{
+					columns: [
+						{ header: 'Date' },
+						{ header: 'Code' },
+						{ header: 'Type' },
+						{ header: 'Platform' },
+						{ header: 'Quantity', align: 'right' },
+						{ header: 'Price/unit', align: 'right' },
+						{ header: 'Brokerage', align: 'right' },
+						{ header: 'Total', align: 'right' },
+						{ header: 'Document', align: 'center' }
+					],
+					rows: transactions.map((t) => [
+						formatDate(t.transactionDate),
+						t.code,
+						t.type,
+						t.platform ?? '',
+						t.quantity.toLocaleString('en-AU'),
+						formatCurrency(t.pricePerUnit),
+						formatCurrency(t.brokerage),
+						formatCurrency(t.total),
+						t.documents.length > 0 ? 'Yes' : 'No'
+					])
+				}
+			]
+		};
 	}
 
 	registerReport(() => ({
 		title: 'Transactions',
 		subtitle: `${describeWindow(period)} · ${narrowing || 'every buy, sell and reinvestment'}`,
-		csv: generateCsv
+		document: reportDocument
 	}));
 </script>
 

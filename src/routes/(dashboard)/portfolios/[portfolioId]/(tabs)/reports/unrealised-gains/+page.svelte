@@ -3,7 +3,8 @@
 	import { getPortfolioUnrealisedGains } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
 	import * as Table from '$ui/table';
-	import { formatCurrency, downloadCSV } from '#lib/utils.js';
+	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { readList } from '#lib/report-query.js';
 
@@ -47,31 +48,55 @@
 		shortTermLots.reduce((sum, lot) => sum + lot.unrealisedGain, 0)
 	);
 
-	function generateUnrealisedGainsReport() {
-		let csv = 'Unrealised Gains Report\n\n';
-
-		// Summary
-		csv += 'Summary\n';
-		csv += 'Category,Amount\n';
-		csv += `Total Unrealised Gain,${(totalUnrealisedGain / 100).toFixed(2)}\n`;
-		csv += `Long-Term Unrealised Gain,${(totalLongTermGain / 100).toFixed(2)}\n`;
-		csv += `Short-Term Unrealised Gain,${(totalShortTermGain / 100).toFixed(2)}\n\n`;
-
-		// All Unrealised Lots
-		csv += 'Unrealised Tax Lots (FIFO)\n';
-		csv +=
-			'Holding,Code,Purchase Date,Units,Cost/Unit,Current Price,Unrealised Gain,Discount Eligible\n';
-		sortedLots.forEach((lot) => {
-			csv += `${lot.holdingName},${lot.holdingCode},${formatDate(lot.date)},${lot.quantity},${(lot.costPerUnit / 100).toFixed(2)},${(lot.currentPrice / 100).toFixed(2)},${(lot.unrealisedGain / 100).toFixed(2)},${lot.isLongTerm ? 'Yes' : 'No'}\n`;
-		});
-
-		downloadCSV(csv, 'Unrealised-Gains-Report');
+	function reportDocument(): ReportDocument {
+		return {
+			title: 'Unrealised gains',
+			subtitle: `Open tax lots at today’s prices · first in, first out${chosen.length > 0 ? ` · ${chosen.join(', ')}` : ''}`,
+			filename: `unrealised-gains${chosen.length > 0 ? `-${chosen.join('-')}` : ''}`,
+			sections: [
+				{
+					heading: 'Summary',
+					columns: [{ header: 'Category' }, { header: 'Amount', align: 'right' }],
+					rows: [
+						['Total unrealised gain', formatCurrency(totalUnrealisedGain)],
+						['Long-term unrealised gain', formatCurrency(totalLongTermGain)],
+						['Short-term unrealised gain', formatCurrency(totalShortTermGain)]
+					]
+				},
+				{
+					heading: 'Unrealised tax lots (FIFO)',
+					columns: [
+						{ header: 'Holding' },
+						{ header: 'Code' },
+						{ header: 'Purchased' },
+						{ header: 'Units', align: 'right' },
+						{ header: 'Cost/unit', align: 'right' },
+						{ header: 'Current price', align: 'right' },
+						{ header: 'Unrealised gain', align: 'right' },
+						{ header: 'Discount eligible', align: 'center' }
+					],
+					rows: sortedLots.map((lot) => [
+						lot.holdingName,
+						lot.holdingCode,
+						formatDate(lot.date),
+						lot.quantity.toLocaleString('en-AU'),
+						formatCurrency(lot.costPerUnit),
+						formatCurrency(lot.currentPrice),
+						formatCurrency(lot.unrealisedGain),
+						lot.isLongTerm ? 'Yes' : 'No'
+					])
+				}
+			],
+			notes: [
+				'Nothing here has been sold. These are what the parcels would realise at today’s prices, not amounts on any return.'
+			]
+		};
 	}
 
 	registerReport(() => ({
 		title: 'Unrealised gains',
 		subtitle: `Open tax lots at today’s prices · first in, first out${chosen.length > 0 ? ` · ${chosen.join(', ')}` : ''}`,
-		csv: generateUnrealisedGainsReport
+		document: reportDocument
 	}));
 </script>
 

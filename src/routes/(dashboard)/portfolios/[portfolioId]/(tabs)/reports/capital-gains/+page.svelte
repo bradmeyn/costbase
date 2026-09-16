@@ -6,6 +6,7 @@
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
+	import type { ReportDocument } from '#lib/report-document.js';
 	import {
 		netCostBaseAmount,
 		financialYearStart,
@@ -74,9 +75,61 @@
 	const labelTotal = (field: string) =>
 		fyStatements.reduce((sum, s) => sum + Number(s[field as keyof typeof s] ?? 0), 0);
 
+	/** One disposal per row, the way a CGT schedule is read. */
+	const disposalSection = (heading: string, gains: typeof yearGains) => ({
+		heading,
+		columns: [
+			{ header: 'Sold' },
+			{ header: 'Code' },
+			{ header: 'Units', align: 'right' as const },
+			{ header: 'Proceeds', align: 'right' as const },
+			{ header: 'Cost base', align: 'right' as const },
+			{ header: 'Gain', align: 'right' as const }
+		],
+		rows: gains.map((g) => [
+			formatDate(g.saleDate),
+			g.holdingCode,
+			g.quantity.toLocaleString('en-AU'),
+			formatCurrency(g.proceeds),
+			formatCurrency(g.costBase),
+			formatCurrency(g.gain)
+		]),
+		footer: ['Total', '', '', '', '', formatCurrency(gains.reduce((sum, g) => sum + g.gain, 0))]
+	});
+
+	function reportDocument(): ReportDocument {
+		return {
+			title: 'Capital gains report',
+			portfolioName: portfolio.name,
+			subtitle: `${formatDate(fyStart)} to ${formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments`,
+			filename: `capital-gains-${fyLabel}`,
+			sections: [
+				{
+					heading: 'Summary',
+					columns: [
+						{ header: 'Item', width: '*' as const },
+						{ header: 'Amount', align: 'right' as const }
+					],
+					rows: [
+						['Total current year capital gains (18H)', formatCurrency(label18H)],
+						['Net capital gain (18A)', formatCurrency(cgt.totalTaxableGain)],
+						['Capital losses this year', formatCurrency(totalLosses)]
+					]
+				},
+				disposalSection('Disposals — held over 12 months', longTermGains),
+				disposalSection('Disposals — held 12 months or less', shortTermGains),
+				...(capitalLosses.length > 0 ? [disposalSection('Disposals at a loss', capitalLosses)] : [])
+			],
+			notes: [
+				'Parcels are matched first in, first out. Cost bases include any AMIT adjustment applied at 30 June of each year with a statement.'
+			]
+		};
+	}
+
 	registerReport(() => ({
 		title: 'Capital gains report',
-		subtitle: `${formatDate(fyStart)} to ${formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments`
+		subtitle: `${formatDate(fyStart)} to ${formatDate(fyEnd)} · first in, first out · cost base includes AMIT adjustments`,
+		document: reportDocument
 	}));
 </script>
 
@@ -270,7 +323,7 @@
 				{#each AMIT_PART_A as [field, code, label] (field)}
 					{@const total = labelTotal(field)}
 					<Table.Row>
-						<Table.Cell class="font-medium text-brand-3 tabular-nums">{code}</Table.Cell>
+						<Table.Cell class="font-medium text-primary tabular-nums">{code}</Table.Cell>
 						<Table.Cell class="text-muted-foreground">{label}</Table.Cell>
 						{#each fyStatements as s (s.id)}
 							<Table.Cell class="text-right tabular-nums">

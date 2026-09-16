@@ -108,7 +108,7 @@
 	{#snippet amountRow(field: string, label: string, code?: string)}
 		<div class="flex items-baseline gap-3 border-b border-border/60 py-1.5 last:border-b-0">
 			{#if code}
-				<span class="w-10 shrink-0 text-[11px] font-medium text-brand-3 tabular-nums">{code}</span>
+				<span class="w-10 shrink-0 text-[11px] font-medium text-primary tabular-nums">{code}</span>
 			{/if}
 			<label for={field} class="mb-0 min-w-0 flex-1 text-[13px] text-muted-foreground">
 				{label}
