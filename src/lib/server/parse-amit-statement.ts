@@ -49,12 +49,19 @@ function toDollars(raw: string | undefined): number | null {
 }
 
 /*
-  Lines whose leading figure is not the cash column. Each is a row the statement
-  leaves blank on the left, so its two figures are the middle and right columns.
+  The only two lines that ever carry a middle-column figure: franking credits on the
+  franked line, and the foreign income tax offset on the foreign one. Every other row
+  leaves that column blank, which is what makes a line's figure count readable.
 */
-const LEADING_FIELD: Record<string, string> = {
+const OFFSET_FIELD: Record<string, string> = {
 	'franked distributions': 'frankedDistributionsCredit',
 	'assessable foreign source income': 'foreignIncomeTaxOffset'
+};
+
+/* Lines whose cash-distribution figure has a field of its own to go in. */
+const CASH_FIELD: Record<string, string> = {
+	'franked distributions': 'frankedDistributionsCash',
+	'gross amount': 'grossCashDistribution'
 };
 
 /** Part B lines that carry an attribution figure, by normalised description. */
@@ -147,16 +154,28 @@ export function amitFromRows(rows: string[][]): ParsedAmitStatement {
 		// The right-most figure is always the attribution column.
 		amounts[field] = values[values.length - 1];
 
-		if (values.length > 1) {
-			const leading =
-				LEADING_FIELD[key] ?? (key === 'gross amount' ? 'grossCashDistribution' : null);
-			if (leading) {
-				amounts[leading] = values[0];
-			} else {
-				warnings.push(
-					`"${row[0]}" has ${values.length} figures and it is not clear which columns they belong to. Check that line against the statement.`
-				);
-			}
+		/*
+		  What sits to its left depends on the year. The table has three columns — cash
+		  distribution, tax paid/offsets, attribution — and older statements print the
+		  cash figure where later ones leave it blank. Since only the two OFFSET_FIELD
+		  lines can carry a middle figure, the count settles the rest: a third figure
+		  means the cash column is present and the middle one is the offset, while a
+		  second figure on any other line can only be cash.
+		*/
+		const offsetField = OFFSET_FIELD[key];
+		const cashField = CASH_FIELD[key];
+
+		if (values.length === 3 && offsetField) {
+			if (cashField) amounts[cashField] = values[0];
+			amounts[offsetField] = values[1];
+		} else if (values.length === 2) {
+			// The cash column on a line with nowhere to put it is dropped, not guessed at.
+			if (offsetField) amounts[offsetField] = values[0];
+			else if (cashField) amounts[cashField] = values[0];
+		} else if (values.length > 1) {
+			warnings.push(
+				`"${row[0]}" has ${values.length} figures and it is not clear which columns they belong to. Check that line against the statement.`
+			);
 		}
 	}
 

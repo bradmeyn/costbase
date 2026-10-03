@@ -67,6 +67,29 @@ describe('amitFromRows', () => {
 		expect(s.warnings).toEqual([]);
 	});
 
+	it('reads an older statement that prints the cash column too', () => {
+		/*
+		  Statements up to 2023 fill all three columns, so the franked and foreign lines
+		  carry cash, offset and attribution. The offset is the middle figure, not the
+		  first — Part A's 13Q and 20O are the same two amounts.
+		*/
+		const s = amitFromRows(
+			statement([
+				['Franked distributions', '$69.37', '$3,538.89', '$11,458.32'],
+				['Assessable foreign source income', '$7.85', '$37.26', '$282.99'],
+				['Unfranked CFI distributions', '$17.34', '$17.57']
+			])
+		);
+		expect(s.amounts.frankedDistributionsCash).toBe(69.37);
+		expect(s.amounts.frankedDistributionsCredit).toBe(3538.89);
+		expect(s.amounts.frankedDistributionsAttribution).toBe(11458.32);
+		expect(s.amounts.foreignIncomeTaxOffset).toBe(37.26);
+		expect(s.amounts.assessableForeignSourceIncome).toBe(282.99);
+		// An ordinary line's leading figure is cash, which has no field of its own.
+		expect(s.amounts.unfrankedCfiDistributions).toBe(17.57);
+		expect(s.warnings).toEqual([]);
+	});
+
 	it('reads foreign income as offset then attribution', () => {
 		const s = amitFromRows(statement([['Assessable foreign source income', '$37.26', '$282.99']]));
 		expect(s.amounts.foreignIncomeTaxOffset).toBe(37.26);

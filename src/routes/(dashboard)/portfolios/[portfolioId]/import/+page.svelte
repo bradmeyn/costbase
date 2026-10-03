@@ -119,6 +119,8 @@
 		gross: string;
 		tax: string;
 		reinvested: boolean;
+		/** Whether to record the parcel the plan allotted, where the statement states one. */
+		allot: boolean;
 	};
 	let rowEdits = $state<Record<string, RowEdit>>({});
 	let paymentDate = $state('');
@@ -137,7 +139,9 @@
 					gross: dollars(row.grossPayment),
 					tax: dollars(row.taxWithheld),
 					// A reinvestment statement says so itself; no need to tick it by hand.
-					reinvested: statement.statement.kind === 'reinvestment'
+					reinvested: statement.statement.kind === 'reinvestment',
+					// Likewise the allotment: if the statement allotted units, record them.
+					allot: (row.reinvestment?.unitsAllotted ?? 0) > 0
 				}
 			])
 		);
@@ -155,6 +159,17 @@
 	);
 	const chosenTotal = $derived(
 		chosenRows.reduce((sum, row) => sum + toCents(rowEdits[row.ticker]?.gross ?? '0'), 0)
+	);
+	/** Units the chosen rows will record as reinvestment parcels. */
+	const chosenAllotted = $derived(
+		chosenRows.reduce(
+			(sum, row) =>
+				sum +
+				(rowEdits[row.ticker]?.reinvested && rowEdits[row.ticker]?.allot
+					? (row.reinvestment?.unitsAllotted ?? 0)
+					: 0),
+			0
+		)
 	);
 
 	async function accept(picked: File[]) {
@@ -233,6 +248,8 @@
 
 	let filedCount = $state(0);
 	let savedDistributions = $state(0);
+	/** Reinvestment parcels recorded alongside those distributions. */
+	let savedAllotments = $state(0);
 	let savedStatements = $state(0);
 	let savedAnnual = $state(0);
 
@@ -385,7 +402,7 @@
 		if (!file || chosenRows.length === 0) return;
 		saveError = '';
 		try {
-			await importDistributionStatement({
+			const result = await importDistributionStatement({
 				portfolioId,
 				file,
 				paymentDate,
@@ -396,11 +413,19 @@
 					centsPerUnit: row.centsPerUnit ?? 0,
 					grossPayment: toCents(rowEdits[row.ticker].gross),
 					taxWithheld: toCents(rowEdits[row.ticker].tax),
-					reinvested: rowEdits[row.ticker].reinvested
+					reinvested: rowEdits[row.ticker].reinvested,
+					allotment:
+						rowEdits[row.ticker].allot && row.reinvestment
+							? {
+									unitsAllotted: row.reinvestment.unitsAllotted,
+									drpPrice: row.reinvestment.drpPrice
+								}
+							: undefined
 				}))
 			});
 			// Off the queue, so the next statement comes up rather than navigating away.
 			savedDistributions += chosenRows.length;
+			savedAllotments += result.allotted;
 			if (statementRead) reads = reads.filter((r) => r !== statementRead);
 			if (statements.length === 0 && newTrades.length === 0 && toFile.length === 0) {
 				await goto(
@@ -498,7 +523,10 @@
 		{/if}
 		{#if savedDistributions > 0}
 			{savedDistributions}
-			{savedDistributions === 1 ? 'distribution' : 'distributions'} saved.
+			{savedDistributions === 1 ? 'distribution' : 'distributions'} saved{#if savedAllotments > 0},
+				with
+				{savedAllotments}
+				{savedAllotments === 1 ? 'reinvestment parcel' : 'reinvestment parcels'} recorded{/if}.
 		{/if}
 		{#if savedStatements > 0}
 			{savedStatements}
@@ -1010,6 +1038,7 @@
 					<Table.Head class="text-right">Gross</Table.Head>
 					<Table.Head class="text-right">Tax withheld</Table.Head>
 					<Table.Head class="text-right">Reinvested</Table.Head>
+					<Table.Head class="text-right">Units allotted</Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -1073,6 +1102,23 @@
 								aria-label="{row.ticker} was reinvested"
 							/>
 						</Table.Cell>
+						<Table.Cell class="text-right">
+							{#if row.reinvestment}
+								<label class="flex items-center justify-end gap-2">
+									<span class="text-[11px] text-muted-foreground tabular-nums">
+										{row.reinvestment.unitsAllotted} @ {formatCurrency(row.reinvestment.drpPrice)}
+									</span>
+									<Checkbox
+										checked={rowEdits[row.ticker]?.allot ?? false}
+										disabled={!rowEdits[row.ticker]?.reinvested}
+										onCheckedChange={(v) => (rowEdits[row.ticker].allot = v === true)}
+										aria-label="Record the {row.ticker} units allotted as a reinvestment transaction"
+									/>
+								</label>
+							{:else}
+								<span class="text-[11px] text-muted-foreground">—</span>
+							{/if}
+						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>
@@ -1083,6 +1129,9 @@
 					</Table.Cell>
 					<Table.Cell class="text-right font-semibold">{formatCurrency(chosenTotal)}</Table.Cell>
 					<Table.Cell colspan={2}></Table.Cell>
+					<Table.Cell class="text-right text-[11px] text-muted-foreground">
+						{#if chosenAllotted > 0}{chosenAllotted} units to record{/if}
+					</Table.Cell>
 				</Table.Row>
 			</Table.Footer>
 		</Table.Root>

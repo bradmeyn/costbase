@@ -646,7 +646,20 @@ export const importDistributionStatement = command(
 					centsPerUnit: z.number().int().nonnegative(),
 					grossPayment: z.number().int().nonnegative(),
 					taxWithheld: z.number().int().nonnegative(),
-					reinvested: z.boolean()
+					reinvested: z.boolean(),
+					/*
+					  The units the plan allotted, where the statement says so and the user kept
+					  them. Recorded as a reinvestment transaction beside the distribution: the
+					  allotment is an acquisition with its own cost base and its own date, and
+					  without it the parcels are short and every later gain is overstated.
+					*/
+					allotment: z
+						.object({
+							unitsAllotted: z.number().int().positive(),
+							/** The DRP price in cents, which is the parcel's cost base per unit. */
+							drpPrice: z.number().int().nonnegative()
+						})
+						.optional()
 				})
 			)
 			.min(1, 'Choose at least one holding to import')
@@ -689,9 +702,54 @@ export const importDistributionStatement = command(
 			.insert(documentTable)
 			.values(created.map((d) => ({ distributionId: d.id, ...stored })));
 
+		/*
+		  Reinvested rows also produce the parcel the plan allotted. Skipped where one is
+		  already recorded for that holding on that day, so re-importing a statement cannot
+		  allot the same units twice.
+		*/
+		const allotments = rows.filter((row) => row.reinvested && row.allotment);
+		const toAllot: typeof allotments = [];
+		for (const row of allotments) {
+			const already = await db.query.transactionTable.findFirst({
+				where: (t, { and: every, eq: e }) =>
+					every(
+						e(t.holdingId, row.holdingId),
+						e(t.type, 'reinvestment'),
+						e(t.transactionDate, datePaid)
+					)
+			});
+			if (!already) toAllot.push(row);
+		}
+
+		let allotted = 0;
+		if (toAllot.length > 0) {
+			const parcels = await db
+				.insert(transactionTable)
+				.values(
+					toAllot.map((row) => ({
+						holdingId: row.holdingId,
+						type: 'reinvestment' as const,
+						quantity: row.allotment!.unitsAllotted,
+						pricePerUnit: row.allotment!.drpPrice,
+						value: row.allotment!.unitsAllotted * row.allotment!.drpPrice,
+						brokerage: 0,
+						transactionDate: datePaid,
+						// The registry allots these, so there is no broker and no confirmation.
+						confirmationNumber: null,
+						platform: null
+					}))
+				)
+				.returning();
+			// The statement is the paperwork for the parcel as well as for the payment.
+			await db
+				.insert(documentTable)
+				.values(parcels.map((t) => ({ transactionId: t.id, ...stored })));
+			allotted = parcels.length;
+		}
+
 		await Promise.all(rows.map((row) => getHolding(row.holdingId).refresh()));
 
-		return { success: true, created: created.length };
+		return { success: true, created: created.length, allotted };
 	}
 );
 
