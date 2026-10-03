@@ -13,12 +13,6 @@ export default defineConfig({
 					async: true
 				}
 			},
-			alias: {
-				$db: 'src/lib/server/db',
-				$ui: 'src/lib/components/ui',
-				$utils: 'src/lib/utils',
-				$constants: 'src/lib/constants'
-			},
 			experimental: {
 				remoteFunctions: true
 			},

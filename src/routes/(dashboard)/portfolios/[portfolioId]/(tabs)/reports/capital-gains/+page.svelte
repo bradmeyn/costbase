@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
-	import * as Table from '$ui/table';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';

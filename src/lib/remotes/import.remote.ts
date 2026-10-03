@@ -1,6 +1,6 @@
 import { command } from '$app/server';
 import { z } from 'zod';
-import { db } from '$db';
+import { db } from '#lib/server/db/index.js';
 import {
 	amitStatementTable,
 	annualStatementTable,
@@ -8,7 +8,7 @@ import {
 	documentTable,
 	portfolioTable,
 	transactionTable
-} from '$db/schemas/portfolio';
+} from '#lib/server/db/schemas/portfolio.js';
 import { AMIT_AMOUNT_FIELDS } from '#lib/schemas/amit.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';

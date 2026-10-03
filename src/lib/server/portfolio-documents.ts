@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { db } from '$db';
-import { portfolioTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { portfolioTable } from '#lib/server/db/schemas/portfolio.js';
 import {
 	annualStatementDocumentName,
 	distributionDocumentName,

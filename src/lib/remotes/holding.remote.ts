@@ -1,8 +1,8 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
-import { db } from '$db';
-import { holdingTable, portfolioTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { holdingTable, portfolioTable } from '#lib/server/db/schemas/portfolio.js';
 import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
@@ -12,7 +12,7 @@ import type {
 	Transaction,
 	Distribution,
 	Document
-} from '$db/schemas/portfolio';
+} from '#lib/server/db/schemas/portfolio.js';
 import { getStockPrice } from '#lib/server/prices.js';
 import {
 	calculateHoldingMetrics,

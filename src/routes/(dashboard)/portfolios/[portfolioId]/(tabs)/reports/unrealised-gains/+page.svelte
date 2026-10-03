@@ -2,7 +2,7 @@
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import { getPortfolioUnrealisedGains } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import { formatCurrency } from '#lib/utils.js';
 	import type { ReportDocument } from '#lib/report-document.js';
 	import SummaryCard from '#lib/components/summary-card.svelte';

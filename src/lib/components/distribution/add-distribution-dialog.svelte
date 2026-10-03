@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Button, { buttonVariants } from '$ui/button/button.svelte';
-	import * as Dialog from '$ui/dialog/index.js';
-	import Input from '$ui/input/input.svelte';
-	import * as Field from '$ui/field';
+	import Button, { buttonVariants } from '#lib/components/ui/button/button.svelte';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import * as Field from '#lib/components/ui/field/index.js';
 	import { addDistribution } from '#lib/remotes/distribution.remote.js';
-	import Spinner from '$ui/spinner/spinner.svelte';
+	import Spinner from '#lib/components/ui/spinner/spinner.svelte';
 	import { Plus } from '@lucide/svelte';
-	import { Checkbox } from '$ui/checkbox';
-	import Label from '$ui/label/label.svelte';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import { formatCurrency } from '#lib/utils.js';
 
 	let {

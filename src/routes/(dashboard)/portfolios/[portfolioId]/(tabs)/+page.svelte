@@ -4,8 +4,8 @@
 	import { deleteHolding } from '#lib/remotes/holding.remote.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import AddHoldingDialog from '#lib/components/holding/add-holding-dialog.svelte';
 	import EditHoldingDialog from '#lib/components/holding/edit-holding-dialog.svelte';
 	import EditPortfolioDialog from '#lib/components/portfolio/edit-portfolio-dialog.svelte';

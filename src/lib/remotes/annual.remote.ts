@@ -2,8 +2,8 @@ import { query } from '$app/server';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { db } from '$db';
-import { holdingTable, portfolioTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { holdingTable, portfolioTable } from '#lib/server/db/schemas/portfolio.js';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 
 async function assertOwnsHolding(holdingId: string) {

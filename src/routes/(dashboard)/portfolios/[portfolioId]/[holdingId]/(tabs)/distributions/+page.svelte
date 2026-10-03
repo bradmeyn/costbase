@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import AddDistributionDialog from '#lib/components/distribution/add-distribution-dialog.svelte';
 	import DistributionRow from '#lib/components/distribution/distribution-row.svelte';
 	import { getHolding } from '#lib/remotes/holding.remote.js';

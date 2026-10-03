@@ -2,8 +2,8 @@
 	import { financialYearLabel } from '#lib/report-period.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import { getAmitStatements } from '#lib/remotes/amit.remote.js';
 	import { getAnnualStatements } from '#lib/remotes/annual.remote.js';
 	import { netCostBaseAmount } from '#lib/utils/amit-calculations.js';

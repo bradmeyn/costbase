@@ -1,15 +1,15 @@
 <script lang="ts">
-	import Button from '$ui/button/button.svelte';
-	import * as Dialog from '$ui/dialog/index.js';
-	import * as Select from '$ui/select/index.js';
-	import Input from '$ui/input/input.svelte';
-	import * as Field from '$ui/field';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import * as Field from '#lib/components/ui/field/index.js';
 	import { updateTransaction } from '#lib/remotes/transaction.remote.js';
-	import Spinner from '$ui/spinner/spinner.svelte';
+	import Spinner from '#lib/components/ui/spinner/spinner.svelte';
 	import { Trash2 } from '@lucide/svelte';
 	import { PLATFORMS } from '#lib/platforms.js';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
-	import type { Document } from '$db/schemas/portfolio';
+	import type { Document } from '#lib/server/db/schemas/portfolio.js';
 
 	let {
 		transactionId,

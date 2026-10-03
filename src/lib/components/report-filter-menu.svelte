@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import Button from '$ui/button/button.svelte';
-	import * as DropdownMenu from '$ui/dropdown-menu';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { ChevronDown } from '@lucide/svelte';
 	import { queryWith, readList, toggle } from '#lib/report-query.js';
 

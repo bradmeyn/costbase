@@ -2,7 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import * as Select from '$ui/select';
+	import * as Select from '#lib/components/ui/select/index.js';
 	import { getPortfolio, getPortfolios } from '#lib/remotes/portfolio.remote.js';
 	import {
 		LayoutGrid,

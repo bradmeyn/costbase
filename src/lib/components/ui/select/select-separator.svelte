@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Separator } from '$ui/separator/index.js';
+	import { Separator } from '#lib/components/ui/separator/index.js';
 	import { cn } from '#lib/utils/tailwind.js';
 	import type { Separator as SeparatorPrimitive } from 'bits-ui';
 

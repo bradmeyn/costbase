@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
-	import Button from '$ui/button/button.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import { FileArchive, Paperclip } from '@lucide/svelte';
 	import ReportPeriodSelect from '#lib/components/report-period-select.svelte';
 	import ReportFilterMenu from '#lib/components/report-filter-menu.svelte';

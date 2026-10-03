@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { financialYearLabel, readFinancialYear } from '#lib/report-period.js';
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import { getPortfolioAmitStatements } from '#lib/remotes/amit.remote.js';
 	import { getPortfolio, getPortfolioFinancialYears } from '#lib/remotes/portfolio.remote.js';

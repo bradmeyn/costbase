@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateHoldingMetrics } from './holding-calculations';
-import type { Transaction } from '$db/schemas/portfolio';
+import type { Transaction } from '#lib/server/db/schemas/portfolio.js';
 
 /** Minimal transaction; amounts in cents, matching the schema. */
 const tx = (

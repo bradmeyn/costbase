@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
-	import * as Accordion from '$ui/accordion';
-	import Input from '$ui/input/input.svelte';
-	import Button from '$ui/button/button.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import * as Accordion from '#lib/components/ui/accordion/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { TriangleAlert, Info } from '@lucide/svelte';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
@@ -25,7 +25,7 @@
 		financialYearLabel,
 		readFinancialYear
 	} from '#lib/report-period.js';
-	import { financialYearEnd } from '$utils/amit-calculations';
+	import { financialYearEnd } from '#lib/utils/amit-calculations.js';
 
 	const portfolioId = $derived(page.params.portfolioId!);
 	const financialYears = $derived(await getPortfolioFinancialYears(portfolioId));

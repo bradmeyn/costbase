@@ -5,8 +5,8 @@
 	import FrequencyInput from '#lib/components/inputs/frequency-select.svelte';
 	import { Pencil, Trash } from '@lucide/svelte';
 	import { getBudgetState } from '../budget.svelte';
-	import Button from '$ui/button/button.svelte';
-	import { FREQUENCIES } from '$constants/frequencies';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import { FREQUENCIES } from '#lib/constants/frequencies.js';
 	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import EditItemDialog from './edit-item-dialog.svelte';
 

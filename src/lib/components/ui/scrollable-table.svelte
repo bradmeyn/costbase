@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ScrollArea from '$ui/scroll-area/scroll-area.svelte';
+	import ScrollArea from '#lib/components/ui/scroll-area/scroll-area.svelte';
 
 	let {
 		data,

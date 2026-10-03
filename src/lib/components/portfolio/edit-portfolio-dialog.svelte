@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Button from '$ui/button/button.svelte';
-	import * as Dialog from '$ui/dialog/index.js';
-	import Input from '$ui/input/input.svelte';
-	import * as Field from '$ui/field';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import * as Field from '#lib/components/ui/field/index.js';
 	import { updatePortfolio } from '#lib/remotes/portfolio.remote.js';
 	import { getPortfolio, getPortfolios } from '#lib/remotes/portfolio.remote.js';
-	import Spinner from '$ui/spinner/spinner.svelte';
+	import Spinner from '#lib/components/ui/spinner/spinner.svelte';
 
 	let {
 		portfolioId,

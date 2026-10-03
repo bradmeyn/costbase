@@ -1,8 +1,8 @@
 <script lang="ts">
-	import * as Table from '$ui/table';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import { CircleCheck } from '@lucide/svelte';
 	import { formatCurrency } from '#lib/utils.js';
-	import type { Distribution, Document } from '$db/schemas/portfolio';
+	import type { Distribution, Document } from '#lib/server/db/schemas/portfolio.js';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
 	import RowActionsMenu from '#lib/components/row-actions-menu.svelte';
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';

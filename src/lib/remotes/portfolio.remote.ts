@@ -1,15 +1,15 @@
 import { command, form, query } from '$app/server';
 import { z } from 'zod';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
-import { db } from '$db';
-import { portfolioTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { portfolioTable } from '#lib/server/db/schemas/portfolio.js';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { getStockPrices } from '#lib/server/prices.js';
-import { apportionCostBaseAdjustment, financialYearEnd } from '$utils/amit-calculations';
+import { apportionCostBaseAdjustment, financialYearEnd } from '#lib/utils/amit-calculations.js';
 import { distributionEntitlementDate } from '#lib/report-period.js';
-import { calculateCGT, type CGTCalculation } from '$utils/cgt-calculations';
-import { calculateHoldingMetrics } from '$utils/holding-calculations';
+import { calculateCGT, type CGTCalculation } from '#lib/utils/cgt-calculations.js';
+import { calculateHoldingMetrics } from '#lib/utils/holding-calculations.js';
 
 export const getPortfolios = query(async () => {
 	const user = await getCurrentUser();

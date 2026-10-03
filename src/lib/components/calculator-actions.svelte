@@ -2,7 +2,7 @@
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { EllipsisVertical, Download } from '@lucide/svelte';
 
-	import { downloadCsv } from '$utils/file-download';
+	import { downloadCsv } from '#lib/utils/file-download.js';
 	import type { Snippet } from 'svelte';
 
 	let {

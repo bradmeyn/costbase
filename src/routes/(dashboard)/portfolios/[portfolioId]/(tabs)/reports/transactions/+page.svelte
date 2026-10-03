@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import { Paperclip } from '@lucide/svelte';
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import {

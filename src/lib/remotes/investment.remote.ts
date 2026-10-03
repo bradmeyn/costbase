@@ -1,6 +1,6 @@
 import { query } from '$app/server';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
-import { db } from '$db';
+import { db } from '#lib/server/db/index.js';
 import { error } from '@sveltejs/kit';
 
 export const getInvestments = query(async () => {

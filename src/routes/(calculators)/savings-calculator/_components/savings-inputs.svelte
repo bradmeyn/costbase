@@ -3,10 +3,10 @@
 	import PercentageSlider from '#lib/components/inputs/percentage-slider.svelte';
 	import FrequencySelect from '#lib/components/inputs/frequency-select.svelte';
 	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
-	import Label from '$ui/label/label.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import { Button } from '#lib/components/ui/button/index.js';
-	import Explainer from '$ui/explainer.svelte';
-	import Slider from '$ui/slider/slider.svelte';
+	import Explainer from '#lib/components/ui/explainer.svelte';
+	import Slider from '#lib/components/ui/slider/slider.svelte';
 
 	let calculator = getCalculatorState();
 </script>

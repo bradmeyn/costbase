@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Button, { buttonVariants } from '$ui/button/button.svelte';
-	import * as Dialog from '$ui/dialog/index.js';
-	import * as Field from '$ui/field';
+	import Button, { buttonVariants } from '#lib/components/ui/button/button.svelte';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Field from '#lib/components/ui/field/index.js';
 	import { addHolding } from '#lib/remotes/holding.remote.js';
 	import { getHoldings } from '#lib/remotes/holding.remote.js';
 	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 	import { getInvestments } from '#lib/remotes/investment.remote.js';
-	import Spinner from '$ui/spinner/spinner.svelte';
+	import Spinner from '#lib/components/ui/spinner/spinner.svelte';
 	import { Plus } from '@lucide/svelte';
 
 	let {

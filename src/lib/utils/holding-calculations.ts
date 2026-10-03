@@ -3,7 +3,7 @@
  * Pure functions for calculating holding metrics from transactions
  */
 
-import type { Transaction } from '$db/schemas/portfolio';
+import type { Transaction } from '#lib/server/db/schemas/portfolio.js';
 
 export interface HoldingMetrics {
 	units: number;

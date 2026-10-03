@@ -1,9 +1,9 @@
 <script lang="ts">
-	import Button from '$ui/button/button.svelte';
-	import { buttonVariants } from '$ui/button/index.js';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import { buttonVariants } from '#lib/components/ui/button/index.js';
 	import { Paperclip, Loader2 } from '@lucide/svelte';
 	import { attachDocument, detachDocument } from '#lib/remotes/import.remote.js';
-	import type { Document } from '$db/schemas/portfolio';
+	import type { Document } from '#lib/server/db/schemas/portfolio.js';
 
 	/*
 	  The source PDF for one record. A row carries at most one in practice — a contract

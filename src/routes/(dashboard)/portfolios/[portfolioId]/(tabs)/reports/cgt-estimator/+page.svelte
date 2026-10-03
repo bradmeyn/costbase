@@ -2,10 +2,10 @@
 	import { registerReport } from '#lib/report-chrome.svelte.js';
 	import { getPortfolioTaxSummary } from '#lib/remotes/portfolio.remote.js';
 	import { page } from '$app/state';
-	import * as Table from '$ui/table';
-	import * as Select from '$ui/select';
-	import Input from '$ui/input/input.svelte';
-	import Button from '$ui/button/button.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import SummaryCard from '#lib/components/summary-card.svelte';
 	import { formatCurrency } from '#lib/utils.js';
 	import type { ReportDocument } from '#lib/report-document.js';
@@ -101,8 +101,6 @@
 	function setUnits(holdingId: string, value: number, max: number) {
 		unitsToSell = { ...unitsToSell, [holdingId]: Math.max(0, Math.min(value, max)) };
 	}
-
-	const dollars = (cents: number) => (cents / 100).toFixed(2);
 
 	function reportDocument(): ReportDocument {
 		const money = (cents: number) => formatCurrency(cents);

@@ -1,4 +1,4 @@
-import { formatCurrency, formatPercentage } from '$utils/formatters';
+import { formatCurrency, formatPercentage } from '#lib/utils/formatters.js';
 
 export type GrowthResult = {
 	totalValue: number;

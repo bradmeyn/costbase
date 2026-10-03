@@ -2,8 +2,8 @@ import { command, query } from '$app/server';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { db } from '$db';
-import { capitalLossCarryforwardTable, portfolioTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { capitalLossCarryforwardTable, portfolioTable } from '#lib/server/db/schemas/portfolio.js';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
 
 async function ownedPortfolio(portfolioId: string) {

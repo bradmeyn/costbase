@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import * as Select from '$ui/select';
-	import Input from '$ui/input/input.svelte';
-	import Button from '$ui/button/button.svelte';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import {
 		currentFinancialYear,
 		describeWindow,

@@ -5,7 +5,7 @@
 	import { formatCurrency } from '#lib/utils/formatters.js';
 	import { FREQUENCIES } from '#lib/constants/frequencies.js';
 	import { Trash } from '@lucide/svelte';
-	import Button from '$ui/button/button.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import AddItemDialog from './add-item-dialog.svelte';
 	import * as Select from '#lib/components/ui/select/index.js';
 

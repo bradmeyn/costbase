@@ -1,9 +1,9 @@
 <script lang="ts">
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 
-	import Button from '$ui/button/button.svelte';
-	import Input from '$ui/input/input.svelte';
-	import Label from '$ui/label/label.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import { Pencil, Trash, Plus, X } from '@lucide/svelte';
 	import { type BudgetItem, getBudgetState } from '../budget.svelte';
 

@@ -1,8 +1,8 @@
 <!-- PercentageSlider.svelte -->
 <script lang="ts">
-	import Label from '$ui/label/label.svelte';
-	import Slider from '$ui/slider/slider.svelte';
-	import Explainer from '$ui/explainer.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
+	import Slider from '#lib/components/ui/slider/slider.svelte';
+	import Explainer from '#lib/components/ui/explainer.svelte';
 
 	interface Props {
 		label: string;

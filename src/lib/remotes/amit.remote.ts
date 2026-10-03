@@ -1,8 +1,8 @@
 import { form, query } from '$app/server';
 import { z } from 'zod';
 import { getCurrentUser } from '#lib/remotes/auth.remote.js';
-import { db } from '$db';
-import { amitStatementTable, holdingTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { amitStatementTable, holdingTable } from '#lib/server/db/schemas/portfolio.js';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import {

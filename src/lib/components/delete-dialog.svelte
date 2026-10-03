@@ -1,8 +1,8 @@
 <script lang="ts">
-	import * as AlertDialog from '$ui/alert-dialog/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import { Trash } from '@lucide/svelte';
-	import { buttonVariants } from '$ui/button';
-	import Spinner from '$ui/spinner/spinner.svelte';
+	import { buttonVariants } from '#lib/components/ui/button/index.js';
+	import Spinner from '#lib/components/ui/spinner/spinner.svelte';
 	import type { Snippet } from 'svelte';
 
 	let {

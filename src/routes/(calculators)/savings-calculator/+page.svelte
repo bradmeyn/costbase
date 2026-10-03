@@ -5,7 +5,7 @@
 	import { Flame, CheckCircle, XCircle } from '@lucide/svelte';
 	import Inputs from './_components/savings-inputs.svelte';
 	import GrowthChart from './_components/growth-chart.svelte';
-	import ScrollableTable from '$ui/scrollable-table.svelte';
+	import ScrollableTable from '#lib/components/ui/scrollable-table.svelte';
 	import CalculatorActions from '#lib/components/calculator-actions.svelte';
 
 	setCalculatorState();

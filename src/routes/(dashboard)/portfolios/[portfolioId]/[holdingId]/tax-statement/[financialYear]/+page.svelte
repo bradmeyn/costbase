@@ -4,8 +4,8 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import Button from '$ui/button/button.svelte';
-	import Input from '$ui/input/input.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
 	import { getHolding } from '#lib/remotes/holding.remote.js';
 	import { getAmitStatements, saveAmitStatement } from '#lib/remotes/amit.remote.js';
 	import {

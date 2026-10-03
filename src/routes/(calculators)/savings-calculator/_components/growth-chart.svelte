@@ -3,7 +3,7 @@
 	import { formatCurrency } from '#lib/utils/formatters.js';
 	import type { AnnualData } from '../calculator.svelte';
 	import { COLOURS } from '#lib/constants/colours.js';
-	import { LC_TOOLTIP_PROPS, LC_AXIS_PROPS, LC_GRID } from '$constants/chart-config';
+	import { LC_TOOLTIP_PROPS, LC_AXIS_PROPS, LC_GRID } from '#lib/constants/chart-config.js';
 
 	let {
 		annualData = [],

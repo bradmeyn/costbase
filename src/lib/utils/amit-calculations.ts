@@ -1,4 +1,4 @@
-import type { AmitStatement } from '$db/schemas/portfolio';
+import type { AmitStatement } from '#lib/server/db/schemas/portfolio.js';
 
 /**
  * AMIT cost base adjustments.

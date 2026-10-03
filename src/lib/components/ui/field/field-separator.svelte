@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Separator } from '$ui/separator/index.js';
+	import { Separator } from '#lib/components/ui/separator/index.js';
 	import { cn, type WithElementRef } from '#lib/utils/tailwind.js';
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';

@@ -1,6 +1,6 @@
-import { FREQUENCIES, type FrequencyType } from '$constants/frequencies';
+import { FREQUENCIES, type FrequencyType } from '#lib/constants/frequencies.js';
 import { setContext, getContext } from 'svelte';
-import { formatCurrency, formatPercentage } from '$utils/formatters';
+import { formatCurrency, formatPercentage } from '#lib/utils/formatters.js';
 import { calculatePersonalTax, type TaxResult } from './tax-rates';
 
 const EMPTY_RESULT: TaxResult = {

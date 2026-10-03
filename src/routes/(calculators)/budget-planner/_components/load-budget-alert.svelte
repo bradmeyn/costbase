@@ -1,7 +1,7 @@
 <!-- Updated LoadBudgetAlert.svelte -->
 <script lang="ts">
 	import { getBudgetState } from '../budget.svelte';
-	import Button from '$ui/button/button.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import { X, FileText } from '@lucide/svelte';
 	import { slide } from 'svelte/transition';
 

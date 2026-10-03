@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { logoutUser } from '#lib/remotes/auth.remote.js';
 	import { calculators } from '#lib/constants/calculators.js';
-	import * as DropdownMenu from '$ui/dropdown-menu';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { ChevronDown } from '@lucide/svelte';
 
 	let activeUrl = $derived(page.url.pathname);

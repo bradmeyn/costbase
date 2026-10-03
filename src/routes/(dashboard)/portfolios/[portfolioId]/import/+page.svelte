@@ -2,12 +2,12 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import Button from '$ui/button/button.svelte';
-	import Input from '$ui/input/input.svelte';
-	import Label from '$ui/label/label.svelte';
-	import Checkbox from '$ui/checkbox/checkbox.svelte';
-	import * as Table from '$ui/table';
-	import * as NativeSelect from '$ui/native-select';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
+	import Checkbox from '#lib/components/ui/checkbox/checkbox.svelte';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import * as NativeSelect from '#lib/components/ui/native-select/index.js';
 	import { ArrowLeft, TriangleAlert, FileText, Coins, Upload, Paperclip } from '@lucide/svelte';
 	import { getPortfolio } from '#lib/remotes/portfolio.remote.js';
 	import {

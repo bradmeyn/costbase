@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Button from '$ui/button/button.svelte';
-	import * as Dialog from '$ui/dialog/index.js';
-	import Input from '$ui/input/input.svelte';
-	import * as Field from '$ui/field';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import * as Field from '#lib/components/ui/field/index.js';
 	import { updateDistribution } from '#lib/remotes/distribution.remote.js';
-	import Spinner from '$ui/spinner/spinner.svelte';
-	import { Checkbox } from '$ui/checkbox';
-	import Label from '$ui/label/label.svelte';
+	import Spinner from '#lib/components/ui/spinner/spinner.svelte';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import { formatCurrency } from '#lib/utils.js';
 	import type { distributionTable } from '#lib/server/db/schemas/portfolio.js';
 	import type { InferSelectModel } from 'drizzle-orm';

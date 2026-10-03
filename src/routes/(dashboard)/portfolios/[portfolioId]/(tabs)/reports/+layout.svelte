@@ -2,9 +2,9 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import Button from '$ui/button/button.svelte';
-	import * as DropdownMenu from '$ui/dropdown-menu';
-	import * as Select from '$ui/select';
+	import Button from '#lib/components/ui/button/button.svelte';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
 	import { Download, ChevronDown } from '@lucide/svelte';
 	import { setReportChrome } from '#lib/report-chrome.svelte.js';
 	import ReportPeriodSelect from '#lib/components/report-period-select.svelte';

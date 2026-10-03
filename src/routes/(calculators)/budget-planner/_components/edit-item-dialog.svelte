@@ -5,11 +5,11 @@
 	import CurrencyInput from '#lib/components/inputs/currency-input.svelte';
 	import FrequencyInput from '#lib/components/inputs/frequency-select.svelte';
 	import type { BudgetItem as BudgetItemType } from '../budget.svelte';
-	import Input from '$ui/input/input.svelte';
+	import Input from '#lib/components/ui/input/input.svelte';
 
 	import { getBudgetState } from '../budget.svelte';
 
-	import Label from '$ui/label/label.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 	import { untrack } from 'svelte';
 
 	let {

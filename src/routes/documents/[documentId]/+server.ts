@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { readFile } from 'node:fs/promises';
 import { eq } from 'drizzle-orm';
-import { db } from '$db';
-import { documentTable } from '$db/schemas/portfolio';
+import { db } from '#lib/server/db/index.js';
+import { documentTable } from '#lib/server/db/schemas/portfolio.js';
 import { documentPath } from '#lib/server/documents.js';
 import { auth } from '#lib/server/auth.js';
 import {

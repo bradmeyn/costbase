@@ -1,13 +1,13 @@
 <script lang="ts">
-	import * as Table from '$ui/table';
+	import * as Table from '#lib/components/ui/table/index.js';
 	import EditTransactionDialog from '#lib/components/transaction/edit-transaction-dialog.svelte';
 	import DeleteDialog from '#lib/components/delete-dialog.svelte';
 	import { deleteTransaction } from '#lib/remotes/transaction.remote.js';
 	import { formatCurrency } from '#lib/utils.js';
 	import DocumentAttachment from '#lib/components/document-attachment.svelte';
-	import Button from '$ui/button/button.svelte';
+	import Button from '#lib/components/ui/button/button.svelte';
 	import { Pencil } from '@lucide/svelte';
-	import type { Transaction, Document } from '$db/schemas/portfolio';
+	import type { Transaction, Document } from '#lib/server/db/schemas/portfolio.js';
 
 	let {
 		transaction
